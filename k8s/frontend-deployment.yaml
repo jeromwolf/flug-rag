@@ -1,0 +1,59 @@
+# flux-rag Frontend Deployment
+# React 애플리케이션 (nginx 서빙) 배포 설정
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flux-rag-frontend
+  namespace: flux-rag
+  labels:
+    app: flux-rag
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: flux-rag
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: flux-rag
+        component: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: flux-rag-frontend:latest  # 실제 레지스트리 경로로 변경 (예: ghcr.io/org/flux-rag-frontend:v1.0.0)
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+
+        # 리소스 제한
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+
+        # 헬스체크
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3

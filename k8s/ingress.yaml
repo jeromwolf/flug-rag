@@ -1,0 +1,56 @@
+# flux-rag Ingress
+# 외부 트래픽을 프론트엔드/백엔드로 라우팅
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flux-rag-ingress
+  namespace: flux-rag
+  labels:
+    app: flux-rag
+  annotations:
+    # nginx ingress controller 설정
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"  # HTTPS 리다이렉트 비활성화 (TLS 설정 전)
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"  # 파일 업로드 크기 제한
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"  # 긴 응답 대응 (LLM 스트리밍)
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    # CORS 설정 (프론트엔드-백엔드 통신)
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: flux-rag.example.com  # 실제 도메인으로 변경
+    http:
+      paths:
+      # API 경로는 백엔드로 라우팅
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8000
+      # 헬스체크 엔드포인트도 백엔드로
+      - path: /health
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 8000
+      # 나머지 모든 경로는 프론트엔드로 (SPA)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+
+  # TLS 설정 (Let's Encrypt 또는 cert-manager 사용 시 주석 해제)
+  # tls:
+  # - hosts:
+  #   - flux-rag.example.com
+  #   secretName: flux-rag-tls

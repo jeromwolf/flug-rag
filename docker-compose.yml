@@ -1,0 +1,64 @@
+# flux-rag Docker Compose 설정
+# 백엔드(FastAPI) + 프론트엔드(React/nginx) 통합 실행
+
+services:
+  # 백엔드 서비스
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flux-rag-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # 데이터 영속성: ChromaDB, SQLite, 업로드 파일
+      - ./backend/data:/app/data
+    env_file:
+      - .env
+    environment:
+      # Docker 네트워크 내부 호스트명 (필요시 오버라이드)
+      - CHROMA_PERSIST_DIR=/app/data/chroma_db
+      - DATABASE_URL=sqlite+aiosqlite:///./data/sqlite.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - flux-rag-net
+    # GPU 사용 설정 (옵션: sentence-transformers GPU 가속)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # 프론트엔드 서비스
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flux-rag-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - flux-rag-net
+
+# 네트워크 정의
+networks:
+  flux-rag-net:
+    driver: bridge

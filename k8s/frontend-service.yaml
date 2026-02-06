@@ -1,0 +1,21 @@
+# flux-rag Frontend Service
+# 프론트엔드 Pod에 대한 내부 로드밸런서
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: flux-rag
+  labels:
+    app: flux-rag
+    component: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: flux-rag
+    component: frontend
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP

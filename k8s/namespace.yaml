@@ -1,0 +1,10 @@
+# flux-rag Kubernetes Namespace
+# 애플리케이션 리소스를 논리적으로 격리
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flux-rag
+  labels:
+    app: flux-rag
+    environment: production
