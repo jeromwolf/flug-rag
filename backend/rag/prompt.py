@@ -15,6 +15,8 @@ class PromptManager:
         self.prompts_dir = prompts_dir or settings.prompts_dir
         self._system_prompts: dict[str, str] = {}
         self._few_shot_examples: list[dict] = []
+        self._legal_examples: list[dict] = []
+        self._technical_examples: list[dict] = []
         self._load_prompts()
 
     def _load_prompts(self):
@@ -29,12 +31,64 @@ class PromptManager:
             with open(few_shot_path, "r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
                 self._few_shot_examples = data.get("examples", [])
+                self._legal_examples = data.get("legal_examples", [])
+                self._technical_examples = data.get("technical_examples", [])
 
     def get_system_prompt(self, name: str) -> str:
         """Get a system prompt by name."""
         if name not in self._system_prompts:
             raise KeyError(f"System prompt not found: {name}. Available: {list(self._system_prompts.keys())}")
         return self._system_prompts[name]
+
+    @staticmethod
+    def detect_document_type(context_chunks: list[dict]) -> str:
+        """Detect document type from retrieved context metadata.
+
+        Returns:
+            "legal" for 법률/규정 documents,
+            "technical" for 기술/매뉴얼/사내문서,
+            "general" for unclassified.
+        """
+        import re
+
+        legal_score = 0
+        technical_score = 0
+
+        for chunk in context_chunks:
+            metadata = chunk.get("metadata", {})
+            filename = (metadata.get("filename", "") or "").lower()
+            category = metadata.get("category", "") or ""
+            content = chunk.get("content", "") or ""
+
+            # Legal signals
+            if category == "규정":
+                legal_score += 2
+            if re.search(r'(법|시행령|시행규칙|조례|규정)', filename):
+                legal_score += 2
+            if re.search(r'제\d+조', content):
+                legal_score += 1
+
+            # Technical signals
+            if category in ("매뉴얼", "점검", "보고서", "계획서", "교육"):
+                technical_score += 2
+            if re.search(r'(매뉴얼|지침서|절차서|안내서|점검표)', filename):
+                technical_score += 2
+            if re.search(r'(점검|측정|설비|배관|밸브)', content) and not re.search(r'제\d+조', content):
+                technical_score += 1
+
+        if legal_score > technical_score:
+            return "legal"
+        elif technical_score > legal_score:
+            return "technical"
+        return "general"
+
+    def _get_domain_examples(self, doc_type: str) -> list[dict]:
+        """Get few-shot examples for the detected document type."""
+        if doc_type == "legal" and self._legal_examples:
+            return self._legal_examples
+        elif doc_type == "technical" and self._technical_examples:
+            return self._technical_examples
+        return self._few_shot_examples
 
     def build_rag_prompt(
         self,
@@ -44,10 +98,13 @@ class PromptManager:
     ) -> tuple[str, str]:
         """Build a complete RAG prompt with context and few-shot examples.
 
+        Auto-detects document type from context metadata and selects
+        the appropriate system prompt and few-shot examples.
+
         Args:
             query: User's question.
             context_chunks: List of {content, metadata} dicts from retrieval.
-            few_shot: Optional few-shot examples. If None, uses loaded examples.
+            few_shot: Optional few-shot examples override.
 
         Returns:
             Tuple of (system_prompt, user_prompt).
@@ -62,17 +119,26 @@ class PromptManager:
 
         context = "\n\n".join(context_parts)
 
-        # System prompt with context
-        system = self.get_system_prompt("rag_system").format(context=context)
+        # Detect document type and select prompt
+        doc_type = self.detect_document_type(context_chunks)
+        prompt_map = {
+            "legal": "rag_legal_system",
+            "technical": "rag_technical_system",
+        }
+        prompt_name = prompt_map.get(doc_type, "rag_system")
+        if prompt_name not in self._system_prompts:
+            prompt_name = "rag_system"
 
-        # Build user prompt with few-shot
-        examples = few_shot or self._few_shot_examples
+        system = self.get_system_prompt(prompt_name).format(context=context)
+
+        # Select domain-appropriate few-shot examples
+        examples = few_shot or self._get_domain_examples(doc_type)
         user_parts = []
 
         if examples:
             user_parts.append("참고 예시:")
-            for ex in examples[:2]:  # Max 2 examples
-                user_parts.append(f"Q: {ex['question']}\nA: {ex['answer']}")
+            for ex in examples[:3]:  # Max 3 examples
+                user_parts.append(f"질문: {ex['question']}\n답변: {ex['answer']}")
             user_parts.append("")
 
         user_parts.append(f"질문: {query}")

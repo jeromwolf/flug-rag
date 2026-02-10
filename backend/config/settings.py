@@ -59,9 +59,14 @@ class Settings(BaseSettings):
     milvus_index_type: str = "IVF_FLAT"
     milvus_metric_type: str = "COSINE"
 
-    # RAG
+    # RAG - Chunking
+    chunk_strategy: str = "recursive"  # "recursive" or "semantic"
     chunk_size: int = 800
     chunk_overlap: int = 80
+    semantic_breakpoint_threshold: float = 0.5  # for semantic chunking: similarity drop threshold
+    semantic_min_chunk_size: int = 100  # for semantic chunking: minimum chunk size (chars)
+
+    # RAG - Retrieval
     retrieval_top_k: int = 20
     rerank_top_n: int = 5
     bm25_weight: float = 0.3
@@ -69,9 +74,40 @@ class Settings(BaseSettings):
     confidence_high: float = 0.8
     confidence_low: float = 0.5
 
+    # RAG - Score filtering
+    retrieval_score_threshold: float = 0.0  # minimum retrieval score (0 = no filtering)
+    context_max_chunks: int = 0  # max chunks for LLM context (0 = use rerank_top_n)
+
+    # RAG - LLM control
+    llm_max_tokens: int = 2048
+
+    # RAG - Query expansion
+    query_expansion_enabled: bool = False  # HyDE (Hypothetical Document Embeddings)
+
+    # RAG - BM25 tuning
+    bm25_k1: float = 1.5  # BM25 term frequency saturation
+    bm25_b: float = 0.75  # BM25 document length normalization
+
+    # RAG - Reranking
+    use_rerank: bool = True  # enable/disable reranking
+
+    # RAG - Advanced techniques
+    multi_query_enabled: bool = False  # Multi-query retrieval (multiple perspectives)
+    multi_query_count: int = 3  # Number of alternative queries to generate
+    self_rag_enabled: bool = False  # Self-RAG (self-reflective RAG with hallucination check)
+    self_rag_max_retries: int = 1  # Max retries if answer is not grounded
+    agentic_rag_enabled: bool = False  # Agentic RAG (dynamic strategy routing)
+
     # OCR - Upstage
     upstage_api_key: str = ""
     upstage_api_url: str = "https://api.upstage.ai/v1/document-ai/document-parse"
+    ocr_provider: str = "cloud"  # "cloud" or "onprem"
+    ocr_onprem_url: str = "http://localhost:8501"
+
+    # OCR Training Data Collection
+    ocr_training_enabled: bool = False
+    ocr_training_dir: str = "./data/ocr_training"
+    ocr_training_image_dpi: int = 150
 
     # Auth (legacy fields kept for backward compatibility)
     secret_key: str = "change-me-in-production"
@@ -95,6 +131,12 @@ class Settings(BaseSettings):
     max_file_size: int = 50 * 1024 * 1024  # 50MB
     upload_dir: str = "./data/uploads"
     allowed_extensions: set[str] = {".pdf", ".hwp", ".docx", ".xlsx", ".pptx", ".txt"}
+
+    # Sync / Scheduler
+    sync_enabled: bool = False
+    sync_cron: str = "0 2 * * *"  # 매일 새벽 2시
+    sync_watch_dirs: list[str] = []
+    sync_batch_size: int = 10
 
     # Agent
     max_history: int = 5

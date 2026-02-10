@@ -1,0 +1,241 @@
+{
+  "summary": {
+    "total_questions": 10,
+    "success_count": 9,
+    "success_rate": 0.9,
+    "avg_confidence": 0.8447,
+    "avg_latency_ms": 23412.4,
+    "total_time_sec": 241.1,
+    "avg_composite_score": 0.6639,
+    "avg_semantic_similarity": 0.7815,
+    "avg_rouge_1": 0.569,
+    "avg_rouge_l": 0.531,
+    "grade_distribution": {
+      "A": 2,
+      "B": 3,
+      "C": 4,
+      "D": 1,
+      "F": 0
+    }
+  },
+  "category_stats": {
+    "factual": {
+      "total": 10,
+      "success": 9,
+      "confidence_sum": 8.447212305443886,
+      "score_sum": 6.638599999999999,
+      "sim_sum": 7.815399999999999,
+      "rouge_sum": 5.3099
+    },
+    "inference": {
+      "total": 0,
+      "success": 0,
+      "confidence_sum": 0.0,
+      "score_sum": 0.0,
+      "sim_sum": 0.0,
+      "rouge_sum": 0.0
+    },
+    "multi_hop": {
+      "total": 0,
+      "success": 0,
+      "confidence_sum": 0.0,
+      "score_sum": 0.0,
+      "sim_sum": 0.0,
+      "rouge_sum": 0.0
+    },
+    "negative": {
+      "total": 0,
+      "success": 0,
+      "confidence_sum": 0.0,
+      "score_sum": 0.0,
+      "sim_sum": 0.0,
+      "rouge_sum": 0.0
+    }
+  },
+  "difficulty_stats": {
+    "easy": {
+      "total": 8,
+      "success": 7
+    },
+    "medium": {
+      "total": 2,
+      "success": 2
+    },
+    "hard": {
+      "total": 0,
+      "success": 0
+    }
+  },
+  "results": [
+    {
+      "id": 1,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사법의 목적은 무엇인가요?",
+      "expected_answer": "한국가스공사를 설립하여 가스를 장기적으로 안정되게 공급할 수 있는 기반을 마련함으로써 국민생활의 편익 증진과 공공복리의 향상에 이바지하게 함을 목적으로 합니다.",
+      "actual_answer": "한국가스공사법의 목적은 가스를 장기적으로 안정되게 공급할 수 있는 기반을 마련하여 국민생활의 편익 증진과 공공복리의 향상에 이바지하는 것이다. (제1조)",
+      "confidence": 0.9823598441572056,
+      "sources_count": 5,
+      "latency_ms": 32384.6,
+      "success": true,
+      "semantic_similarity": 0.8783,
+      "rouge_1": 0.8296,
+      "rouge_l": 0.7704,
+      "composite_score": 0.8362,
+      "grade": "A"
+    },
+    {
+      "id": 2,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사의 법적 지위는 무엇인가요?",
+      "expected_answer": "한국가스공사는 법인입니다.",
+      "actual_answer": "한국가스공사는 공공기관(시장형 공기업)으로서 법적으로 지위를 갖추고 있습니다.\n이 규정은 한국가스공사법 제2조에서 법인격을 부여함으로써 명시되어 있으며, 설립 근거는 \"한국가스공사법\"입니다.",
+      "confidence": 0.844761983488392,
+      "sources_count": 5,
+      "latency_ms": 21535.1,
+      "success": true,
+      "semantic_similarity": 0.8078,
+      "rouge_1": 0.2553,
+      "rouge_l": 0.2553,
+      "composite_score": 0.5316,
+      "grade": "C"
+    },
+    {
+      "id": 3,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사의 주된 사무소 소재지는 어떻게 정하나요?",
+      "expected_answer": "공사의 주된 사무소의 소재지는 정관으로 정합니다.",
+      "actual_answer": "한국가스공사의 주된 사무소 소재지는 정관으로 정합니다.\n(제3조 ①)",
+      "confidence": 0.938170690713716,
+      "sources_count": 5,
+      "latency_ms": 20594.9,
+      "success": true,
+      "semantic_similarity": 0.8033,
+      "rouge_1": 0.8333,
+      "rouge_l": 0.8333,
+      "composite_score": 0.8183,
+      "grade": "A"
+    },
+    {
+      "id": 4,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사가 지사나 사업소를 설치하려면 어떤 절차가 필요한가요?",
+      "expected_answer": "이사회의 의결을 거쳐 필요한 곳에 지사 또는 사업소를 둘 수 있습니다.",
+      "actual_answer": "한국가스공사는 이사회 의결을 거쳐 지사 또는 사업소 설치를 결정하고, 이를 등기해야 합니다.\n1. 공사는 그 업무 수행을 위하여 필요하다고 판단되면 이사회에서 지사 또는 사업소 설치를 의결합니다 (제3조).\n2. 지사나 사업소의 설치는 설립등기에 해당하여 대통령령으로 정하는 바에 따라 등기를 해야 합니다 (제6조 제2항).\n\n이로써 한국가스공사는 필요한 곳에 지사 또는 사업소를 설치할 수 있으며, 이를 위한 등기 절차도 규정되어 있습니다.",
+      "confidence": 0.807205676910614,
+      "sources_count": 5,
+      "latency_ms": 24762.2,
+      "success": false,
+      "semantic_similarity": 0.707,
+      "rouge_1": 0.2634,
+      "rouge_l": 0.2537,
+      "composite_score": 0.4823,
+      "grade": "D"
+    },
+    {
+      "id": 5,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사의 자본은 어떻게 구성되나요?",
+      "expected_answer": "공사의 자본은 주식으로 분할합니다.",
+      "actual_answer": "한국가스공사의 자본은 주식으로 분할됩니다.\n이 조항은 공사의 자본구조를 정의하며, 이를 통해 공사는 그 업무 수행에 필요한 자금을 마련하고 운영됩니다. (제5조)",
+      "confidence": 0.6009633379718393,
+      "sources_count": 5,
+      "latency_ms": 21238.6,
+      "success": true,
+      "semantic_similarity": 0.758,
+      "rouge_1": 0.3457,
+      "rouge_l": 0.3457,
+      "composite_score": 0.5518,
+      "grade": "C"
+    },
+    {
+      "id": 6,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사는 언제 성립하나요?",
+      "expected_answer": "공사는 주된 사무소의 소재지에서 설립등기를 함으로써 성립합니다.",
+      "actual_answer": "한국가스공사는 주된 사무소의 소재지에서 설립등기를 함으로써 성립합니다.\n[한국가스공사법 제6조 제1항]",
+      "confidence": 0.5899985074996948,
+      "sources_count": 5,
+      "latency_ms": 19124.9,
+      "success": true,
+      "semantic_similarity": 0.745,
+      "rouge_1": 0.7671,
+      "rouge_l": 0.7671,
+      "composite_score": 0.7561,
+      "grade": "B"
+    },
+    {
+      "id": 7,
+      "category": "factual",
+      "difficulty": "medium",
+      "question": "한국가스공사의 등기에 관한 사항은 무엇으로 정하나요?",
+      "expected_answer": "공사의 설립등기와 지사 또는 사업소의 설치등기, 이전등기, 변경등기, 그 밖에 공사의 등기에 관하여 필요한 사항은 대통령령으로 정합니다.",
+      "actual_answer": "한국가스공사의 등기 관련 사항은 대통령령으로 정합니다.\n\n법 제6조 제2항에 따라 공사의 설립등기와 지사 또는 사업소의 설치등기, 이전등기, 변경등기 등을 포함하는 등기 사항은 대통령령으로 구체적으로 규정됩니다.",
+      "confidence": 0.9664830644496987,
+      "sources_count": 5,
+      "latency_ms": 23454.4,
+      "success": true,
+      "semantic_similarity": 0.8355,
+      "rouge_1": 0.6897,
+      "rouge_l": 0.5793,
+      "composite_score": 0.7295,
+      "grade": "B"
+    },
+    {
+      "id": 8,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사가 아닌 자가 유사한 명칭을 사용할 수 있나요?",
+      "expected_answer": "아니요, 이 법에 따른 공사가 아닌 자는 한국가스공사 또는 이와 유사한 명칭을 사용하지 못합니다.",
+      "actual_answer": "한국가스공사가 아닌 자는 유사한 명칭을 사용할 수 없습니다.\n1. 제7조에 따르면, 한국가스공사가 아닌 자는 \"한국가스공사 또는 이와 유사한 명칭을 사용하지 못한다.\"\n2. 제20조에는 위반 시 200만원 이하의 과태료를 부과하도록 규정되어 있습니다.",
+      "confidence": 0.8910280542008847,
+      "sources_count": 5,
+      "latency_ms": 23071.9,
+      "success": true,
+      "semantic_similarity": 0.8,
+      "rouge_1": 0.4965,
+      "rouge_l": 0.4823,
+      "composite_score": 0.644,
+      "grade": "C"
+    },
+    {
+      "id": 9,
+      "category": "factual",
+      "difficulty": "medium",
+      "question": "한국가스공사의 사장은 대리인을 선임할 수 있나요?",
+      "expected_answer": "네, 사장은 정관으로 정하는 바에 따라 직원 중에서 공사의 업무에 관한 재판상 또는 재판 외의 모든 행위를 할 수 있는 권한을 가진 대리인을 선임할 수 있습니다.",
+      "actual_answer": "네, 한국가스공사의 사장은 정관으로 정하는 바에 따라 대리인을 선임할 수 있습니다. (제9조)",
+      "confidence": 0.9481216262630754,
+      "sources_count": 5,
+      "latency_ms": 22844.3,
+      "success": true,
+      "semantic_similarity": 0.7909,
+      "rouge_1": 0.64,
+      "rouge_l": 0.54,
+      "composite_score": 0.6854,
+      "grade": "B"
+    },
+    {
+      "id": 10,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사 임직원의 비밀누설 금지 의무는 무엇인가요?",
+      "expected_answer": "공사의 임직원이나 그 직에 있었던 사람은 직무상 알게 된 비밀을 누설하거나 도용하여서는 아니 됩니다.",
+      "actual_answer": "한국가스공사의 임직원은 직무상 알게 된 비밀을 누설하거나 도용해서는 안 됩니다. 이를 위반할 경우 2년 이하 징역 또는 1천만 원 이하 벌금에 처해질 수 있습니다. (제10조, 제19조)",
+      "confidence": 0.8781195197887641,
+      "sources_count": 5,
+      "latency_ms": 25112.7,
+      "success": true,
+      "semantic_similarity": 0.6896,
+      "rouge_1": 0.569,
+      "rouge_l": 0.4828,
+      "composite_score": 0.6034,
+      "grade": "C"
+    }
+  ]
+}

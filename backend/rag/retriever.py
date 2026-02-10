@@ -38,21 +38,33 @@ class HybridRetriever:
         bm25_weight: float | None = None,
         top_k: int | None = None,
         rerank_top_n: int | None = None,
+        score_threshold: float | None = None,
+        use_rerank: bool | None = None,
+        bm25_k1: float | None = None,
+        bm25_b: float | None = None,
     ):
         self.vectorstore = vectorstore or create_vectorstore()
         self.embedder = embedder or create_embedder()
-        self.vector_weight = vector_weight or settings.vector_weight
-        self.bm25_weight = bm25_weight or settings.bm25_weight
+        self.vector_weight = vector_weight if vector_weight is not None else settings.vector_weight
+        self.bm25_weight = bm25_weight if bm25_weight is not None else settings.bm25_weight
         self.top_k = top_k or settings.retrieval_top_k
         self.rerank_top_n = rerank_top_n or settings.rerank_top_n
+        self.score_threshold = score_threshold if score_threshold is not None else settings.retrieval_score_threshold
+        self.use_rerank = use_rerank if use_rerank is not None else settings.use_rerank
+        self.bm25_k1 = bm25_k1 if bm25_k1 is not None else settings.bm25_k1
+        self.bm25_b = bm25_b if bm25_b is not None else settings.bm25_b
         self._reranker = None
+        self._kiwi = None
         self._bm25_corpus: list[dict] | None = None
         self._bm25_index: BM25Okapi | None = None
 
-    @staticmethod
-    def _retrieval_cache_key(query: str, top_k: int | None, filters: dict | None) -> str:
+    def _retrieval_cache_key(self, query: str, top_k: int | None, filters: dict | None, hyde: bool = False) -> str:
         """Build a cache key for retrieval results."""
-        raw = json.dumps({"q": query, "k": top_k, "f": filters}, sort_keys=True, ensure_ascii=False)
+        raw = json.dumps({
+            "q": query, "k": top_k, "f": filters,
+            "st": self.score_threshold, "rr": self.use_rerank,
+            "k1": self.bm25_k1, "b": self.bm25_b, "hyde": hyde,
+        }, sort_keys=True, ensure_ascii=False)
         return "retriever:search:" + hashlib.md5(raw.encode()).hexdigest()
 
     async def retrieve(
@@ -60,7 +72,8 @@ class HybridRetriever:
         query: str,
         top_k: int | None = None,
         filters: dict | None = None,
-        use_rerank: bool = True,
+        use_rerank: bool | None = None,
+        hyde_embedding: list[float] | None = None,
     ) -> list[RetrievalResult]:
         """Execute hybrid search and optional re-ranking.
 
@@ -74,9 +87,11 @@ class HybridRetriever:
             List of RetrievalResult sorted by relevance.
         """
         top_k = top_k or self.top_k
+        use_rerank = use_rerank if use_rerank is not None else self.use_rerank
 
         # Check cache for identical query+filters (TTL: 120s)
-        cache_key = self._retrieval_cache_key(query, top_k, filters)
+        cache = None
+        cache_key = self._retrieval_cache_key(query, top_k, filters, hyde=hyde_embedding is not None)
         try:
             from core.cache import get_cache
 
@@ -90,7 +105,7 @@ class HybridRetriever:
 
         # Run vector search and BM25 in parallel
         vector_results, bm25_results = await asyncio.gather(
-            self._vector_search(query, top_k, filters),
+            self._vector_search(query, top_k, filters, hyde_embedding=hyde_embedding),
             self._bm25_search(query, top_k),
         )
 
@@ -104,19 +119,28 @@ class HybridRetriever:
         # Return top N
         results = combined[: self.rerank_top_n if use_rerank else top_k]
 
+        # Apply score threshold filtering
+        if self.score_threshold > 0:
+            results = [r for r in results if r.score >= self.score_threshold]
+
         # Store in cache (TTL: 120s)
-        try:
-            await cache.set(cache_key, [asdict(r) for r in results], ttl=120)
-        except Exception:
-            pass
+        if cache is not None:
+            try:
+                await cache.set(cache_key, [asdict(r) for r in results], ttl=120)
+            except Exception:
+                pass
 
         return results
 
     async def _vector_search(
         self, query: str, top_k: int, filters: dict | None = None,
+        hyde_embedding: list[float] | None = None,
     ) -> list[SearchResult]:
         """Search by vector similarity."""
-        query_embedding = await self.embedder.embed_query(query)
+        if hyde_embedding is not None:
+            query_embedding = hyde_embedding
+        else:
+            query_embedding = await self.embedder.embed_query(query)
         return await self.vectorstore.search(
             query_embedding=query_embedding,
             top_k=top_k,
@@ -182,13 +206,22 @@ class HybridRetriever:
             })
             tokenized_corpus.append(self._tokenize(content))
 
-        self._bm25_index = BM25Okapi(tokenized_corpus)
+        self._bm25_index = BM25Okapi(tokenized_corpus, k1=self.bm25_k1, b=self.bm25_b)
 
     def _tokenize(self, text: str) -> list[str]:
-        """Simple whitespace + character tokenization for Korean text."""
-        # Basic tokenization: split on whitespace and punctuation
-        import re
-        tokens = re.findall(r'[\w]+', text.lower())
+        """Korean morphological tokenization using kiwipiepy."""
+        if self._kiwi is None:
+            try:
+                from kiwipiepy import Kiwi
+                self._kiwi = Kiwi()
+            except ImportError:
+                import re
+                return re.findall(r'[\w]+', text.lower())
+        tokens = []
+        for token in self._kiwi.tokenize(text):
+            # 의미 있는 형태소만: 명사, 동사, 형용사, 어근, 숫자, 외국어
+            if token.tag.startswith(('NN', 'VV', 'VA', 'XR', 'SN', 'SL')):
+                tokens.append(token.form.lower())
         return tokens
 
     def _merge_results(
@@ -242,38 +275,29 @@ class HybridRetriever:
         if reranker is None:
             return results
 
-        # Prepare pairs for re-ranking
-        passages = [{"id": r.id, "text": r.content} for r in results]
+        # Prepare (query, passage) pairs for re-ranking
+        pairs = [(query, r.content) for r in results]
 
-        # flashrank uses RerankRequest object
-        from flashrank import RerankRequest
-        rerank_request = RerankRequest(query=query, passages=passages)
-        reranked = await asyncio.to_thread(
-            reranker.rerank,
-            rerank_request,
-        )
+        # Get scores from CrossEncoder
+        scores = await asyncio.to_thread(reranker.predict, pairs)
 
-        # Map back to RetrievalResult
-        # flashrank returns: [{'id': ..., 'text': ..., 'score': ...}, ...]
-        result_map = {r.id: r for r in results}
-        reranked_results = []
+        # Update results with rerank scores and sort by score descending
+        for i, result in enumerate(results):
+            score = float(scores[i])
+            result.rerank_score = score
+            result.score = score  # Override with rerank score
 
-        for item in reranked:
-            doc_id = item["id"]
-            if doc_id in result_map:
-                result = result_map[doc_id]
-                result.rerank_score = float(item["score"])
-                result.score = float(item["score"])  # Override with rerank score
-                reranked_results.append(result)
+        # Sort by rerank score descending
+        reranked_results = sorted(results, key=lambda r: r.score, reverse=True)
 
         return reranked_results
 
     def _get_reranker(self):
-        """Lazy-load flashrank reranker."""
+        """Lazy-load sentence-transformers CrossEncoder reranker."""
         if self._reranker is None:
             try:
-                from flashrank import Ranker
-                self._reranker = Ranker(model_name="ms-marco-MultiBERT-L-12")
+                from sentence_transformers import CrossEncoder
+                self._reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
             except ImportError:
                 return None
         return self._reranker
