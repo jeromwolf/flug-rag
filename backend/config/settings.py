@@ -1,8 +1,9 @@
 """Central configuration using Pydantic BaseSettings."""
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Union
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -17,6 +18,7 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
+    cors_origins: list[str] = ["*"]  # Override with CORS_ORIGINS env var (comma-separated)
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./data/sqlite.db"
@@ -80,6 +82,7 @@ class Settings(BaseSettings):
 
     # RAG - LLM control
     llm_max_tokens: int = 2048
+    llm_temperature: float = 0.3  # Lower = more precise (0.1 for legal, 0.7 for general)
 
     # RAG - Query expansion
     query_expansion_enabled: bool = False  # HyDE (Hypothetical Document Embeddings)
@@ -147,6 +150,14 @@ class Settings(BaseSettings):
     cache_enabled: bool = False  # Disabled by default for demo/dev
     cache_default_ttl: int = 300  # 5 minutes
 
+    # MinIO Object Storage
+    minio_enabled: bool = False  # Enable MinIO for document storage
+    minio_endpoint: str = "localhost:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket: str = "flux-rag-documents"
+    minio_secure: bool = False  # True for HTTPS
+
     # Monitoring
     prometheus_enabled: bool = False  # Disabled by default
 
@@ -159,6 +170,13 @@ class Settings(BaseSettings):
     base_dir: Path = Path(__file__).resolve().parent.parent
     prompts_dir: Path = Path(__file__).resolve().parent.parent / "prompts"
     data_dir: Path = Path(__file__).resolve().parent.parent / "data"
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Union[str, list[str]]) -> list[str]:
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 

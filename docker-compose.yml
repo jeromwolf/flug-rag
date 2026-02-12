@@ -19,6 +19,10 @@ services:
       # Docker 네트워크 내부 호스트명 (필요시 오버라이드)
       - CHROMA_PERSIST_DIR=/app/data/chroma_db
       - DATABASE_URL=sqlite+aiosqlite:///./data/sqlite.db
+      - MINIO_ENABLED=true
+      - MINIO_ENDPOINT=minio:9000
+    depends_on:
+      - minio
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -58,7 +62,35 @@ services:
     networks:
       - flux-rag-net
 
+  # MinIO 오브젝트 스토리지
+  minio:
+    image: minio/minio:latest
+    container_name: flux-rag-minio
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - flux-rag-net
+
 # 네트워크 정의
 networks:
   flux-rag-net:
     driver: bridge
+
+# 볼륨 정의
+volumes:
+  minio-data:
+    driver: local
