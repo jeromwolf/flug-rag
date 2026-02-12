@@ -11,13 +11,13 @@ metadata:
   annotations:
     # nginx ingress controller 설정
     nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"  # HTTPS 리다이렉트 비활성화 (TLS 설정 전)
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"  # HTTPS 리다이렉트 활성화
     nginx.ingress.kubernetes.io/proxy-body-size: "100m"  # 파일 업로드 크기 제한
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"  # 긴 응답 대응 (LLM 스트리밍)
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
     # CORS 설정 (프론트엔드-백엔드 통신)
     nginx.ingress.kubernetes.io/enable-cors: "true"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://flux-rag.example.com"
 spec:
   ingressClassName: nginx
   rules:
@@ -49,8 +49,8 @@ spec:
             port:
               number: 80
 
-  # TLS 설정 (Let's Encrypt 또는 cert-manager 사용 시 주석 해제)
-  # tls:
-  # - hosts:
-  #   - flux-rag.example.com
-  #   secretName: flux-rag-tls
+  # TLS 설정 (Let's Encrypt 또는 cert-manager 사용 시)
+  tls:
+  - hosts:
+    - flux-rag.example.com
+    secretName: flux-rag-tls

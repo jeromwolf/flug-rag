@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import logging
 from functools import lru_cache
+from typing import Optional
 
 from .base import BaseEmbedding
 
@@ -11,6 +12,21 @@ logger = logging.getLogger(__name__)
 
 # Embedding cache TTL: 1 hour (embeddings are deterministic for same input)
 _EMBEDDING_CACHE_TTL = 3600
+
+# Module-level batch processor singleton
+_batch_processor = None
+
+
+def get_embedding_batch_processor():
+    """Get or create the embedding batch processor singleton."""
+    global _batch_processor
+    return _batch_processor
+
+
+def set_embedding_batch_processor(processor):
+    """Set the embedding batch processor (called from app startup)."""
+    global _batch_processor
+    _batch_processor = processor
 
 
 class LocalEmbedding(BaseEmbedding):
@@ -37,7 +53,11 @@ class LocalEmbedding(BaseEmbedding):
         return f"embed:local:{text_hash}"
 
     async def embed_text(self, text: str) -> list[float]:
-        """Embed a single text with caching (TTL: 3600s)."""
+        """Embed a single text with caching (TTL: 3600s).
+
+        If batch inference is enabled, routes through BatchProcessor
+        to collect concurrent requests into efficient batches.
+        """
         # Try cache first
         cache_key = self._embedding_cache_key(text)
         try:
@@ -50,6 +70,19 @@ class LocalEmbedding(BaseEmbedding):
         except Exception:
             cache = None
 
+        # Use batch processor if available
+        batch_proc = get_embedding_batch_processor()
+        if batch_proc is not None:
+            result = await batch_proc.submit(text)
+            # Cache the result
+            if cache is not None:
+                try:
+                    await cache.set(cache_key, result, ttl=_EMBEDDING_CACHE_TTL)
+                except Exception:
+                    pass
+            return result
+
+        # Direct encoding (no batching)
         model = self._get_model()
         embedding = await asyncio.to_thread(
             model.encode, text, normalize_embeddings=True

@@ -39,8 +39,8 @@ class OpenAIProvider(BaseLLM):
         response = await self._client.chat.completions.create(
             model=self.model,
             messages=messages,
-            temperature=temperature or self.temperature,
-            max_tokens=max_tokens or self.max_tokens,
+            temperature=temperature if temperature is not None else self.temperature,
+            max_tokens=max_tokens if max_tokens is not None else self.max_tokens,
             **kwargs,
         )
 
@@ -71,8 +71,8 @@ class OpenAIProvider(BaseLLM):
         stream = await self._client.chat.completions.create(
             model=self.model,
             messages=messages,
-            temperature=temperature or self.temperature,
-            max_tokens=max_tokens or self.max_tokens,
+            temperature=temperature if temperature is not None else self.temperature,
+            max_tokens=max_tokens if max_tokens is not None else self.max_tokens,
             stream=True,
             **kwargs,
         )

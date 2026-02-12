@@ -140,6 +140,85 @@ const PRESETS: PresetDef[] = [
     ],
   },
   {
+    id: "regulation_review",
+    name: "규정 검토 에이전트",
+    description: "문서를 사내 규정과 대조 검토",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 100, y: 200 },
+        data: { nodeType: "start", label: "문서 입력", config: { description: "검토할 문서를 입력하세요" } },
+      },
+      {
+        id: "regulation_search",
+        type: "workflow",
+        position: { x: 350, y: 200 },
+        data: {
+          nodeType: "tool",
+          label: "규정 검토",
+          config: {
+            tool_name: "regulation_review",
+            arguments_template: {
+              document_text: "{{input}}",
+              regulation_category: "전체",
+              review_depth: "standard",
+            },
+          }
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 600, y: 200 },
+        data: { nodeType: "output", label: "검토 보고서", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e-start-regulation", source: "start", target: "regulation_search", animated: true },
+      { id: "e-regulation-output", source: "regulation_search", target: "output", animated: true },
+    ],
+  },
+  {
+    id: "safety_checklist",
+    name: "안전 체크리스트 생성",
+    description: "설비별 안전 점검 체크리스트 + 규정 매핑",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 100, y: 200 },
+        data: { nodeType: "start", label: "설비 유형 선택", config: { description: "점검 대상 설비 유형을 입력하세요" } },
+      },
+      {
+        id: "checklist_gen",
+        type: "workflow",
+        position: { x: 350, y: 200 },
+        data: {
+          nodeType: "tool",
+          label: "체크리스트 생성",
+          config: {
+            tool_name: "safety_checklist",
+            arguments_template: {
+              equipment_type: "{{input}}",
+              output_format: "markdown",
+            },
+          }
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 600, y: 200 },
+        data: { nodeType: "output", label: "체크리스트 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e-start-checklist", source: "start", target: "checklist_gen", animated: true },
+      { id: "e-checklist-output", source: "checklist_gen", target: "output", animated: true },
+    ],
+  },
+  {
     id: "routing",
     name: "라우팅 워크플로우",
     description: "질문 분류 → 문서검색/직접답변 분기 → 출력",

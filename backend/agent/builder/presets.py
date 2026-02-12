@@ -112,10 +112,83 @@ def create_quality_check_workflow() -> Workflow:
     )
 
 
+def create_regulation_review_workflow() -> Workflow:
+    """규정 검토 워크플로우: 문서 입력 → 규정 검색 → 대조 분석 → 검토 보고서."""
+    start = WorkflowNode(id="start", config=NodeConfig(
+        node_type=NodeType.START, label="문서 입력",
+        config={"description": "검토할 문서를 입력하세요"},
+    ))
+    regulation_search = WorkflowNode(id="regulation_search", config=NodeConfig(
+        node_type=NodeType.TOOL, label="규정 검토",
+        config={
+            "tool_name": "regulation_review",
+            "arguments_template": {
+                "document_text": "{{input}}",
+                "regulation_category": "전체",
+                "review_depth": "standard",
+            },
+        },
+        position={"x": 250, "y": 0},
+    ))
+    output = WorkflowNode(id="output", config=NodeConfig(
+        node_type=NodeType.OUTPUT, label="검토 보고서",
+        config={"format": "markdown"},
+        position={"x": 500, "y": 0},
+    ))
+
+    return Workflow(
+        name="규정 검토 에이전트",
+        description="업로드 문서를 사내 규정과 대조하여 위반/불일치 항목을 식별합니다.",
+        nodes=[start, regulation_search, output],
+        edges=[
+            Edge(source="start", target="regulation_search"),
+            Edge(source="regulation_search", target="output"),
+        ],
+        status=WorkflowStatus.ACTIVE,
+    )
+
+
+def create_safety_checklist_workflow() -> Workflow:
+    """안전 체크리스트 워크플로우: 설비 유형 → 규정 검색 → 체크리스트 생성."""
+    start = WorkflowNode(id="start", config=NodeConfig(
+        node_type=NodeType.START, label="설비 유형 선택",
+        config={"description": "점검 대상 설비 유형을 입력하세요"},
+    ))
+    checklist_gen = WorkflowNode(id="checklist_gen", config=NodeConfig(
+        node_type=NodeType.TOOL, label="체크리스트 생성",
+        config={
+            "tool_name": "safety_checklist",
+            "arguments_template": {
+                "equipment_type": "{{input}}",
+                "output_format": "markdown",
+            },
+        },
+        position={"x": 250, "y": 0},
+    ))
+    output = WorkflowNode(id="output", config=NodeConfig(
+        node_type=NodeType.OUTPUT, label="체크리스트 출력",
+        config={"format": "markdown"},
+        position={"x": 500, "y": 0},
+    ))
+
+    return Workflow(
+        name="안전 체크리스트 생성",
+        description="설비 유형별 안전 점검 체크리스트와 관련 규정을 자동 생성합니다.",
+        nodes=[start, checklist_gen, output],
+        edges=[
+            Edge(source="start", target="checklist_gen"),
+            Edge(source="checklist_gen", target="output"),
+        ],
+        status=WorkflowStatus.ACTIVE,
+    )
+
+
 PRESET_WORKFLOWS = {
     "simple_rag": create_simple_rag_workflow,
     "routing": create_routing_workflow,
     "quality_check": create_quality_check_workflow,
+    "regulation_review": create_regulation_review_workflow,
+    "safety_checklist": create_safety_checklist_workflow,
 }
 
 

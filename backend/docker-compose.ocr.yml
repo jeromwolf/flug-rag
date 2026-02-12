@@ -1,0 +1,81 @@
+# flux-rag OCR On-Premises Stack
+# Upstage Document Parse 온프레미스 컨테이너
+#
+# Prerequisites:
+#   - Upstage 온프레미스 라이선스 및 Docker 이미지
+#   - GPU 지원 (NVIDIA Docker runtime)
+#
+# Usage:
+#   docker compose -f docker-compose.ocr.yml up -d
+#
+# Access:
+#   OCR API: http://localhost:8501
+#   Health:  http://localhost:8501/health
+
+services:
+  # Upstage Document Parse 온프레미스
+  upstage-dp:
+    image: upstage/document-parse:latest
+    container_name: flux-rag-ocr
+    ports:
+      - "8501:8501"
+    volumes:
+      - ocr_models:/app/models
+      - ocr_cache:/app/cache
+    environment:
+      - UPSTAGE_LICENSE_KEY=${UPSTAGE_LICENSE_KEY:-}
+      - MODEL_PATH=/app/models
+      - CACHE_DIR=/app/cache
+      - MAX_WORKERS=4
+      - GPU_MEMORY_FRACTION=0.8
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - flux-rag-ocr
+
+  # GPU 없는 환경용 CPU 전용 모드
+  upstage-dp-cpu:
+    image: upstage/document-parse:latest-cpu
+    container_name: flux-rag-ocr-cpu
+    profiles:
+      - cpu-only
+    ports:
+      - "8501:8501"
+    volumes:
+      - ocr_models:/app/models
+      - ocr_cache:/app/cache
+    environment:
+      - UPSTAGE_LICENSE_KEY=${UPSTAGE_LICENSE_KEY:-}
+      - MODEL_PATH=/app/models
+      - CACHE_DIR=/app/cache
+      - MAX_WORKERS=2
+      - DEVICE=cpu
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - flux-rag-ocr
+
+volumes:
+  ocr_models:
+  ocr_cache:
+
+networks:
+  flux-rag-ocr:
+    driver: bridge

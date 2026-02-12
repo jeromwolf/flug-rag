@@ -29,6 +29,7 @@ import {
   DialogActions,
   Snackbar,
   Alert,
+  Slider,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 import {
@@ -46,13 +47,15 @@ import {
   ContentCopy as CopyIcon,
   Menu as MenuIcon,
   SmartToy as BotIcon,
+  ReportProblem as ReportProblemIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useAppStore } from "../stores/appStore";
-import { sessionsApi, feedbackApi, API_BASE, getAuthHeaders } from "../api/client";
+import { sessionsApi, feedbackApi, qualityApi, contentApi, API_BASE, getAuthHeaders } from "../api/client";
 import type { Message, Source } from "../types";
 import { getConfidenceLevel } from "../types";
 
@@ -183,15 +186,20 @@ function SourcesPanel({ sources }: { sources: Source[] }) {
 interface MessageBubbleProps {
   msg: Message;
   onFeedback: (messageId: string, rating: number) => void;
+  onErrorReport: (messageId: string) => void;
+  onEditAnswer: (messageId: string, currentContent: string) => void;
   sessionId: string | null;
+  userRole?: string;
 }
 
-function MessageBubble({ msg, onFeedback, sessionId }: MessageBubbleProps) {
+function MessageBubble({ msg, onFeedback, onErrorReport, onEditAnswer, sessionId, userRole }: MessageBubbleProps) {
   const isUser = msg.role === "user";
 
   const handleCopy = () => {
     navigator.clipboard.writeText(msg.content);
   };
+
+  const canEdit = !isUser && (userRole === "admin" || userRole === "manager");
 
   return (
     <Box
@@ -297,6 +305,7 @@ function MessageBubble({ msg, onFeedback, sessionId }: MessageBubbleProps) {
                     <IconButton
                       size="small"
                       onClick={() => onFeedback(msg.id, 1)}
+                      aria-label="긍정 평가"
                     >
                       <ThumbUpIcon fontSize="small" />
                     </IconButton>
@@ -305,10 +314,31 @@ function MessageBubble({ msg, onFeedback, sessionId }: MessageBubbleProps) {
                     <IconButton
                       size="small"
                       onClick={() => onFeedback(msg.id, -1)}
+                      aria-label="부정 평가"
                     >
                       <ThumbDownIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="오류 신고">
+                    <IconButton
+                      size="small"
+                      onClick={() => onErrorReport(msg.id)}
+                      aria-label="오류 신고"
+                    >
+                      <ReportProblemIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  {canEdit && (
+                    <Tooltip title="답변 수정">
+                      <IconButton
+                        size="small"
+                        onClick={() => onEditAnswer(msg.id, msg.content)}
+                        aria-label="답변 수정"
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
                 </>
               )}
               <Tooltip title="복사">
@@ -350,11 +380,22 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
+  const [temperature, setTemperature] = useState(0.7);
+  const [errorReportDialog, setErrorReportDialog] = useState<{
+    open: boolean;
+    messageId: string | null;
+  }>({ open: false, messageId: null });
+  const [errorDescription, setErrorDescription] = useState("");
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
     severity: "success" | "error" | "info";
   }>({ open: false, message: "", severity: "info" });
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState("");
+  const [editedAnswer, setEditedAnswer] = useState("");
+  const [evaluationTag, setEvaluationTag] = useState("accurate");
+  const [userRole, setUserRole] = useState<string>("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -372,6 +413,26 @@ export default function ChatPage() {
   });
 
   const sessions = sessionsData?.sessions ?? [];
+
+  // Fetch announcements
+  const { data: announcementsData } = useQuery({
+    queryKey: ["announcements"],
+    queryFn: () => contentApi.listAnnouncements(),
+    staleTime: 60000,
+  });
+
+  // Get user role
+  useEffect(() => {
+    const user = localStorage.getItem("flux_user");
+    if (user) {
+      try {
+        const parsed = JSON.parse(user);
+        setUserRole(parsed.role || "");
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
 
   // Load messages when session changes
   useEffect(() => {
@@ -470,6 +531,7 @@ export default function ChatPage() {
       if (selectedModel && selectedModel !== "default") {
         body.model = selectedModel;
       }
+      body.temperature = temperature;
 
       const response = await fetch(`${API_BASE}/chat/stream`, {
         method: "POST",
@@ -629,6 +691,76 @@ export default function ChatPage() {
         setSnackbar({
           open: true,
           message: "피드백 전송에 실패했습니다.",
+          severity: "error",
+        });
+      });
+  };
+
+  const handleErrorReport = (messageId: string) => {
+    setErrorReportDialog({ open: true, messageId });
+    setErrorDescription("");
+  };
+
+  const handleEditAnswer = (messageId: string, currentContent: string) => {
+    setEditingMessageId(messageId);
+    setEditedAnswer(currentContent);
+    setEvaluationTag("accurate");
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveGoldenData = async () => {
+    if (!currentSessionId || !editingMessageId) return;
+
+    // Find the user message before this assistant message
+    const msgIndex = messages.findIndex((m) => m.id === editingMessageId);
+    let userQuestion = "";
+    if (msgIndex > 0 && messages[msgIndex - 1].role === "user") {
+      userQuestion = messages[msgIndex - 1].content;
+    }
+
+    try {
+      await qualityApi.createGoldenData({
+        question: userQuestion,
+        answer: editedAnswer,
+        source_message_id: editingMessageId,
+        source_session_id: currentSessionId,
+        evaluation_tag: evaluationTag,
+      });
+      setSnackbar({
+        open: true,
+        message: "답변이 Golden Data로 저장되었습니다.",
+        severity: "success",
+      });
+      setEditDialogOpen(false);
+    } catch {
+      setSnackbar({
+        open: true,
+        message: "Golden Data 저장에 실패했습니다.",
+        severity: "error",
+      });
+    }
+  };
+
+  const handleSubmitErrorReport = () => {
+    if (!currentSessionId || !errorReportDialog.messageId) return;
+    feedbackApi
+      .submitErrorReport({
+        message_id: errorReportDialog.messageId,
+        session_id: currentSessionId,
+        description: errorDescription,
+      })
+      .then(() => {
+        setSnackbar({
+          open: true,
+          message: "오류 신고가 전송되었습니다.",
+          severity: "success",
+        });
+        setErrorReportDialog({ open: false, messageId: null });
+      })
+      .catch(() => {
+        setSnackbar({
+          open: true,
+          message: "오류 신고 전송에 실패했습니다.",
           severity: "error",
         });
       });
@@ -835,6 +967,7 @@ export default function ChatPage() {
             value={selectedModel}
             onChange={(e: SelectChangeEvent) => setSelectedModel(e.target.value)}
             sx={{ minWidth: 160 }}
+            aria-label="AI 모델 선택"
           >
             <MenuItem value="default">기본 모델</MenuItem>
             <MenuItem value="vllm">vLLM</MenuItem>
@@ -842,6 +975,26 @@ export default function ChatPage() {
             <MenuItem value="openai">OpenAI</MenuItem>
             <MenuItem value="anthropic">Anthropic</MenuItem>
           </Select>
+
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 200 }}>
+            <Typography variant="caption" color="text.secondary">
+              Temperature:
+            </Typography>
+            <Slider
+              value={temperature}
+              onChange={(_, val) => setTemperature(val as number)}
+              min={0}
+              max={2}
+              step={0.1}
+              valueLabelDisplay="auto"
+              size="small"
+              sx={{ width: 120 }}
+              aria-label="Temperature 조절"
+            />
+            <Typography variant="caption" color="text.secondary">
+              {temperature}
+            </Typography>
+          </Box>
 
           <ToggleButtonGroup
             size="small"
@@ -851,8 +1004,8 @@ export default function ChatPage() {
               if (val) setResponseMode(val);
             }}
           >
-            <ToggleButton value="rag">RAG</ToggleButton>
-            <ToggleButton value="direct">직접 응답</ToggleButton>
+            <ToggleButton value="rag" aria-label="RAG 모드">RAG</ToggleButton>
+            <ToggleButton value="direct" aria-label="직접 모드">직접 응답</ToggleButton>
           </ToggleButtonGroup>
 
           <Box sx={{ flex: 1 }} />
@@ -866,6 +1019,15 @@ export default function ChatPage() {
 
         {/* Chat messages area */}
         <Box sx={{ flex: 1, overflow: "auto", py: 2 }}>
+          {/* Announcement banners */}
+          {announcementsData?.data?.announcements?.filter((a: any) => a.is_pinned && a.is_active).map((a: any) => (
+            <Box key={a.id} sx={{ px: 2, mb: 1 }}>
+              <Alert severity="info">
+                <strong>{a.title}</strong> — {a.content.slice(0, 100)}{a.content.length > 100 ? "..." : ""}
+              </Alert>
+            </Box>
+          ))}
+
           {/* Empty state */}
           {messages.length === 0 && !streamingContent && (
             <Box
@@ -916,7 +1078,10 @@ export default function ChatPage() {
               key={msg.id}
               msg={msg}
               onFeedback={handleFeedback}
+              onErrorReport={handleErrorReport}
+              onEditAnswer={handleEditAnswer}
               sessionId={currentSessionId}
+              userRole={userRole}
             />
           ))}
 
@@ -1018,6 +1183,7 @@ export default function ChatPage() {
                   borderRadius: 2,
                 },
               }}
+              inputProps={{ "aria-label": "메시지 입력" }}
             />
             {isStreaming ? (
               <IconButton
@@ -1028,6 +1194,7 @@ export default function ChatPage() {
                   color: "white",
                   "&:hover": { bgcolor: "error.main" },
                 }}
+                aria-label="생성 중단"
               >
                 <StopIcon />
               </IconButton>
@@ -1045,6 +1212,7 @@ export default function ChatPage() {
                     color: "grey.500",
                   },
                 }}
+                aria-label="메시지 전송"
               >
                 <SendIcon />
               </IconButton>
@@ -1078,6 +1246,41 @@ export default function ChatPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Error report dialog */}
+      <Dialog
+        open={errorReportDialog.open}
+        onClose={() => setErrorReportDialog({ open: false, messageId: null })}
+      >
+        <DialogTitle>오류 신고</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            발견하신 오류를 설명해주세요.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            multiline
+            rows={4}
+            fullWidth
+            placeholder="오류 내용을 입력하세요..."
+            value={errorDescription}
+            onChange={(e) => setErrorDescription(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setErrorReportDialog({ open: false, messageId: null })}>
+            취소
+          </Button>
+          <Button
+            color="primary"
+            variant="contained"
+            onClick={handleSubmitErrorReport}
+          >
+            신고
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
@@ -1092,6 +1295,59 @@ export default function ChatPage() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Edit Answer Dialog for Expert Evaluation */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>답변 수정 (Golden Data 저장)</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            답변을 수정하여 Golden Data로 저장하세요. 이 데이터는 향후 모델 평가 및 개선에 사용됩니다.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            multiline
+            rows={8}
+            fullWidth
+            placeholder="수정된 답변을 입력하세요..."
+            value={editedAnswer}
+            onChange={(e) => setEditedAnswer(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              평가 태그:
+            </Typography>
+            <Select
+              size="small"
+              value={evaluationTag}
+              onChange={(e: SelectChangeEvent) => setEvaluationTag(e.target.value)}
+              fullWidth
+            >
+              <MenuItem value="accurate">정확함 (Accurate)</MenuItem>
+              <MenuItem value="partial">부분적으로 정확 (Partial)</MenuItem>
+              <MenuItem value="inaccurate">부정확 (Inaccurate)</MenuItem>
+              <MenuItem value="hallucination">환각 (Hallucination)</MenuItem>
+            </Select>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>취소</Button>
+          <Button
+            color="primary"
+            variant="contained"
+            onClick={handleSaveGoldenData}
+            disabled={!editedAnswer.trim()}
+          >
+            저장
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

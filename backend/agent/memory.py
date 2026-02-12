@@ -1,8 +1,9 @@
 """SQLite-based conversation memory and session management."""
 
+import asyncio
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import aiosqlite
@@ -17,46 +18,51 @@ class ConversationMemory:
         self.db_path = db_path or str(settings.data_dir / "memory.db")
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._initialized = False
+        self._init_lock = asyncio.Lock()
 
     async def _ensure_initialized(self):
         """Create tables if they don't exist."""
         if self._initialized:
             return
 
-        async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS sessions (
-                    id TEXT PRIMARY KEY,
-                    title TEXT DEFAULT '',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    metadata TEXT DEFAULT '{}'
-                )
-            """)
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS messages (
-                    id TEXT PRIMARY KEY,
-                    session_id TEXT NOT NULL,
-                    role TEXT NOT NULL,
-                    content TEXT NOT NULL,
-                    metadata TEXT DEFAULT '{}',
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-                )
-            """)
-            await db.execute("""
-                CREATE INDEX IF NOT EXISTS idx_messages_session
-                ON messages(session_id, created_at)
-            """)
-            await db.commit()
+        async with self._init_lock:
+            if self._initialized:
+                return
 
-        self._initialized = True
+            async with aiosqlite.connect(self.db_path) as db:
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS sessions (
+                        id TEXT PRIMARY KEY,
+                        title TEXT DEFAULT '',
+                        created_at TEXT NOT NULL,
+                        updated_at TEXT NOT NULL,
+                        metadata TEXT DEFAULT '{}'
+                    )
+                """)
+                await db.execute("""
+                    CREATE TABLE IF NOT EXISTS messages (
+                        id TEXT PRIMARY KEY,
+                        session_id TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        metadata TEXT DEFAULT '{}',
+                        created_at TEXT NOT NULL,
+                        FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+                    )
+                """)
+                await db.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_messages_session
+                    ON messages(session_id, created_at)
+                """)
+                await db.commit()
+
+            self._initialized = True
 
     async def create_session(self, title: str = "", metadata: dict | None = None) -> str:
         """Create a new conversation session. Returns session_id."""
         await self._ensure_initialized()
         session_id = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
@@ -77,7 +83,7 @@ class ConversationMemory:
         """Add a message to a session. Returns message_id."""
         await self._ensure_initialized()
         msg_id = str(uuid.uuid4())
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
@@ -193,7 +199,7 @@ class ConversationMemory:
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 "UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?",
-                (title, datetime.utcnow().isoformat(), session_id),
+                (title, datetime.now(timezone.utc).isoformat(), session_id),
             )
             await db.commit()
 
@@ -206,6 +212,14 @@ class ConversationMemory:
             await db.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
             await db.commit()
 
+    async def count_sessions(self) -> int:
+        """Get total session count."""
+        await self._ensure_initialized()
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute("SELECT COUNT(*) FROM sessions")
+            row = await cursor.fetchone()
+            return row[0] if row else 0
+
     async def clear_all(self):
         """Delete all sessions and messages."""
         await self._ensure_initialized()
@@ -214,3 +228,15 @@ class ConversationMemory:
             await db.execute("DELETE FROM messages")
             await db.execute("DELETE FROM sessions")
             await db.commit()
+
+
+# Singleton factory
+_shared_memory: ConversationMemory | None = None
+
+
+def get_memory() -> ConversationMemory:
+    """Get the shared ConversationMemory singleton."""
+    global _shared_memory
+    if _shared_memory is None:
+        _shared_memory = ConversationMemory()
+    return _shared_memory

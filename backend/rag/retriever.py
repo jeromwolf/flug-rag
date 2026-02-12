@@ -57,6 +57,7 @@ class HybridRetriever:
         self._kiwi = None
         self._bm25_corpus: list[dict] | None = None
         self._bm25_index: BM25Okapi | None = None
+        self._bm25_doc_count: int = 0  # Track doc count for auto-invalidation
 
     def _retrieval_cache_key(self, query: str, top_k: int | None, filters: dict | None, hyde: bool = False) -> str:
         """Build a cache key for retrieval results."""
@@ -149,6 +150,12 @@ class HybridRetriever:
 
     async def _bm25_search(self, query: str, top_k: int) -> list[dict]:
         """Search by BM25 keyword matching."""
+        # Auto-invalidate if document count changed (H-4)
+        current_count = await self.vectorstore.count()
+        if current_count != self._bm25_doc_count:
+            self._bm25_index = None
+            self._bm25_corpus = None
+
         if self._bm25_index is None:
             await self._build_bm25_index()
 
@@ -177,36 +184,38 @@ class HybridRetriever:
         return results
 
     async def _build_bm25_index(self):
-        """Build BM25 index from all documents in vectorstore."""
-        # Get all documents from ChromaDB
+        """Build BM25 index from all documents in vectorstore.
+
+        Uses BaseVectorStore.get_all_documents() abstraction (H-2 fix)
+        instead of accessing internal ChromaDB _collection.
+        """
         count = await self.vectorstore.count()
         if count == 0:
             return
 
-        # ChromaDB peek to get all docs (for BM25 index)
-        collection = self.vectorstore._collection
-        all_docs = await asyncio.to_thread(
-            collection.get,
-            include=["documents", "metadatas"],
-        )
+        try:
+            all_docs = await self.vectorstore.get_all_documents()
+        except NotImplementedError:
+            logger.warning(
+                "BM25 index skipped: %s does not support get_all_documents()",
+                type(self.vectorstore).__name__,
+            )
+            return
 
-        if not all_docs["ids"]:
+        if not all_docs:
             return
 
         self._bm25_corpus = []
         tokenized_corpus = []
 
-        for i, doc_id in enumerate(all_docs["ids"]):
-            content = all_docs["documents"][i] if all_docs["documents"] else ""
-            metadata = all_docs["metadatas"][i] if all_docs["metadatas"] else {}
-            self._bm25_corpus.append({
-                "id": doc_id,
-                "content": content,
-                "metadata": metadata,
-            })
+        for doc in all_docs:
+            content = doc.get("content", "")
+            self._bm25_corpus.append(doc)
             tokenized_corpus.append(self._tokenize(content))
 
         self._bm25_index = BM25Okapi(tokenized_corpus, k1=self.bm25_k1, b=self.bm25_b)
+        self._bm25_doc_count = count
+        logger.debug("BM25 index built with %d documents", count)
 
     def _tokenize(self, text: str) -> list[str]:
         """Korean morphological tokenization using kiwipiepy."""

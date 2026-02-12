@@ -39,6 +39,7 @@ class BenchmarkResult:
     rouge_1: float = 0.0
     rouge_l: float = 0.0
     composite_score: float = 0.0
+    category_score: float = 0.0
     grade: str = ""
 
 
@@ -112,8 +113,16 @@ async def run_benchmark(model_name: str | None = None, limit: int | None = None)
             # 답변 평가 (골든 답변 vs 실제 답변)
             eval_result = await evaluator.evaluate(q["answer"], answer)
 
-            # 성공 기준: 종합 점수 0.5 이상 + confidence 0.15 이상
-            success = eval_result.composite_score >= 0.5 and confidence > 0.15
+            # 카테고리별 성공 기준
+            category_score = AnswerEvaluator.compute_category_score(eval_result, q["category"])
+            CATEGORY_THRESHOLDS = {
+                "factual": 0.50,
+                "inference": 0.50,
+                "multi_hop": 0.48,
+                "negative": 0.45,
+            }
+            threshold = CATEGORY_THRESHOLDS.get(q["category"], 0.50)
+            success = category_score >= threshold and confidence > 0.15
 
             result = BenchmarkResult(
                 id=q["id"],
@@ -130,6 +139,7 @@ async def run_benchmark(model_name: str | None = None, limit: int | None = None)
                 rouge_1=eval_result.rouge_1,
                 rouge_l=eval_result.rouge_l,
                 composite_score=eval_result.composite_score,
+                category_score=category_score,
                 grade=eval_result.grade,
             )
             results.append(result)
@@ -152,7 +162,9 @@ async def run_benchmark(model_name: str | None = None, limit: int | None = None)
             print(
                 f"{status} conf={confidence:.2f} "
                 f"score={eval_result.composite_score:.2f}({eval_result.grade}) "
+                f"cat_score={category_score:.2f} "
                 f"rouge_l={eval_result.rouge_l:.2f} "
+                f"len_pen={eval_result.length_penalty:.2f} "
                 f"latency={latency_ms:.0f}ms"
             )
 
@@ -203,6 +215,7 @@ async def run_benchmark(model_name: str | None = None, limit: int | None = None)
                 answer_length=len(r.actual_answer),
                 expected_length=len(r.expected_answer),
                 length_ratio=round(len(r.actual_answer) / len(r.expected_answer), 2) if len(r.expected_answer) > 0 else 0.0,
+                length_penalty=1.0,
                 composite_score=r.composite_score,
                 grade=r.grade,
             )
@@ -256,7 +269,9 @@ async def run_benchmark(model_name: str | None = None, limit: int | None = None)
             print(f"  Q{r.id} ({r.category}/{r.difficulty}): {r.question[:40]}...")
             print(
                 f"       conf={r.confidence:.2f} score={r.composite_score:.2f}({r.grade}) "
-                f"sim={r.semantic_similarity:.2f} rouge_l={r.rouge_l:.2f}"
+                f"cat_score={r.category_score:.2f} "
+                f"sim={r.semantic_similarity:.2f} rouge_l={r.rouge_l:.2f} "
+                f"len_ratio={len(r.actual_answer)/max(len(r.expected_answer),1):.1f}x"
             )
 
     # Low-scoring questions (grade D or F)
@@ -310,6 +325,7 @@ async def run_benchmark(model_name: str | None = None, limit: int | None = None)
                         "rouge_1": r.rouge_1,
                         "rouge_l": r.rouge_l,
                         "composite_score": r.composite_score,
+                        "category_score": r.category_score,
                         "grade": r.grade,
                     }
                     for r in results

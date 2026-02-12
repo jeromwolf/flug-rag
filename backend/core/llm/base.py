@@ -74,5 +74,9 @@ class BaseLLM(ABC):
                 return json.loads(content[start:end])
             raise ValueError(f"Failed to parse JSON from LLM response: {content[:200]}")
 
+    async def close(self) -> None:
+        """Release resources (e.g. HTTP clients). Override in subclasses."""
+        pass
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(model={self.model!r})"

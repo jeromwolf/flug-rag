@@ -10,7 +10,7 @@ from jose import JWTError
 
 from auth.jwt_handler import verify_token
 from auth.models import ROLE_PERMISSIONS, Role, User
-from auth.user_store import user_store
+from auth.user_store import get_user_store
 from config.settings import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -58,7 +58,8 @@ async def get_current_user(
             detail="Invalid token payload",
         )
 
-    user = user_store.get_by_username(username)
+    user_store = await get_user_store()
+    user = await user_store.get_by_username(username)
     if user is None or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

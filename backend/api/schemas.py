@@ -5,12 +5,13 @@ from pydantic import BaseModel, Field
 
 # --- Chat ---
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(..., min_length=1, max_length=10000)
     session_id: str | None = None
     mode: str = "auto"  # "auto", "rag", "direct"
     provider: str | None = None
     model: str | None = None
     filters: dict | None = None
+    temperature: float | None = Field(None, ge=0.0, le=2.0, description="Temperature")
 
 
 class ChatResponse(BaseModel):

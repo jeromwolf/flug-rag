@@ -40,13 +40,58 @@ class MetadataExtractor:
         r'(\d{4})[-./](\d{1,2})',  # YYYY-MM
     ]
 
+    def _detect_source_type(self, file_path: str, content: str = "") -> str:
+        """Detect document source type from file path and content.
+
+        Returns:
+            "법률" for laws/statutes
+            "내부규정" for internal regulations
+            "정관" for articles of incorporation
+            "기타" for unclassified
+        """
+        import unicodedata
+        path_lower = unicodedata.normalize("NFC", file_path).lower()
+
+        # Law detection
+        law_patterns = ["가스공사법", "시행령", "시행규칙", "법률"]
+        for p in law_patterns:
+            if p in path_lower:
+                return "법률"
+
+        # Articles of incorporation
+        if "정관" in path_lower:
+            return "정관"
+
+        # Internal regulations (Korean Gas Technology Corporation)
+        rule_patterns = [
+            "규정", "규칙", "지침", "내규", "요령", "기준",
+            "내부규정", "사규",
+        ]
+        for p in rule_patterns:
+            if p in path_lower:
+                return "내부규정"
+
+        # Check if path contains 내부규정 directory
+        if "내부규정" in file_path or "한국가스공사법" in file_path:
+            if "한국가스공사법" in file_path:
+                return "법률"
+            return "내부규정"
+
+        return "기타"
+
     def extract(self, text: str, filename: str = "", file_path: str = "") -> dict:
         """Extract metadata from document text and filename.
 
         Returns:
-            dict with keys: department, category, dates, tags, title
+            dict with keys: department, category, dates, tags, title, source_type
         """
         metadata = {}
+
+        # Detect source type
+        if file_path:
+            metadata["source_type"] = self._detect_source_type(file_path, text[:1000] if text else "")
+        else:
+            metadata["source_type"] = self._detect_source_type(filename, text[:1000] if text else "")
 
         # Extract from filename
         if filename:

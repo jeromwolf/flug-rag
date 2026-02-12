@@ -2,7 +2,7 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -24,7 +24,7 @@ class AgentMessage:
     content: Any
     msg_type: MessageType = MessageType.REQUEST
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     correlation_id: str | None = None  # Links request to response
     metadata: dict = field(default_factory=dict)
 
@@ -71,7 +71,7 @@ class SharedContext:
             "action": "set",
             "key": key,
             "agent_id": agent_id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         self._history.append(entry)
         self._notify_listeners(key, value)

@@ -1,0 +1,108 @@
+# flux-rag 백업 CronJob
+# PVC 스냅샷 기반 일일 백업 + S3 호환 스토리지 업로드
+#
+# 사전 요구사항:
+#   - S3 호환 스토리지 (MinIO 등) 설정
+#   - Secret: flux-rag-backup-s3 (access-key, secret-key, endpoint)
+#   - PVC: flux-rag-data (백엔드 데이터 볼륨)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: flux-rag-backup
+  namespace: flux-rag
+  labels:
+    app: flux-rag
+    component: backup
+spec:
+  schedule: "0 2 * * *"  # 매일 02:00
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 3600  # 1시간 타임아웃
+      template:
+        metadata:
+          labels:
+            app: flux-rag
+            component: backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: amazon/aws-cli:latest
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -e
+                  DATE=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="/tmp/flux-rag-backup-$DATE.tar.gz"
+
+                  echo "=== flux-rag K8s 백업 시작: $(date) ==="
+
+                  # 1. 데이터 디렉토리 압축
+                  echo "[1/2] 데이터 압축..."
+                  tar czf "$BACKUP_FILE" \
+                    -C /data chroma_db/ \
+                    -C /data *.db \
+                    -C /data uploads/ 2>/dev/null || \
+                  tar czf "$BACKUP_FILE" -C /data . 2>/dev/null
+
+                  BACKUP_SIZE=$(du -sh "$BACKUP_FILE" | cut -f1)
+                  echo "  백업 크기: $BACKUP_SIZE"
+
+                  # 2. S3 호환 스토리지 업로드
+                  echo "[2/2] S3 업로드..."
+                  aws --endpoint-url "$S3_ENDPOINT" \
+                    s3 cp "$BACKUP_FILE" \
+                    "s3://$S3_BUCKET/flux-rag/backups/flux-rag-backup-$DATE.tar.gz"
+
+                  # 30일 이전 백업 삭제
+                  CUTOFF_DATE=$(date -d "-30 days" +%Y%m%d 2>/dev/null || date -v-30d +%Y%m%d)
+                  aws --endpoint-url "$S3_ENDPOINT" \
+                    s3 ls "s3://$S3_BUCKET/flux-rag/backups/" | \
+                    awk '{print $4}' | \
+                    while read -r file; do
+                      FILE_DATE=$(echo "$file" | grep -oP '\d{8}' | head -1)
+                      if [ -n "$FILE_DATE" ] && [ "$FILE_DATE" -lt "$CUTOFF_DATE" ]; then
+                        aws --endpoint-url "$S3_ENDPOINT" s3 rm "s3://$S3_BUCKET/flux-rag/backups/$file"
+                        echo "  삭제: $file"
+                      fi
+                    done
+
+                  echo "=== 백업 완료: $(date) ==="
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: flux-rag-backup-s3
+                      key: access-key
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: flux-rag-backup-s3
+                      key: secret-key
+                - name: S3_ENDPOINT
+                  valueFrom:
+                    secretKeyRef:
+                      name: flux-rag-backup-s3
+                      key: endpoint
+                - name: S3_BUCKET
+                  value: "flux-rag-backups"
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 512Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: flux-rag-data-pvc

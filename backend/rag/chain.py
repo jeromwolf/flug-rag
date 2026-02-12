@@ -43,6 +43,52 @@ class RAGChain:
         self.quality = quality or QualityController()
 
     @staticmethod
+    def _auto_detect_filters(question: str, filters: dict | None) -> dict | None:
+        """Auto-detect source_type filter from question keywords.
+
+        Returns enhanced filters dict if a specific source is detected,
+        otherwise returns the original filters unchanged.
+        """
+        if filters and filters.get("source_type"):
+            return filters  # User already specified, don't override
+
+        q = question.lower()
+
+        # Law/statute detection patterns
+        law_keywords = [
+            "한국가스공사법", "가스공사법", "시행령", "시행규칙",
+            "법 제", "법률 제", "조문", "부칙",
+        ]
+
+        # Internal regulation detection patterns
+        rule_keywords = [
+            "내부규정", "규정에", "사규", "지침에",
+            "인사규정", "감사규정", "보수규정", "여비규정",
+            "복무규정", "퇴직금", "경조금", "당직",
+            "출자회사", "정관",
+        ]
+
+        detected_source = None
+
+        for kw in law_keywords:
+            if kw in q:
+                detected_source = "법률"
+                break
+
+        if detected_source is None:
+            for kw in rule_keywords:
+                if kw in q:
+                    detected_source = "내부규정"
+                    break
+
+        if detected_source:
+            new_filters = dict(filters) if filters else {}
+            new_filters["source_type"] = detected_source
+            return new_filters
+
+        return filters
+
+    @staticmethod
     def _make_cache_key(question: str, mode: str, filters: dict | None, provider: str | None, model: str | None) -> str:
         """Build a deterministic cache key for a RAG query."""
         raw = json.dumps(
@@ -93,6 +139,7 @@ class RAGChain:
         """
         # Check cache for identical queries (TTL: 60s)
         cache_key = self._make_cache_key(question, mode, filters, provider, model)
+        cache = None
         try:
             from core.cache import get_cache
 
@@ -102,7 +149,7 @@ class RAGChain:
                 logger.debug("RAG cache hit for query: %s", question[:50])
                 return RAGResponse(**cached)
         except Exception:
-            pass
+            cache = None
 
         start_time = time.time()
 
@@ -142,62 +189,75 @@ class RAGChain:
 
         # Use override LLM if specified
         llm = self.llm
+        temp_llm = None
         if provider or model:
-            llm = create_llm(provider=provider, model=model, temperature=temperature or 0.7)
+            temp_llm = create_llm(provider=provider, model=model, temperature=temperature or settings.llm_temperature)
+            llm = temp_llm
 
-        # Agentic RAG: dynamic strategy routing
-        agentic_meta = None
-        if settings.agentic_rag_enabled and mode == "rag":
-            try:
-                from .agentic import AgenticRAGRouter
-                router = AgenticRAGRouter(llm=llm)
-                decision = await router.route(question)
-                agentic_meta = {
-                    "strategy": decision.strategy,
-                    "routing_confidence": decision.confidence,
-                    "reasoning": decision.reasoning,
-                    "_params": decision.params,
-                }
-                logger.info("Agentic RAG: strategy=%s (confidence=%.2f)", decision.strategy, decision.confidence)
-
-                # Apply routing decision
-                if decision.params.get("mode") == "direct":
-                    mode = "direct"
-                if decision.params.get("temperature") is not None:
-                    temperature = temperature if temperature is not None else decision.params["temperature"]
-            except Exception as e:
-                logger.warning("Agentic RAG routing failed: %s", e)
-
-        # Determine per-request overrides from agentic routing
-        agentic_use_multi_query = False
-        agentic_top_k = None
-        if agentic_meta:
-            agentic_use_multi_query = bool(agentic_meta.get("strategy") == "multi_query_rag")
-            params = agentic_meta.get("_params", {})
-            if params.get("top_k"):
-                agentic_top_k = params["top_k"]
-
-        if mode == "direct":
-            response = await self._direct_query(question, llm, start_time, user_id, correction_info, temperature)
-        else:
-            response = await self._rag_query(
-                question, llm, filters, start_time, user_id, correction_info, temperature,
-                force_multi_query=agentic_use_multi_query, override_top_k=agentic_top_k,
-            )
-
-        # Add agentic routing metadata (exclude internal _params)
-        if agentic_meta:
-            response.metadata["agentic_routing"] = {
-                k: v for k, v in agentic_meta.items() if not k.startswith("_")
-            }
-
-        # Store in cache (TTL: 60s)
         try:
-            await cache.set(cache_key, asdict(response), ttl=60)
-        except Exception:
-            pass
+            # Agentic RAG: dynamic strategy routing
+            agentic_meta = None
+            if settings.agentic_rag_enabled and mode == "rag":
+                try:
+                    from .agentic import AgenticRAGRouter
+                    router = AgenticRAGRouter(llm=llm)
+                    decision = await router.route(question)
+                    agentic_meta = {
+                        "strategy": decision.strategy,
+                        "routing_confidence": decision.confidence,
+                        "reasoning": decision.reasoning,
+                        "_params": decision.params,
+                    }
+                    logger.info("Agentic RAG: strategy=%s (confidence=%.2f)", decision.strategy, decision.confidence)
 
-        return response
+                    # Apply routing decision
+                    if decision.params.get("mode") == "direct":
+                        mode = "direct"
+                    if decision.params.get("temperature") is not None:
+                        temperature = temperature if temperature is not None else decision.params["temperature"]
+                except Exception as e:
+                    logger.warning("Agentic RAG routing failed: %s", e)
+
+            # Determine per-request overrides from agentic routing
+            agentic_use_multi_query = False
+            agentic_top_k = None
+            if agentic_meta:
+                agentic_use_multi_query = bool(agentic_meta.get("strategy") == "multi_query_rag")
+                params = agentic_meta.get("_params", {})
+                if params.get("top_k"):
+                    agentic_top_k = params["top_k"]
+
+            # Auto-detect source_type filter from question
+            if mode != "direct":
+                filters = self._auto_detect_filters(question, filters)
+                if filters and filters.get("source_type"):
+                    logger.info("Auto-detected source_type filter: %s", filters["source_type"])
+
+            if mode == "direct":
+                response = await self._direct_query(question, llm, start_time, user_id, correction_info, temperature)
+            else:
+                response = await self._rag_query(
+                    question, llm, filters, start_time, user_id, correction_info, temperature,
+                    force_multi_query=agentic_use_multi_query, override_top_k=agentic_top_k,
+                )
+
+            # Add agentic routing metadata (exclude internal _params)
+            if agentic_meta:
+                response.metadata["agentic_routing"] = {
+                    k: v for k, v in agentic_meta.items() if not k.startswith("_")
+                }
+
+            # Store in cache (TTL: 60s)
+            if cache is not None:
+                try:
+                    await cache.set(cache_key, asdict(response), ttl=60)
+                except Exception:
+                    pass
+
+            return response
+        finally:
+            if temp_llm is not None:
+                await temp_llm.close()
 
     async def _rag_query(
         self,
@@ -217,9 +277,8 @@ class RAGChain:
         multi_query_used = False
         hyde_embedding = None
 
-        # Apply top_k override from agentic routing
-        if override_top_k:
-            self.retriever.top_k = override_top_k
+        # Determine effective top_k (don't mutate shared retriever state)
+        effective_top_k = override_top_k or None
 
         # Generate HyDE embedding if enabled
         if settings.query_expansion_enabled:
@@ -243,6 +302,7 @@ class RAGChain:
                 )
                 retrieval_results = await mq_retriever.retrieve(
                     query=question,
+                    top_k=effective_top_k,
                     filters=filters,
                     hyde_embedding=hyde_embedding,
                 )
@@ -254,6 +314,7 @@ class RAGChain:
         if not multi_query_used:
             retrieval_results = await self.retriever.retrieve(
                 query=question,
+                top_k=effective_top_k,
                 filters=filters,
                 hyde_embedding=hyde_embedding if hyde_used else None,
             )
@@ -283,9 +344,13 @@ class RAGChain:
         if settings.context_max_chunks > 0:
             context_chunks = context_chunks[:settings.context_max_chunks]
 
+        # Determine model name for model-aware prompting
+        model_name = getattr(llm, 'model', None)
+
         system_prompt, user_prompt = self.prompt_manager.build_rag_prompt(
             query=question,
             context_chunks=context_chunks,
+            model_hint=model_name,
         )
 
         # Step 5: Generate
@@ -395,7 +460,8 @@ class RAGChain:
         )
 
         content = response.content
-        content = self._postprocess_answer(content)
+        postprocessed = self._postprocess_answer(content)
+        content = postprocessed if postprocessed else content.strip()
         # Guardrails: output check
         try:
             from .guardrails import get_guardrails_manager
@@ -411,11 +477,12 @@ class RAGChain:
         latency_ms = int((time.time() - start_time) * 1000)
 
         metadata = {
-            "confidence_score": 1.0,
-            "confidence_level": "high",
+            "confidence_score": 0.5,
+            "confidence_level": "medium",
             "model_used": f"{llm.provider_name}/{llm.model}",
             "latency_ms": latency_ms,
             "response_mode": "direct",
+            "note": "검색 근거 없이 LLM만으로 생성된 답변입니다.",
         }
 
         # Add query correction info if present
@@ -425,8 +492,9 @@ class RAGChain:
         return RAGResponse(
             content=content,
             sources=[],
-            confidence=1.0,
-            confidence_level="high",
+            confidence=0.5,
+            confidence_level="medium",
+            safety_warning="이 답변은 문서 검색 없이 LLM만으로 생성되었습니다. 정확도를 직접 확인해주세요.",
             metadata=metadata,
         )
 
@@ -455,95 +523,103 @@ class RAGChain:
 
         # Use override LLM if specified
         llm = self.llm
+        temp_llm = None
         if provider or model:
-            llm = create_llm(provider=provider, model=model, temperature=temperature or 0.7)
+            temp_llm = create_llm(provider=provider, model=model, temperature=temperature or settings.llm_temperature)
+            llm = temp_llm
 
-        yield {"event": "start", "data": {"message_id": message_id}}
-
-        # Guardrails: input check
         try:
-            from .guardrails import get_guardrails_manager
-            guard = await get_guardrails_manager()
-            guard_result = await guard.check_input(question, user_id=user_id)
-            if not guard_result.passed and guard_result.action == "block":
+            yield {"event": "start", "data": {"message_id": message_id}}
+
+            # Guardrails: input check
+            try:
+                from .guardrails import get_guardrails_manager
+                guard = await get_guardrails_manager()
+                guard_result = await guard.check_input(question, user_id=user_id)
+                if not guard_result.passed and guard_result.action == "block":
+                    yield {
+                        "event": "chunk",
+                        "data": {"content": guard_result.message or "입력이 필터링되었습니다."},
+                    }
+                    yield {
+                        "event": "end",
+                        "data": {
+                            "blocked_by": "guardrails",
+                            "triggered_rules": guard_result.triggered_rules,
+                        },
+                    }
+                    return
+            except Exception as e:
+                logger.debug("Guardrails input check skipped: %s", e)
+
+            if mode == "direct":
+                system, user_prompt = self.prompt_manager.build_direct_prompt(question)
+                # Note: Output guardrails not applied in streaming mode (tokens streamed one-by-one)
+                async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
+                    yield {"event": "chunk", "data": {"content": token}}
+                latency_ms = int((time.time() - start_time) * 1000)
+                yield {"event": "end", "data": {"confidence_score": 0.5, "confidence_level": "medium", "latency_ms": latency_ms, "note": "검색 근거 없이 LLM만으로 생성된 답변"}}
+                return
+
+            # RAG mode with streaming
+            # Step 0: HyDE query expansion (optional)
+            hyde_embedding = None
+            if settings.query_expansion_enabled:
+                try:
+                    from .query_expander import QueryExpander
+                    expander = QueryExpander(llm=llm)
+                    hyde_embedding = await expander.expand_hyde(question)
+                except Exception as e:
+                    logger.warning("HyDE expansion failed in streaming: %s", e)
+
+            # Step 1: Retrieve
+            results = await self.retriever.retrieve(query=question, filters=filters, hyde_embedding=hyde_embedding)
+            chunk_scores = [r.score for r in results]
+            confidence = self.quality.calculate_confidence(chunk_scores)
+
+            # Emit sources
+            for r in results:
                 yield {
-                    "event": "chunk",
-                    "data": {"content": guard_result.message or "입력이 필터링되었습니다."},
-                }
-                yield {
-                    "event": "end",
+                    "event": "source",
                     "data": {
-                        "blocked_by": "guardrails",
-                        "triggered_rules": guard_result.triggered_rules,
+                        "chunk_id": r.id,
+                        "filename": r.metadata.get("filename", ""),
+                        "page": r.metadata.get("page_number"),
+                        "score": round(r.score, 3),
                     },
                 }
-                return
-        except Exception as e:
-            logger.debug("Guardrails input check skipped: %s", e)
 
-        if mode == "direct":
-            system, user_prompt = self.prompt_manager.build_direct_prompt(question)
+            # Step 2: Build prompt and stream
+            context_chunks = [{"content": r.content, "metadata": r.metadata} for r in results]
+            # Limit context chunks for LLM (if configured)
+            if settings.context_max_chunks > 0:
+                context_chunks = context_chunks[:settings.context_max_chunks]
+            model_name = getattr(llm, 'model', None)
+            system, user_prompt = self.prompt_manager.build_rag_prompt(
+                query=question, context_chunks=context_chunks,
+                model_hint=model_name,
+            )
+
+            # Safety warning first
+            if self.quality.should_add_safety_warning(confidence):
+                warning = self.quality.get_safety_message(confidence)
+                yield {"event": "chunk", "data": {"content": warning + "\n\n"}}
+
+            # Stream LLM response
             # Note: Output guardrails not applied in streaming mode (tokens streamed one-by-one)
             async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
                 yield {"event": "chunk", "data": {"content": token}}
+
             latency_ms = int((time.time() - start_time) * 1000)
-            yield {"event": "end", "data": {"confidence_score": 1.0, "latency_ms": latency_ms}}
-            return
-
-        # RAG mode with streaming
-        # Step 0: HyDE query expansion (optional)
-        hyde_embedding = None
-        if settings.query_expansion_enabled:
-            try:
-                from .query_expander import QueryExpander
-                expander = QueryExpander(llm=llm)
-                hyde_embedding = await expander.expand_hyde(question)
-            except Exception as e:
-                logger.warning("HyDE expansion failed in streaming: %s", e)
-
-        # Step 1: Retrieve
-        results = await self.retriever.retrieve(query=question, filters=filters, hyde_embedding=hyde_embedding)
-        chunk_scores = [r.score for r in results]
-        confidence = self.quality.calculate_confidence(chunk_scores)
-
-        # Emit sources
-        for r in results:
             yield {
-                "event": "source",
+                "event": "end",
                 "data": {
-                    "chunk_id": r.id,
-                    "filename": r.metadata.get("filename", ""),
-                    "page": r.metadata.get("page_number"),
-                    "score": round(r.score, 3),
+                    "confidence_score": round(confidence, 3),
+                    "confidence_level": self.quality.get_confidence_level(confidence),
+                    "latency_ms": latency_ms,
+                    "source_count": len(results),
                 },
             }
-
-        # Step 2: Build prompt and stream
-        context_chunks = [{"content": r.content, "metadata": r.metadata} for r in results]
-        # Limit context chunks for LLM (if configured)
-        if settings.context_max_chunks > 0:
-            context_chunks = context_chunks[:settings.context_max_chunks]
-        system, user_prompt = self.prompt_manager.build_rag_prompt(
-            query=question, context_chunks=context_chunks,
-        )
-
-        # Safety warning first
-        if self.quality.should_add_safety_warning(confidence):
-            warning = self.quality.get_safety_message(confidence)
-            yield {"event": "chunk", "data": {"content": warning + "\n\n"}}
-
-        # Stream LLM response
-        # Note: Output guardrails not applied in streaming mode (tokens streamed one-by-one)
-        async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
-            yield {"event": "chunk", "data": {"content": token}}
-
-        latency_ms = int((time.time() - start_time) * 1000)
-        yield {
-            "event": "end",
-            "data": {
-                "confidence_score": round(confidence, 3),
-                "confidence_level": self.quality.get_confidence_level(confidence),
-                "latency_ms": latency_ms,
-                "source_count": len(results),
-            },
-        }
+        finally:
+            if temp_llm is not None:
+                await temp_llm.close()

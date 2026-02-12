@@ -33,10 +33,10 @@ class AnthropicProvider(BaseLLM):
     ) -> LLMResponse:
         response = await self._client.messages.create(
             model=self.model,
-            max_tokens=max_tokens or self.max_tokens,
+            max_tokens=max_tokens if max_tokens is not None else self.max_tokens,
             system=system or "",
             messages=[{"role": "user", "content": prompt}],
-            temperature=temperature or self.temperature,
+            temperature=temperature if temperature is not None else self.temperature,
             **kwargs,
         )
 
@@ -63,10 +63,10 @@ class AnthropicProvider(BaseLLM):
     ) -> AsyncIterator[str]:
         async with self._client.messages.stream(
             model=self.model,
-            max_tokens=max_tokens or self.max_tokens,
+            max_tokens=max_tokens if max_tokens is not None else self.max_tokens,
             system=system or "",
             messages=[{"role": "user", "content": prompt}],
-            temperature=temperature or self.temperature,
+            temperature=temperature if temperature is not None else self.temperature,
             **kwargs,
         ) as stream:
             async for text in stream.text_stream:

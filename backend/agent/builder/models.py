@@ -2,7 +2,7 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -72,8 +72,8 @@ class Workflow:
     nodes: list[WorkflowNode] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
     status: WorkflowStatus = WorkflowStatus.DRAFT
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     metadata: dict = field(default_factory=dict)
 
     def get_node(self, node_id: str) -> WorkflowNode | None:

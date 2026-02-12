@@ -130,7 +130,18 @@ class ChromaStore(BaseVectorStore):
         )
 
     def _build_where_filter(self, filters: dict) -> dict | None:
-        """Build ChromaDB where filter from dict."""
+        """Build ChromaDB where filter from dict.
+
+        If the filter already contains ChromaDB operators ($and, $or, $not),
+        pass through as-is (e.g. from access control merged filters).
+        """
+        if not filters:
+            return None
+
+        # If any top-level key is a ChromaDB operator, the filter is pre-built
+        if any(key.startswith("$") for key in filters):
+            return filters
+
         conditions = []
         for key, value in filters.items():
             if value is not None:
@@ -144,6 +155,22 @@ class ChromaStore(BaseVectorStore):
         if len(conditions) == 1:
             return conditions[0]
         return {"$and": conditions}
+
+    async def get_all_documents(self) -> list[dict]:
+        """Get all documents for BM25 index building."""
+        all_docs = await asyncio.to_thread(
+            self._collection.get,
+            include=["documents", "metadatas"],
+        )
+        items = []
+        if all_docs["ids"]:
+            for i, doc_id in enumerate(all_docs["ids"]):
+                items.append({
+                    "id": doc_id,
+                    "content": all_docs["documents"][i] if all_docs["documents"] else "",
+                    "metadata": all_docs["metadatas"][i] if all_docs["metadatas"] else {},
+                })
+        return items
 
     def get_collection_info(self) -> dict:
         """Get collection metadata and stats."""

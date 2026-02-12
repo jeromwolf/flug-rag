@@ -56,3 +56,15 @@ class BaseVectorStore(ABC):
     async def clear(self) -> None:
         """Clear all documents."""
         ...
+
+    async def get_all_documents(self) -> list[dict]:
+        """Get all documents with content and metadata (for BM25 index).
+
+        Returns:
+            List of dicts with keys: id, content, metadata.
+            Default implementation raises NotImplementedError.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement get_all_documents(). "
+            "BM25 hybrid search requires this method."
+        )

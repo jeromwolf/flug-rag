@@ -21,6 +21,10 @@ spec:
         app: flux-rag
         component: frontend
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        fsGroup: 101
       containers:
       - name: frontend
         image: flux-rag-frontend:latest  # 실제 레지스트리 경로로 변경 (예: ghcr.io/org/flux-rag-frontend:v1.0.0)
@@ -29,6 +33,9 @@ spec:
         - containerPort: 80
           name: http
           protocol: TCP
+
+        securityContext:
+          allowPrivilegeEscalation: false
 
         # 리소스 제한
         resources:

@@ -1,6 +1,7 @@
-"""HWP document loader using pyhwp."""
+"""HWP document loader using hwp5txt, olefile, and LibreOffice fallbacks."""
 
 import asyncio
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -9,7 +10,7 @@ from .base import BaseLoader, LoadedDocument
 
 
 class HWPLoader(BaseLoader):
-    """Load HWP files. Tries pyhwp first, falls back to LibreOffice conversion."""
+    """Load HWP files. Tries hwp5txt first, then olefile, then LibreOffice."""
 
     supported_extensions = [".hwp"]
 
@@ -18,39 +19,74 @@ class HWPLoader(BaseLoader):
         return await asyncio.to_thread(self._load_sync, path)
 
     def _load_sync(self, path: Path) -> LoadedDocument:
-        # Try pyhwp first
+        # Try hwp5txt first (best quality)
         try:
-            return self._load_with_pyhwp(path)
+            return self._load_with_hwp5txt(path)
         except Exception:
             pass
 
-        # Fallback: LibreOffice CLI conversion (hwp → docx → text)
+        # Try olefile (OLE-based extraction)
+        try:
+            return self._load_with_olefile(path)
+        except Exception:
+            pass
+
+        # Fallback: LibreOffice CLI conversion
         try:
             return self._load_with_libreoffice(path)
         except Exception as e:
             raise RuntimeError(
                 f"Failed to load HWP file: {path}. "
-                f"Neither pyhwp nor LibreOffice could process it. Error: {e}"
+                f"hwp5txt, olefile, LibreOffice all failed. Error: {e}"
             )
 
-    def _load_with_pyhwp(self, path: Path) -> LoadedDocument:
-        """Load HWP using pyhwp library."""
+    def _load_with_hwp5txt(self, path: Path) -> LoadedDocument:
+        """Extract text using hwp5txt command."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            # Copy file to temp dir to avoid cwd pollution
+            tmp_hwp = Path(tmp_dir) / path.name
+            shutil.copy2(path, tmp_hwp)
+
+            result = subprocess.run(
+                ["hwp5txt", str(tmp_hwp)],
+                capture_output=True,
+                text=True,
+                cwd=tmp_dir,
+                timeout=30,
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                text = result.stdout.strip()
+                if len(text) > 10:
+                    return LoadedDocument(
+                        content=text,
+                        metadata={
+                            "filename": path.name,
+                            "file_type": "hwp",
+                            "extraction_method": "hwp5txt",
+                        },
+                    )
+
+            raise RuntimeError("hwp5txt produced no output")
+
+    def _load_with_olefile(self, path: Path) -> LoadedDocument:
+        """Load HWP using olefile OLE extraction."""
+        import struct
+
         import olefile
 
         if not olefile.isOleFile(str(path)):
-            raise ValueError("Not a valid OLE file (HWP format)")
+            raise ValueError("Not a valid OLE file")
 
         ole = olefile.OleFileIO(str(path))
-
-        # Extract text from HWP bodytext sections
         text_parts = []
+
         for stream_name in ole.listdir():
             stream_path = "/".join(stream_name)
-            if "BodyText" in stream_path or "bodytext" in stream_path.lower():
+            if "bodytext" in stream_path.lower():
                 try:
                     data = ole.openstream(stream_name).read()
-                    # HWP stores text in UTF-16 encoded sections
-                    text = self._extract_text_from_bodytext(data)
+                    text = self._extract_text_from_bodytext(data, struct)
                     if text.strip():
                         text_parts.append(text.strip())
                 except Exception:
@@ -60,39 +96,35 @@ class HWPLoader(BaseLoader):
 
         content = "\n\n".join(text_parts)
         if not content.strip():
-            raise ValueError("No text extracted from HWP via pyhwp")
+            raise ValueError("No text extracted via olefile")
 
         return LoadedDocument(
             content=content,
             metadata={
                 "filename": path.name,
                 "file_type": "hwp",
-                "extraction_method": "pyhwp",
+                "extraction_method": "olefile",
             },
         )
 
-    def _extract_text_from_bodytext(self, data: bytes) -> str:
+    @staticmethod
+    def _extract_text_from_bodytext(data: bytes, struct) -> str:
         """Extract readable text from HWP bodytext binary data."""
-        import struct
-
         text_parts = []
         i = 0
         while i < len(data) - 1:
-            # Try to decode as UTF-16LE characters
             try:
                 char_code = struct.unpack_from("<H", data, i)[0]
                 if 0x20 <= char_code < 0xFFFF and char_code not in (0xFEFF, 0xFFFE):
                     char = chr(char_code)
-                    if char.isprintable() or char in ('\n', '\r', '\t'):
+                    if char.isprintable() or char in ("\n", "\r", "\t"):
                         text_parts.append(char)
                     elif char_code < 0x20:
-                        # Control characters - treat some as newlines
                         if char_code in (0x0A, 0x0D, 0x02):
-                            text_parts.append('\n')
+                            text_parts.append("\n")
                 i += 2
             except (struct.error, ValueError):
                 i += 2
-
         return "".join(text_parts)
 
     def _load_with_libreoffice(self, path: Path) -> LoadedDocument:
@@ -114,12 +146,10 @@ class HWPLoader(BaseLoader):
             if result.returncode != 0:
                 raise RuntimeError(f"LibreOffice conversion failed: {result.stderr}")
 
-            # Find the converted DOCX
             docx_files = list(Path(tmp_dir).glob("*.docx"))
             if not docx_files:
                 raise RuntimeError("LibreOffice conversion produced no output")
 
-            # Use python-docx to extract text
             from docx import Document as DocxDocument
 
             doc = DocxDocument(str(docx_files[0]))

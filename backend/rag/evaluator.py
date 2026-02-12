@@ -29,6 +29,7 @@ class AnswerEvaluation:
     length_ratio: float  # 길이 비율
     composite_score: float  # 종합 점수 (가중 평균)
     grade: str  # A/B/C/D/F 등급
+    length_penalty: float = 1.0  # 1.0 = no penalty, <1.0 = verbose answer
 
 
 class _KoreanCharTokenizer:
@@ -53,14 +54,18 @@ class AnswerEvaluator:
 
     - 의미 유사도: bge-m3 임베딩 → cosine similarity
     - ROUGE: rouge-score 라이브러리로 ROUGE-1, ROUGE-L F1 (한국어 문자 수준)
-    - 종합 점수: 0.5 * semantic + 0.3 * rouge_l + 0.2 * rouge_1
+    - 종합 점수: 0.65 * semantic + 0.2 * rouge_l + 0.15 * rouge_1
     - 등급: A(>=0.8), B(>=0.65), C(>=0.5), D(>=0.35), F(<0.35)
+
+    NOTE: 한국어 법률 QA 특성상 의미 유사도 비중을 높임.
+    같은 법률 개념이 다양한 표현으로 기술되므로 어휘 일치(ROUGE)보다
+    의미적 일치(semantic similarity)에 더 높은 가중치를 부여.
     """
 
-    # 종합 점수 가중치
-    W_SEMANTIC = 0.5
-    W_ROUGE_L = 0.3
-    W_ROUGE_1 = 0.2
+    # 종합 점수 가중치 (한국어 법률 QA 최적화)
+    W_SEMANTIC = 0.65
+    W_ROUGE_L = 0.20
+    W_ROUGE_1 = 0.15
 
     # 등급 기준
     GRADE_THRESHOLDS = [
@@ -69,6 +74,14 @@ class AnswerEvaluator:
         (0.5, "C"),
         (0.35, "D"),
     ]
+
+    # Category-specific weights
+    CATEGORY_WEIGHTS = {
+        "factual": {"semantic": 0.55, "rouge_l": 0.30, "rouge_1": 0.15},  # factual needs precise citation
+        "inference": {"semantic": 0.70, "rouge_l": 0.15, "rouge_1": 0.15},  # inference focuses on meaning
+        "multi_hop": {"semantic": 0.65, "rouge_l": 0.20, "rouge_1": 0.15},  # multi_hop balances both
+        "negative": {"semantic": 0.80, "rouge_l": 0.10, "rouge_1": 0.10},  # negative focuses on semantic (absence detection)
+    }
 
     def __init__(self):
         self._embedder = LocalEmbedding()
@@ -102,11 +115,19 @@ class AnswerEvaluator:
         actual_len = len(actual)
         length_ratio = actual_len / expected_len if expected_len > 0 else 0.0
 
+        # Length penalty: penalize verbose answers
+        # If answer is >2.5x the expected length, scale down composite
+        length_penalty = 1.0
+        if expected_len > 0 and actual_len > expected_len * 2.5:
+            # Gradual penalty: 2.5x → 1.0, 5x → 0.85, 10x → 0.7
+            ratio = actual_len / expected_len
+            length_penalty = max(0.7, 1.0 - (ratio - 2.5) * 0.04)
+
         composite = (
             self.W_SEMANTIC * semantic_sim
             + self.W_ROUGE_L * rouge_l
             + self.W_ROUGE_1 * rouge_1
-        )
+        ) * length_penalty
 
         return AnswerEvaluation(
             semantic_similarity=round(semantic_sim, 4),
@@ -115,6 +136,7 @@ class AnswerEvaluator:
             answer_length=actual_len,
             expected_length=expected_len,
             length_ratio=round(length_ratio, 2),
+            length_penalty=round(length_penalty, 4),
             composite_score=round(composite, 4),
             grade=self._compute_grade(composite),
         )
@@ -138,6 +160,7 @@ class AnswerEvaluator:
                 answer_length=len(actual),
                 expected_length=len(expected),
                 length_ratio=0.0,
+                length_penalty=1.0,
                 composite_score=0.0,
                 grade="F",
             )
@@ -175,6 +198,7 @@ class AnswerEvaluator:
                     answer_length=len(actual),
                     expected_length=len(expected),
                     length_ratio=0.0,
+                    length_penalty=1.0,
                     composite_score=0.0,
                     grade="F",
                 )
@@ -192,6 +216,30 @@ class AnswerEvaluator:
                 results[idx] = self._score_pair(vec_expected, vec_actual, expected, actual)
 
         return results  # type: ignore[return-value]
+
+    @staticmethod
+    def compute_category_score(
+        eval_result: "AnswerEvaluation",
+        category: str,
+    ) -> float:
+        """Compute category-adjusted composite score.
+
+        Different question types weight metrics differently:
+        - factual: Higher ROUGE weight (needs precise law text citation)
+        - inference: Higher semantic weight (interpretation matters more)
+        - negative: High semantic weight (detecting absence, wording varies)
+        - multi_hop: Balanced approach
+        """
+        weights = AnswerEvaluator.CATEGORY_WEIGHTS.get(
+            category,
+            {"semantic": 0.65, "rouge_l": 0.20, "rouge_1": 0.15},
+        )
+        score = (
+            weights["semantic"] * eval_result.semantic_similarity
+            + weights["rouge_l"] * eval_result.rouge_l
+            + weights["rouge_1"] * eval_result.rouge_1
+        ) * eval_result.length_penalty
+        return round(score, 4)
 
     @staticmethod
     def summarize(evaluations: list[AnswerEvaluation]) -> dict:

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from auth.audit import AuditAction, audit_logger
 from auth.dependencies import get_current_user, require_role
@@ -14,7 +14,7 @@ from auth.jwt_handler import create_access_token, create_refresh_token, verify_t
 from auth.ldap_provider import ldap_provider
 from auth.models import Role, Token, User
 from auth.rate_limiter import login_rate_limiter
-from auth.user_store import user_store
+from auth.user_store import get_user_store
 from config.settings import settings
 
 router = APIRouter()
@@ -130,12 +130,13 @@ async def login(body: LoginRequest, request: Request):
     login_rate_limiter.record(rate_key)
 
     # 1. Try LDAP first (if configured)
+    user_store = await get_user_store()
     user: User | None = None
     if ldap_provider.is_configured:
         ldap_info = ldap_provider.authenticate(body.username, body.password)
         if ldap_info is not None:
             # Map LDAP user to local user (create if missing)
-            user = user_store.get_by_username(body.username)
+            user = await user_store.get_by_username(body.username)
             if user is None:
                 # Auto-create from LDAP info with default USER role
                 user = User(
@@ -146,10 +147,11 @@ async def login(body: LoginRequest, request: Request):
                     department=ldap_info.department,
                     role=Role.USER,
                 )
+                await user_store.create_user(user)
 
     # 2. Fall back to local store
     if user is None:
-        user = user_store.authenticate(body.username, body.password)
+        user = await user_store.authenticate(body.username, body.password)
 
     if user is None:
         audit_logger.log_event(
@@ -205,7 +207,8 @@ async def refresh_token(body: RefreshRequest, request: Request):
         )
 
     username = payload.get("sub")
-    user = user_store.get_by_username(username) if username else None
+    user_store = await get_user_store()
+    user = await user_store.get_by_username(username) if username else None
     if user is None or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -258,7 +261,8 @@ async def list_users(
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
 ):
     """List all users (admin only)."""
-    return [_user_to_response(u) for u in user_store.list_users()]
+    user_store = await get_user_store()
+    return [_user_to_response(u) for u in await user_store.list_users()]
 
 
 @router.put("/auth/users/{user_id}/role")
@@ -277,7 +281,8 @@ async def update_user_role(
             detail=f"Invalid role: {body.role}. Valid: {[r.value for r in Role]}",
         )
 
-    updated = user_store.update_role(user_id, new_role)
+    user_store = await get_user_store()
+    updated = await user_store.update_role(user_id, new_role)
     if updated is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
@@ -303,3 +308,183 @@ async def get_audit_logs(
     """Retrieve audit log entries (admin only)."""
     events = audit_logger.get_events(limit=limit, user_id=user_id, action=action)
     return {"events": events, "total": len(events)}
+
+
+# ===== Ethics Pledge Endpoints =====
+
+@router.get("/auth/ethics-pledge")
+async def get_ethics_pledge():
+    """
+    최신 윤리 서약 내용 조회
+    """
+    from auth.ethics import CURRENT_PLEDGE_VERSION, CURRENT_PLEDGE_CONTENT
+    return {
+        "version": CURRENT_PLEDGE_VERSION,
+        "content": CURRENT_PLEDGE_CONTENT,
+    }
+
+
+@router.get("/auth/ethics-pledge/status")
+async def get_pledge_status(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    현재 사용자의 서약 동의 상태 확인
+    """
+    from auth.ethics import get_pledge_manager, CURRENT_PLEDGE_VERSION
+    manager = await get_pledge_manager()
+    agreed = await manager.has_agreed(current_user.id)
+    return {
+        "agreed": agreed,
+        "current_version": CURRENT_PLEDGE_VERSION,
+        "user_id": current_user.id,
+    }
+
+
+@router.post("/auth/ethics-pledge/agree")
+async def agree_ethics_pledge(
+    current_user: Annotated[User, Depends(get_current_user)],
+    request: Request,
+):
+    """
+    윤리 서약 동의
+    """
+    from auth.ethics import get_pledge_manager
+    manager = await get_pledge_manager()
+
+    ip_address = request.client.host if request.client else ""
+    record = await manager.agree(current_user.id, ip_address=ip_address)
+
+    return {
+        "status": "agreed",
+        "version": record.version,
+        "agreed_at": record.agreed_at,
+    }
+
+
+# ===== Access Request Endpoints =====
+
+class AccessRequestCreate(BaseModel):
+    requested_role: str = Field(..., description="요청 역할: admin, manager, user")
+    reason: str = Field(..., min_length=10, description="신청 사유 (최소 10자)")
+
+
+class AccessRequestReview(BaseModel):
+    decision: str = Field(..., description="approved 또는 rejected")
+    comment: str = Field("", description="검토 의견")
+
+
+@router.post("/auth/access-request")
+async def create_access_request(
+    body: AccessRequestCreate,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    권한 신청 - 인증된 사용자가 역할 변경 요청
+    """
+    from auth.access_request import get_request_manager
+    manager = await get_request_manager()
+
+    try:
+        req = await manager.create_request(
+            user_id=current_user.id,
+            username=current_user.username,
+            current_role=current_user.role.value,
+            requested_role=body.requested_role,
+            reason=body.reason,
+        )
+        return {
+            "status": "created",
+            "request_id": req.id,
+            "requested_role": req.requested_role,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.get("/auth/access-request/my")
+async def get_my_access_requests(
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """
+    내 권한 신청 이력 조회
+    """
+    from auth.access_request import get_request_manager
+    manager = await get_request_manager()
+    requests = await manager.get_user_requests(current_user.id)
+
+    return {
+        "requests": [
+            {
+                "id": r.id,
+                "requested_role": r.requested_role,
+                "reason": r.reason,
+                "status": r.status,
+                "created_at": r.created_at,
+                "reviewer_comment": r.reviewer_comment,
+                "reviewed_at": r.reviewed_at,
+            }
+            for r in requests
+        ]
+    }
+
+
+@router.get("/auth/admin/access-requests")
+async def get_pending_access_requests(
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """
+    관리자: 대기 중인 권한 신청 목록
+    """
+    from auth.access_request import get_request_manager
+    manager = await get_request_manager()
+    requests = await manager.get_pending_requests()
+
+    return {
+        "requests": [
+            {
+                "id": r.id,
+                "user_id": r.user_id,
+                "username": r.username,
+                "current_role": r.current_role,
+                "requested_role": r.requested_role,
+                "reason": r.reason,
+                "status": r.status,
+                "created_at": r.created_at,
+            }
+            for r in requests
+        ],
+        "total": len(requests),
+    }
+
+
+@router.put("/auth/admin/access-requests/{request_id}")
+async def review_access_request(
+    request_id: str,
+    body: AccessRequestReview,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """
+    관리자: 권한 신청 승인/거절
+    """
+    from auth.access_request import get_request_manager
+
+    if body.decision not in ("approved", "rejected"):
+        raise HTTPException(status_code=400, detail="decision must be 'approved' or 'rejected'")
+
+    manager = await get_request_manager()
+    try:
+        req = await manager.review_request(
+            request_id=request_id,
+            reviewer_id=current_user.id,
+            decision=body.decision,
+            comment=body.comment,
+        )
+        return {
+            "status": req.status,
+            "request_id": req.id,
+            "reviewer_comment": req.reviewer_comment,
+            "reviewed_at": req.reviewed_at,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

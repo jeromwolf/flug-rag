@@ -26,8 +26,9 @@ class RateLimiter:
     def is_allowed(self, key: str) -> bool:
         """Return ``True`` if *key* has not exceeded the rate limit."""
         now = time.monotonic()
-        self._prune(key, now)
-        return len(self._attempts[key]) < self.max_attempts
+        if key in self._attempts:
+            self._prune(key, now)
+        return len(self._attempts.get(key, [])) < self.max_attempts
 
     def record(self, key: str) -> None:
         """Record an attempt for *key*."""
@@ -48,6 +49,8 @@ class RateLimiter:
     def _prune(self, key: str, now: float) -> None:
         cutoff = now - self.window_seconds
         self._attempts[key] = [t for t in self._attempts[key] if t > cutoff]
+        if not self._attempts[key]:
+            del self._attempts[key]
 
 
 # Singleton for login rate-limiting: 5 attempts per 60 seconds

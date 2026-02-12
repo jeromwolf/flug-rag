@@ -1,0 +1,241 @@
+{
+  "summary": {
+    "total_questions": 10,
+    "success_count": 0,
+    "success_rate": 0.0,
+    "avg_confidence": 0.4997,
+    "avg_latency_ms": 108511.3,
+    "total_time_sec": 1095.5,
+    "avg_composite_score": 0.3558,
+    "avg_semantic_similarity": 0.6367,
+    "avg_rouge_1": 0.087,
+    "avg_rouge_l": 0.0667,
+    "grade_distribution": {
+      "A": 0,
+      "B": 0,
+      "C": 0,
+      "D": 3,
+      "F": 2
+    }
+  },
+  "category_stats": {
+    "factual": {
+      "total": 10,
+      "success": 0,
+      "confidence_sum": 4.997389555702846,
+      "score_sum": 1.7788,
+      "sim_sum": 3.1835,
+      "rouge_sum": 0.3335
+    },
+    "inference": {
+      "total": 0,
+      "success": 0,
+      "confidence_sum": 0.0,
+      "score_sum": 0.0,
+      "sim_sum": 0.0,
+      "rouge_sum": 0.0
+    },
+    "multi_hop": {
+      "total": 0,
+      "success": 0,
+      "confidence_sum": 0.0,
+      "score_sum": 0.0,
+      "sim_sum": 0.0,
+      "rouge_sum": 0.0
+    },
+    "negative": {
+      "total": 0,
+      "success": 0,
+      "confidence_sum": 0.0,
+      "score_sum": 0.0,
+      "sim_sum": 0.0,
+      "rouge_sum": 0.0
+    }
+  },
+  "difficulty_stats": {
+    "easy": {
+      "total": 8,
+      "success": 0
+    },
+    "medium": {
+      "total": 2,
+      "success": 0
+    },
+    "hard": {
+      "total": 0,
+      "success": 0
+    }
+  },
+  "results": [
+    {
+      "id": 1,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사법의 목적은 무엇인가요?",
+      "expected_answer": "한국가스공사를 설립하여 가스를 장기적으로 안정되게 공급할 수 있는 기반을 마련함으로써 국민생활의 편익 증진과 공공복리의 향상에 이바지하게 함을 목적으로 합니다.",
+      "actual_answer": "<thought>\n답변을 작성하기 위해 먼저 질문의 핵심을 파악해야 합니다. 질문은 \"한국가스공사법의 목적은 무엇인가요?\" 입니다. 컨텍스트에서 해당 법의 목적을 찾기 위해 각 문서를 살펴봐야 합니다.\n\n컨텍스트의 첫 번째 문서 (문서1)는 한국가스공사법의 여러 조항을 포함하고 있지만, 법의 목적이나 서문에 대한 직접적인 언급은 없습니다. 일반적으로 법률의 목적은 법률의 제1조에 명시되어 있는 경우가 많습니다. 그러나 제공된 문서들 중에서 제1조에 대한 내용이 포함된 부분이 보이지 않습니다. \n\n문서1의 첫 페이지에 있는 내용은 주로 사업 범위, 투자, 연구개발, 행정 협의, 토지 매수 등에 관한 규정들로 이루어져 있습니다. 제16조의2나 다른 조항들도 특정 사업 절차에 관한 것이지만, 법의 목적에 대한 설명은 없습니다. \n\n다른 문서들 (문서2~5)도 특정 규정들을 다루고 있지만, 법의 목적을 명시한 부분은 없어 보입니다. 예를 들어, 문서3의 제16조의4나 제19조(벌칙) 등은 특정 조항의 내용을 설명하지만 목적에 대해서는 언급하고 있지 않습니다.\n\n따라서, 주어진 컨텍스트 내에서 한국가스공사법의 목적에 대한 직접적인 규정을 찾을 수 없습니다. 법률의 목적은 보통 제1조에 있으나, 해당 조항이 제공된 문서들에 포함되어 있지 않으므로, 해당 규정이 없다는 답변이 적절할 것 같습니다. \n\n그러나 혹시 다른 조항에서 간접적으로 목적을 추론할 수 있는지 확인해보겠습니다. 예를 들어, 제16조의2에서 \"가스사업 실시계획\"에 대한 규정이 있는데, 이는 가스 사업을 수행하기 위한 절차를 규정하고 있습니다. 또한 제11조(투자 등)에서는 공사의 사업과 관련된 투자 및 융자를 허용하고 있습니다. 이러한 조항들은 한국가스공사가 천연가스 및 관련 사업을 수행하고, 기술 개발과 연구를 지원하며, 국가 에너지 정책에 기여하는 역할을 수행하는 것을 목적으로 하는 것으로 추론할 수 있습니다. 하지만 이는 간접적인 해석일 뿐, 법률의 명시적인 목적 조항은 없어 보입니다.\n\n따라서, 주어진 컨텍스트에서 해당 질문에 대한 직접적인 답을 찾을 수 없으므로 \"이 법에 해당 규정이 없습니다\"라고 답변해야 합니다. 하지만 예시에서는 목적을 묻는 질문에 대해 법조문에서 찾은 내용을 인용하는 방식이었지만, 여기서는 해당 조항이 없으므로 그렇게 답변해야 합니다.\n</thought>\n\n한국가스공사법의 목적에 대한 명시적 규정이 제공된 문서들 내에서는 확인되지 않습니다. 법률의 목적은 통상 제1조에 명시되으나, 해당 조항이 포함된 부분이 없으므로 해당 규정이 없습니다.",
+      "confidence": 0.9996005797209789,
+      "sources_count": 5,
+      "latency_ms": 116420.3,
+      "success": false,
+      "semantic_similarity": 0.6549,
+      "rouge_1": 0.1102,
+      "rouge_l": 0.0735,
+      "composite_score": 0.3715,
+      "grade": "D"
+    },
+    {
+      "id": 2,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사의 법적 지위는 무엇인가요?",
+      "expected_answer": "한국가스공사는 법인입니다.",
+      "actual_answer": "<thought>\nOkay, let me tackle this question. The user is asking for the legal status of the Korea Gas Corporation (한국가스공사). Looking at the provided documents, I need to check each one for any mention of the company's legal form or structure.\n\nFirst, looking at Document 1 from the Korean Gas Corporation Act. The title says \"한국가스공사법\" which translates to the Korean Gas Corporation Act. Typically, such entities are established under a specific legal status. In many countries, public utilities like gas companies are often set up as public corporations. \n\nChecking the sections in Document 1. The first few sections might outline the establishment. Since the user's example mentioned \"법인\" (corporation) in the sample answer for a similar question, maybe the law defines it as a corporation. Let me scan through the provided parts of the document. \n\nIn the first document (p.3), the sections start with the purposes of the corporation (like conducting certain projects), but the exact legal status isn't explicitly stated here. However, in the sample answer given in the example, the answer was \"법인\" referencing a section like 제2조 (Article 2). Since the user's example used that, perhaps in the actual law's Article 2, it's defined as a corporation. \n\nLooking at the other documents: Document 2 is about Liquefied Petroleum Gas Act, which probably doesn't cover the main corporation's status. Documents 3 to 5 are other parts of the same Korean Gas Corporation Act. For example, in Document 3 (p.5), there's mention of \"공사(\n\nSince the example answer refers to Article 2, even though the provided context might not have the exact text of Article 2 here (since the snippets given might not include that part), but based on standard legal structures and the terminology used (\"공사\"), it's safe to assume that the law establishes the Korea Gas Corporation as a public corporation (법인) under Article 2. The user's example also used that structure, so following that pattern, the answer should be that it's a corporation as per Article 2 of the law.\n</thought>\n\n한국가스공사는 법인으로 설립되었습니다. (제2조)",
+      "confidence": 0.9995972089808339,
+      "sources_count": 5,
+      "latency_ms": 76511.4,
+      "success": false,
+      "semantic_similarity": 0.7392,
+      "rouge_1": 0.0133,
+      "rouge_l": 0.0133,
+      "composite_score": 0.3763,
+      "grade": "D"
+    },
+    {
+      "id": 3,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사의 주된 사무소 소재지는 어떻게 정하나요?",
+      "expected_answer": "공사의 주된 사무소의 소재지는 정관으로 정합니다.",
+      "actual_answer": "ERROR: ",
+      "confidence": 0.0,
+      "sources_count": 0,
+      "latency_ms": 122472.9,
+      "success": false,
+      "semantic_similarity": 0.0,
+      "rouge_1": 0.0,
+      "rouge_l": 0.0,
+      "composite_score": 0.0,
+      "grade": ""
+    },
+    {
+      "id": 4,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사가 지사나 사업소를 설치하려면 어떤 절차가 필요한가요?",
+      "expected_answer": "이사회의 의결을 거쳐 필요한 곳에 지사 또는 사업소를 둘 수 있습니다.",
+      "actual_answer": "ERROR: ",
+      "confidence": 0.0,
+      "sources_count": 0,
+      "latency_ms": 122834.3,
+      "success": false,
+      "semantic_similarity": 0.0,
+      "rouge_1": 0.0,
+      "rouge_l": 0.0,
+      "composite_score": 0.0,
+      "grade": ""
+    },
+    {
+      "id": 5,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사의 자본은 어떻게 구성되나요?",
+      "expected_answer": "공사의 자본은 주식으로 분할합니다.",
+      "actual_answer": "ERROR: ",
+      "confidence": 0.0,
+      "sources_count": 0,
+      "latency_ms": 123496.5,
+      "success": false,
+      "semantic_similarity": 0.0,
+      "rouge_1": 0.0,
+      "rouge_l": 0.0,
+      "composite_score": 0.0,
+      "grade": ""
+    },
+    {
+      "id": 6,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사는 언제 성립하나요?",
+      "expected_answer": "공사는 주된 사무소의 소재지에서 설립등기를 함으로써 성립합니다.",
+      "actual_answer": "<thought>\n답변을 준비하기 위해 먼저 질문을 분석합니다. 질문은 \"한국가스공사는 언제 성립하나요?\" 입니다. 이 질문은 한국가스공사가 언제 설립되었는지, 즉 법인으로서 성립일을 묻는 것입니다.\n\n컨텍스트 문서 중 관련된 조항을 찾아야 합니다. 문서 2, 3,4,5 중에서 제2조나 제6조와 같은 곳을 확인해 보세요. \n\n문서 4 (페이지 2)의 제6조를 보면:\n\n제6조(등기) ① 공사는 주된 사무소의 소재지에서 설립등기를 함으로써 성립한다. \n\n여기서 \"성립\"은 설립등기를 마친 때를 의미할 것입니다. 하지만 정확한 날짜는 이 조항에 나와 있지 않습니다. 다른 조항을 찾아봐야 합니다. \n\n문서 4의 제1조 목적이나 다른 조항에서는 설립일에 대한 직접적 정보가 없습니다. 다만, 법률의 시행일을 확인해 볼 수 있습니다. \n\n문서4의 상단에 법률 시행일이 나와 있습니다: \n\n[시행 2015. 2. 3.] [법률 제13160호, 2015. 2. 3., 일부개정]\n\n이 법률이 2015년 2월 3일에 시행되었으므로, 이 법에 따라 한국가스공사가 설립되었다면 성립일은 2015년 2월 3일일 가능성이 높습니다. \n\n그러나 다른 문서에서 확인할 필요가 있습니다. 문서 1 (페이지3)의 제2조는 법인격에 관한 것이고, 제6조 등기와 관련된 내용이 있지만 구체적인 날짜는 없습니다. \n\n따라서 법률의 시행일이 가장 유력한 답이 될 것입니다. 왜냐하면 법률이 공포 및 시행된 날에 공사가 설립되었을 것이기 때문입니다. \n\n그러므로 답변은 2015년 2월 3일입니다. 관련 조항은 법률 시행일을 명시한 문서4의 첫 페이지 상단에 있습니다. \n\n그러나 만약 컨텍스트 내에서 더 구체적인 조항이 있는지 다시 확인해보니, 문서4의 제6조에서는 설립등기를 통해 성립한다고만 되어있고, 실제 날짜는 법률 시행일에 의존합니다. \n\n따라서 해당 법률이 2015년 2월 3일에 시행되었으므로, 그 날이 성립일이라고 답변할 수 있습니다.\n</thought>\n\n2015년 2월 3일",
+      "confidence": 0.9995382240035219,
+      "sources_count": 5,
+      "latency_ms": 103609.5,
+      "success": false,
+      "semantic_similarity": 0.5171,
+      "rouge_1": 0.0785,
+      "rouge_l": 0.0785,
+      "composite_score": 0.2978,
+      "grade": "F"
+    },
+    {
+      "id": 7,
+      "category": "factual",
+      "difficulty": "medium",
+      "question": "한국가스공사의 등기에 관한 사항은 무엇으로 정하나요?",
+      "expected_answer": "공사의 설립등기와 지사 또는 사업소의 설치등기, 이전등기, 변경등기, 그 밖에 공사의 등기에 관하여 필요한 사항은 대통령령으로 정합니다.",
+      "actual_answer": "<thought>\nOkay, let's tackle this question. The user is asking about the requirements for the approval of a gas business implementation plan under the Korean Gas Corporation Act. They provided several documents, so I need to check each one to find the relevant section.\n\nFirst, looking at Document 2, which is the actual law text. The user mentioned the question is about the requirements for approval of the gas business plan. In Document 2, the relevant section is probably Article 16조의2 (which is 16.2 in Korean numbering). Let me check that part again.\n\nIn the first part of 16.2 (①), it says that the corporation must submit a gas business implementation plan that includes business area, business period, and other matters as per presidential decree. Then they need approval from the Minister of Industry, Trade and Energy. The plan must have those elements. The user's question is about the requirements for approval, so the key points here are the contents of the plan (business zone, duration, etc.), and the approval process requiring the minister's consent. \n\nOther documents like the manuals (doc1, doc3) might have procedural details but the actual legal requirements are in the law itself. Document 3's guide mentions the laws but doesn't specify the approval requirements beyond citing the statute numbers. \n\nSo the answer should be based on Article 16.2 of the Korean Gas Corporation Act. The exact wording from the law is needed. The user wants the exact text from the document. Let me recheck the exact wording from Document 2's first paragraph of 16.2:\n\n\"사업구역, 사업시행기간, 그 밖에 대통령령으로 정하는사항이 포함된 가스사업 실시계획(이하 “실시계획”이라 한다)을 수립하여 대통령령으로 정하는 바에 따라 산업통상자원부장관의 승인을 받아야 한다.\"\n\nSo the requirements are that the plan must include business area, business duration, and other matters prescribed by presidential decree. Then it must be approved by the Minister. \n\nTherefore, the answer should quote that exact part from the law. The user wants the exact wording from the context provided. Since Document 2 is the law text, that's the right place. The key elements are the contents of the plan and the approval by the Minister. \n\nI need to make sure there's no other document that might add more requirements, but the other docs are manuals or guides, so the primary source is the actual law in Document 2. \n\nAlso, the user's example showed that the answer should be the exact quoted text from the relevant article. So the answer should start with the conclusion, then the exact text from 16.2①. Let me structure that properly.\n</thought>\n\n한국가스공사의 가스사업 실시계획 승인을 위한 요구사항은 다음과 같습니다:  \n- **사업구역, 사업시행기간, 대통령령으로 정하는 사항이 포함된 가스사업 실시계획**을 수립해야 하며, **산업통상자원부장관의 승인**을 받아야 합니다. (한국가스공사법 제16조의2 제1항)",
+      "confidence": 0.999304872645705,
+      "sources_count": 5,
+      "latency_ms": 114692.6,
+      "success": false,
+      "semantic_similarity": 0.5092,
+      "rouge_1": 0.034,
+      "rouge_l": 0.023,
+      "composite_score": 0.2683,
+      "grade": "F"
+    },
+    {
+      "id": 8,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사가 아닌 자가 유사한 명칭을 사용할 수 있나요?",
+      "expected_answer": "아니요, 이 법에 따른 공사가 아닌 자는 한국가스공사 또는 이와 유사한 명칭을 사용하지 못합니다.",
+      "actual_answer": "<thought>\n알아봐야 할 내용은 \"한국가스공사가 아닌 자가 유사한 명칭을 사용할 수 있나요?\"에 대한 답변입니다. 문서 4의 10. 다른 법률과의 관계 항목을 보면, 특히 (4) 공공기관의 운영에 관한 법률 적용 부분이 있지만, 유사명칭 사용과 관련된 규정은 문서4의 9. 벌칙 및 과태료 항목에 나와 있습니다. \n\n9. 벌칙 및 과태료 항목의 (2) 과태료 부분에서 \"유사명칭 사용: 200만원 이하\"라고 나와 있습니다. 이는 유사명칭을 사용하는 경우 과태료가 부과된다는 의미이므로, 한국가스공사가 아닌 자가 유사한 명칭을 사용하는 것은 금지되어 있습니다. 따라서 해당 규정이 있으므로 과태료 부과 대상이 됩니다.\n\n따라서 답변은 해당 규정이 있음을 명시하고, 사용 시 과태료가 부과된다는 내용을 담아야 합니다.\n</thought>\n\n한국가스공사가 아닌 자가 유사한 명칭을 사용할 경우 과태료가 부과됩니다. (문서4 9.벌금금 과태료 항목 참조)",
+      "confidence": 0.9993486703518063,
+      "sources_count": 5,
+      "latency_ms": 57810.0,
+      "success": false,
+      "semantic_similarity": 0.7631,
+      "rouge_1": 0.1989,
+      "rouge_l": 0.1452,
+      "composite_score": 0.4649,
+      "grade": "D"
+    },
+    {
+      "id": 9,
+      "category": "factual",
+      "difficulty": "medium",
+      "question": "한국가스공사의 사장은 대리인을 선임할 수 있나요?",
+      "expected_answer": "네, 사장은 정관으로 정하는 바에 따라 직원 중에서 공사의 업무에 관한 재판상 또는 재판 외의 모든 행위를 할 수 있는 권한을 가진 대리인을 선임할 수 있습니다.",
+      "actual_answer": "ERROR: ",
+      "confidence": 0.0,
+      "sources_count": 0,
+      "latency_ms": 123959.6,
+      "success": false,
+      "semantic_similarity": 0.0,
+      "rouge_1": 0.0,
+      "rouge_l": 0.0,
+      "composite_score": 0.0,
+      "grade": ""
+    },
+    {
+      "id": 10,
+      "category": "factual",
+      "difficulty": "easy",
+      "question": "한국가스공사 임직원의 비밀누설 금지 의무는 무엇인가요?",
+      "expected_answer": "공사의 임직원이나 그 직에 있었던 사람은 직무상 알게 된 비밀을 누설하거나 도용하여서는 아니 됩니다.",
+      "actual_answer": "ERROR: ",
+      "confidence": 0.0,
+      "sources_count": 0,
+      "latency_ms": 123305.9,
+      "success": false,
+      "semantic_similarity": 0.0,
+      "rouge_1": 0.0,
+      "rouge_l": 0.0,
+      "composite_score": 0.0,
+      "grade": ""
+    }
+  ]
+}

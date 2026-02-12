@@ -23,6 +23,21 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 
+def _escape_ldap_filter(value: str) -> str:
+    """Escape special characters for LDAP filter to prevent injection."""
+    replacements = {
+        '\\': '\\5c',
+        '*': '\\2a',
+        '(': '\\28',
+        ')': '\\29',
+        '\x00': '\\00',
+        '/': '\\2f',
+    }
+    for char, escaped in replacements.items():
+        value = value.replace(char, escaped)
+    return value
+
+
 @dataclass
 class LDAPUserInfo:
     """Minimal user info returned by an LDAP bind."""
@@ -85,7 +100,7 @@ class LDAPAuthProvider:
             return None
 
         server = ldap3.Server(self.server_url, get_info=ldap3.ALL)
-        user_dn = f"CN={username},{self.base_dn}"
+        user_dn = f"CN={_escape_ldap_filter(username)},{self.base_dn}"
 
         conn = ldap3.Connection(server, user=user_dn, password=password)
         if not conn.bind():
@@ -93,7 +108,7 @@ class LDAPAuthProvider:
             return None
 
         # Search for user attributes
-        search_filter = f"(sAMAccountName={username})"
+        search_filter = f"(sAMAccountName={_escape_ldap_filter(username)})"
         conn.search(
             self.base_dn,
             search_filter,

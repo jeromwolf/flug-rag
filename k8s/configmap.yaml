@@ -14,11 +14,11 @@ data:
   DEFAULT_LLM_PROVIDER: "vllm"
 
   # vLLM 설정
-  VLLM_BASE_URL: "http://localhost:8000/v1"
+  VLLM_BASE_URL: "http://vllm-service:8000/v1"
   VLLM_MODEL: "Qwen/Qwen2.5-7B-Instruct"
 
   # Ollama 설정 (로컬 개발용)
-  OLLAMA_BASE_URL: "http://localhost:11434"
+  OLLAMA_BASE_URL: "http://ollama-service:11434"
   OLLAMA_MODEL: "qwen2.5:7b"
 
   # OpenAI 설정
@@ -33,3 +33,10 @@ data:
   # 데이터베이스 경로
   CHROMA_PERSIST_DIR: "/app/data/chroma_db"
   DATABASE_URL: "sqlite+aiosqlite:///./data/sqlite.db"
+
+  # 추가 설정
+  DATABASE_BACKEND: "sqlite"
+  UPLOAD_DIR: "/app/data/uploads"
+  AUTH_ENABLED: "true"
+  CORS_ORIGINS: "https://flux-rag.example.com"
+  CACHE_ENABLED: "false"

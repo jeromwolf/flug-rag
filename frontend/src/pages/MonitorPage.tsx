@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Box,
@@ -19,6 +20,14 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Tab,
+  Tabs,
+  TextField,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  TablePagination,
 } from "@mui/material";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
@@ -29,8 +38,11 @@ import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import FolderIcon from "@mui/icons-material/Folder";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import BuildIcon from "@mui/icons-material/Build";
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
-import api, { feedbackApi, adminApi, mcpApi } from "../api/client";
+import DownloadIcon from "@mui/icons-material/Download";
+import SearchIcon from "@mui/icons-material/Search";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import { PieChart, Pie, Cell, Legend, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import api, { feedbackApi, adminApi, mcpApi, statsApi, logsApi } from "../api/client";
 import Layout from "../components/Layout";
 
 const PIE_COLORS = ["#4caf50", "#f44336", "#9e9e9e"];
@@ -136,7 +148,7 @@ function FeedbackChartSection() {
                   <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <RechartsTooltip />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -318,37 +330,289 @@ function McpToolsStatusSection() {
   );
 }
 
+// ── Section: Usage Stats (일/주/월 사용량 차트) ──
+function UsageStatsSection() {
+  const [period, setPeriod] = useState<"day" | "week" | "month">("week");
+  const { data, isLoading } = useQuery({
+    queryKey: ["usage-stats", period],
+    queryFn: () => statsApi.getUsage(period),
+  });
+
+  if (isLoading) return <CircularProgress />;
+  const stats = data?.data;
+
+  return (
+    <Card variant="outlined">
+      <CardContent>
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            사용량 통계
+          </Typography>
+          <FormControl size="small" sx={{ minWidth: 100 }}>
+            <Select value={period} onChange={(e) => setPeriod(e.target.value as "day" | "week" | "month")}>
+              <MenuItem value="day">일간</MenuItem>
+              <MenuItem value="week">주간</MenuItem>
+              <MenuItem value="month">월간</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+        <Grid container spacing={2} sx={{ mb: 2 }}>
+          {[
+            { label: "총 세션", value: stats?.total_sessions ?? 0 },
+            { label: "총 질의", value: stats?.total_queries ?? 0 },
+            { label: "고유 사용자", value: stats?.unique_users ?? 0 },
+            { label: "평균 질의/세션", value: stats?.avg_queries_per_session?.toFixed(1) ?? "0" },
+          ].map((m) => (
+            <Grid key={m.label} size={{ xs: 6, sm: 3 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>{m.value}</Typography>
+                <Typography variant="caption" color="text.secondary">{m.label}</Typography>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+        {stats?.daily_breakdown?.length > 0 && (
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={stats.daily_breakdown}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis />
+              <RechartsTooltip />
+              <Bar dataKey="queries" fill="#1976d2" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Section: Keyword Stats ──
+function KeywordStatsSection() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["keyword-stats"],
+    queryFn: () => statsApi.getKeywords("week", 20),
+  });
+
+  if (isLoading) return <CircularProgress />;
+  const keywords = data?.data?.keywords ?? [];
+
+  return (
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          인기 키워드
+        </Typography>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+          {keywords.map((kw: { keyword: string; count: number }, i: number) => (
+            <Chip
+              key={kw.keyword}
+              label={`${kw.keyword} (${kw.count})`}
+              size={i < 5 ? "medium" : "small"}
+              color={i < 3 ? "primary" : i < 10 ? "default" : "default"}
+              variant={i < 3 ? "filled" : "outlined"}
+            />
+          ))}
+          {keywords.length === 0 && (
+            <Typography color="text.secondary" variant="body2">키워드 데이터가 없습니다.</Typography>
+          )}
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Section: Excel Export ──
+function ExcelExportSection() {
+  const [period, setPeriod] = useState<"day" | "week" | "month">("month");
+  const [downloading, setDownloading] = useState(false);
+
+  const handleExport = async () => {
+    setDownloading(true);
+    try {
+      const res = await statsApi.exportExcel(period);
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `flux-rag-stats-${period}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <Card variant="outlined">
+      <CardContent sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <BarChartIcon color="primary" />
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1 }}>
+          통계 Excel 다운로드
+        </Typography>
+        <FormControl size="small" sx={{ minWidth: 100 }}>
+          <Select value={period} onChange={(e) => setPeriod(e.target.value as "day" | "week" | "month")}>
+            <MenuItem value="day">일간</MenuItem>
+            <MenuItem value="week">주간</MenuItem>
+            <MenuItem value="month">월간</MenuItem>
+          </Select>
+        </FormControl>
+        <Button variant="contained" startIcon={<DownloadIcon />} onClick={handleExport} disabled={downloading} size="small">
+          {downloading ? "다운로드 중..." : "다운로드"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Section: Query Log Search ──
+function QueryLogSection() {
+  const [keyword, setKeyword] = useState("");
+  const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["query-logs", searchTerm, page],
+    queryFn: () => logsApi.searchQueries({ keyword: searchTerm || undefined, page: page + 1, page_size: 10 }),
+    enabled: true,
+  });
+
+  const logs = data?.data;
+
+  return (
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          질의 이력
+        </Typography>
+        <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+          <TextField
+            size="small"
+            placeholder="키워드 검색..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setSearchTerm(keyword); setPage(0); } }}
+            sx={{ flex: 1 }}
+          />
+          <Button variant="outlined" startIcon={<SearchIcon />} onClick={() => { setSearchTerm(keyword); setPage(0); }}>
+            검색
+          </Button>
+        </Box>
+        {isLoading ? <CircularProgress /> : (
+          <>
+            <TableContainer component={Paper} variant="outlined">
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>일시</TableCell>
+                    <TableCell>세션</TableCell>
+                    <TableCell>질의 내용</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(logs?.queries ?? []).map((q: { timestamp: string; session_id: string; content: string }, i: number) => (
+                    <TableRow key={i}>
+                      <TableCell sx={{ whiteSpace: "nowrap" }}>
+                        <Typography variant="caption">{new Date(q.timestamp).toLocaleString("ko-KR")}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ fontFamily: "monospace" }}>{q.session_id?.slice(0, 8)}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" noWrap sx={{ maxWidth: 400 }}>{q.content}</Typography>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {(logs?.queries ?? []).length === 0 && (
+                    <TableRow><TableCell colSpan={3}><Typography color="text.secondary" variant="body2" align="center">결과 없음</Typography></TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            {(logs?.total ?? 0) > 10 && (
+              <TablePagination
+                component="div"
+                count={logs?.total ?? 0}
+                page={page}
+                onPageChange={(_, p) => setPage(p)}
+                rowsPerPage={10}
+                rowsPerPageOptions={[10]}
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
+              />
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main: MonitorPage ──
 export default function MonitorPage() {
+  const [tab, setTab] = useState(0);
+
   return (
     <Layout title="모니터링 대시보드">
-      {/* Section 1: Key Metrics */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 600 }}>
-          주요 지표
-        </Typography>
-        <KeyMetricsSection />
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+          <Tab label="개요" />
+          <Tab label="사용 통계" />
+          <Tab label="로그" />
+        </Tabs>
       </Box>
 
-      {/* Section 2 & 3: Charts + Table */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <FeedbackChartSection />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <RecentFeedbackSection />
-        </Grid>
-      </Grid>
+      {tab === 0 && (
+        <>
+          {/* Section 1: Key Metrics */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 600 }}>
+              주요 지표
+            </Typography>
+            <KeyMetricsSection />
+          </Box>
 
-      {/* Section 4 & 5: System Health + MCP Tools */}
-      <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <SystemHealthSection />
-        </Grid>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <McpToolsStatusSection />
-        </Grid>
-      </Grid>
+          {/* Section 2 & 3: Charts + Table */}
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FeedbackChartSection />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <RecentFeedbackSection />
+            </Grid>
+          </Grid>
+
+          {/* Section 4 & 5: System Health + MCP Tools */}
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <SystemHealthSection />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <McpToolsStatusSection />
+            </Grid>
+          </Grid>
+        </>
+      )}
+
+      {tab === 1 && (
+        <>
+          <Box sx={{ mb: 3 }}>
+            <ExcelExportSection />
+          </Box>
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid size={{ xs: 12, md: 7 }}>
+              <UsageStatsSection />
+            </Grid>
+            <Grid size={{ xs: 12, md: 5 }}>
+              <KeywordStatsSection />
+            </Grid>
+          </Grid>
+        </>
+      )}
+
+      {tab === 2 && (
+        <QueryLogSection />
+      )}
     </Layout>
   );
 }

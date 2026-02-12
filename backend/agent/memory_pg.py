@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import asyncpg
 
@@ -58,7 +58,7 @@ class PostgresConversationMemory:
         """Create a new conversation session. Returns session_id."""
         await self._ensure_initialized()
         session_id = str(uuid.uuid4())
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         async with self._pool.acquire() as conn:
             await conn.execute(
@@ -78,7 +78,7 @@ class PostgresConversationMemory:
         """Add a message to a session. Returns message_id."""
         await self._ensure_initialized()
         msg_id = str(uuid.uuid4())
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         async with self._pool.acquire() as conn:
             await conn.execute(
@@ -187,7 +187,7 @@ class PostgresConversationMemory:
         async with self._pool.acquire() as conn:
             await conn.execute(
                 "UPDATE sessions SET title = $1, updated_at = $2 WHERE id = $3",
-                title, datetime.utcnow(), session_id,
+                title, datetime.now(timezone.utc), session_id,
             )
 
     async def delete_session(self, session_id: str):

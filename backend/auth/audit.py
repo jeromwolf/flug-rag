@@ -52,32 +52,31 @@ class AuditLogger:
 
     def _ensure_table(self) -> None:
         try:
-            conn = sqlite3.connect(self._db_path)
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS audit_log (
-                    id          TEXT PRIMARY KEY,
-                    timestamp   TEXT NOT NULL,
-                    user_id     TEXT,
-                    username    TEXT,
-                    action      TEXT NOT NULL,
-                    resource    TEXT,
-                    details     TEXT,
-                    ip_address  TEXT
+            with sqlite3.connect(self._db_path) as conn:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS audit_log (
+                        id          TEXT PRIMARY KEY,
+                        timestamp   TEXT NOT NULL,
+                        user_id     TEXT,
+                        username    TEXT,
+                        action      TEXT NOT NULL,
+                        resource    TEXT,
+                        details     TEXT,
+                        ip_address  TEXT
+                    )
+                    """
                 )
-                """
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log (user_id)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log (action)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log (timestamp)"
-            )
-            conn.commit()
-            conn.close()
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log (user_id)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log (action)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log (timestamp)"
+                )
+                conn.commit()
         except Exception:
             logger.exception("Failed to initialise audit database")
 
@@ -100,16 +99,15 @@ class AuditLogger:
         action_str = action.value if isinstance(action, AuditAction) else str(action)
 
         try:
-            conn = sqlite3.connect(self._db_path)
-            conn.execute(
-                """
-                INSERT INTO audit_log (id, timestamp, user_id, username, action, resource, details, ip_address)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (event_id, timestamp, user_id, username, action_str, resource, details, ip_address),
-            )
-            conn.commit()
-            conn.close()
+            with sqlite3.connect(self._db_path) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO audit_log (id, timestamp, user_id, username, action, resource, details, ip_address)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (event_id, timestamp, user_id, username, action_str, resource, details, ip_address),
+                )
+                conn.commit()
         except Exception:
             logger.exception("Failed to write audit event %s", action_str)
 
@@ -121,22 +119,21 @@ class AuditLogger:
     ) -> list[dict]:
         """Retrieve recent audit events with optional filters."""
         try:
-            conn = sqlite3.connect(self._db_path)
-            conn.row_factory = sqlite3.Row
-            query = "SELECT * FROM audit_log WHERE 1=1"
-            params: list = []
-            if user_id:
-                query += " AND user_id = ?"
-                params.append(user_id)
-            if action:
-                query += " AND action = ?"
-                params.append(action)
-            query += " ORDER BY timestamp DESC LIMIT ?"
-            params.append(limit)
+            with sqlite3.connect(self._db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                query = "SELECT * FROM audit_log WHERE 1=1"
+                params: list = []
+                if user_id:
+                    query += " AND user_id = ?"
+                    params.append(user_id)
+                if action:
+                    query += " AND action = ?"
+                    params.append(action)
+                query += " ORDER BY timestamp DESC LIMIT ?"
+                params.append(limit)
 
-            rows = conn.execute(query, params).fetchall()
-            conn.close()
-            return [dict(r) for r in rows]
+                rows = conn.execute(query, params).fetchall()
+                return [dict(r) for r in rows]
         except Exception:
             logger.exception("Failed to read audit events")
             return []

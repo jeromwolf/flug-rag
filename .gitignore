@@ -22,10 +22,20 @@ env/
 .env
 .env.local
 
+# Kubernetes secrets (use secret.yaml.example as template)
+k8s/secret.yaml
+
 # Data
 backend/data/chroma_db/
-backend/data/sqlite.db
+backend/data/*.db
 backend/data/uploads/
+backend/data/ocr_training/
+backend/data/feedback.jsonl
+backend/data/error_reports.jsonl
+
+# Claude Code / oh-my-claudecode
+.omc/
+.claude/plans/
 
 # Node
 node_modules/

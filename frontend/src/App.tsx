@@ -10,6 +10,7 @@ import DocumentsPage from "./pages/DocumentsPage";
 import AdminPage from "./pages/AdminPage";
 import MonitorPage from "./pages/MonitorPage";
 import AgentBuilderPage from "./pages/AgentBuilderPage";
+import QualityDashboardPage from "./pages/QualityDashboardPage";
 
 const theme = createTheme({
   palette: {
@@ -79,6 +80,14 @@ export default function App() {
                   element={
                     <PrivateRoute requiredPermission="agent-builder:read">
                       <AgentBuilderPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route
+                  path="/quality"
+                  element={
+                    <PrivateRoute requiredPermission="admin:read">
+                      <QualityDashboardPage />
                     </PrivateRoute>
                   }
                 />

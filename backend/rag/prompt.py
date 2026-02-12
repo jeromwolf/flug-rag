@@ -90,11 +90,28 @@ class PromptManager:
             return self._technical_examples
         return self._few_shot_examples
 
+    @staticmethod
+    def _get_conciseness_suffix(model_hint: str | None = None) -> str:
+        """Get extra conciseness instruction for smaller models."""
+        if not model_hint:
+            return ""
+        model_lower = model_hint.lower()
+        small_patterns = ["7b", "8b", "3b", "1b", "1.5b", "mini", "tiny", "small"]
+        if any(p in model_lower for p in small_patterns):
+            return (
+                "\n\n[추가 지시 - 반드시 따르세요]\n"
+                "- 반드시 1~3문장으로만 답변하세요.\n"
+                "- 법 조문의 원문을 그대로 인용하세요.\n"
+                "- 추가 해석이나 부연 설명을 절대 덧붙이지 마세요."
+            )
+        return ""
+
     def build_rag_prompt(
         self,
         query: str,
         context_chunks: list[dict],
         few_shot: list[dict] | None = None,
+        model_hint: str | None = None,
     ) -> tuple[str, str]:
         """Build a complete RAG prompt with context and few-shot examples.
 
@@ -105,6 +122,7 @@ class PromptManager:
             query: User's question.
             context_chunks: List of {content, metadata} dicts from retrieval.
             few_shot: Optional few-shot examples override.
+            model_hint: Optional model name for model-size-aware prompting.
 
         Returns:
             Tuple of (system_prompt, user_prompt).
@@ -130,6 +148,7 @@ class PromptManager:
             prompt_name = "rag_system"
 
         system = self.get_system_prompt(prompt_name).format(context=context)
+        system += self._get_conciseness_suffix(model_hint)
 
         # Select domain-appropriate few-shot examples
         examples = few_shot or self._get_domain_examples(doc_type)
@@ -137,7 +156,7 @@ class PromptManager:
 
         if examples:
             user_parts.append("참고 예시:")
-            for ex in examples[:3]:  # Max 3 examples
+            for ex in examples[:6]:  # Max 6 examples (law + regulation styles)
                 user_parts.append(f"질문: {ex['question']}\n답변: {ex['answer']}")
             user_parts.append("")
 

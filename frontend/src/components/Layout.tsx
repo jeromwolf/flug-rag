@@ -18,6 +18,7 @@ import {
   Settings as AdminIcon,
   BarChart as MonitorIcon,
   SmartToy as AgentIcon,
+  FactCheck as QualityIcon,
   ChevronLeft as ChevronLeftIcon,
   Menu as MenuIcon,
   Logout as LogoutIcon,
@@ -33,6 +34,7 @@ const navItems = [
   { path: "/admin", label: "관리자", icon: <AdminIcon />, permission: "admin:read" },
   { path: "/monitor", label: "모니터링", icon: <MonitorIcon />, permission: "monitor:read" },
   { path: "/agent-builder", label: "에이전트 빌더", icon: <AgentIcon />, permission: "agent-builder:read" },
+  { path: "/quality", label: "RAG 품질 관리", icon: <QualityIcon />, permission: "admin:read" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {

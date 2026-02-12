@@ -1,20 +1,22 @@
 """Workflow endpoints for Agent Builder."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from agent.builder import WorkflowEngine, get_preset, list_presets
 from api.schemas import WorkflowRunRequest
+from auth.dependencies import get_current_user
+from auth.models import User
 
 router = APIRouter()
 
 
 @router.get("/workflows/presets")
-async def get_presets():
+async def get_presets(current_user: User | None = Depends(get_current_user)):
     return {"presets": list_presets()}
 
 
 @router.post("/workflows/run")
-async def run_workflow(request: WorkflowRunRequest):
+async def run_workflow(request: WorkflowRunRequest, current_user: User | None = Depends(get_current_user)):
     if request.preset:
         workflow = get_preset(request.preset)
         if not workflow:

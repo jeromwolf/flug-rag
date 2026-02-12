@@ -13,8 +13,8 @@ class QualityController:
         confidence_high: float | None = None,
         confidence_low: float | None = None,
     ):
-        self.confidence_high = confidence_high or settings.confidence_high
-        self.confidence_low = confidence_low or settings.confidence_low
+        self.confidence_high = confidence_high if confidence_high is not None else settings.confidence_high
+        self.confidence_low = confidence_low if confidence_low is not None else settings.confidence_low
 
     def calculate_confidence(self, chunk_scores: list[float]) -> float:
         """Calculate confidence score from retrieval scores.
