@@ -7,6 +7,7 @@ from .docx import DocxLoader
 from .excel import ExcelLoader
 from .pptx import PPTXLoader
 from .text import TextLoader
+from .iso import ISOLoader
 
 LOADER_MAP: dict[str, type[BaseLoader]] = {
     ".pdf": PDFLoader,
@@ -32,4 +33,5 @@ def get_loader(file_extension: str) -> BaseLoader:
 __all__ = [
     "BaseLoader", "LoadedDocument", "get_loader",
     "PDFLoader", "HWPLoader", "DocxLoader", "ExcelLoader", "PPTXLoader", "TextLoader",
+    "ISOLoader",
 ]

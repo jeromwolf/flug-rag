@@ -1,5 +1,7 @@
 """Document chunking with multiple strategies."""
 
+from __future__ import annotations
+
 import asyncio
 import concurrent.futures
 import re
@@ -888,6 +890,194 @@ class HierarchicalChunker:
         return chunks
 
 
+class ISOChunker:
+    """Chunk ISO/KS standard documents using section boundaries.
+
+    Preserves section numbers and titles as context for each chunk.
+    Falls back to RecursiveChunker for non-ISO content.
+    """
+
+    # Section heading pattern
+    SECTION_RE = re.compile(r'^(\d+(?:\.\d+)*)\s+(.+)$')
+
+    def __init__(
+        self,
+        chunk_size: int | None = None,
+        chunk_overlap: int | None = None,
+    ):
+        self.chunk_size = chunk_size or settings.chunk_size
+        self.chunk_overlap = chunk_overlap or settings.chunk_overlap
+        self.base_chunker = RecursiveChunker(chunk_size, chunk_overlap)
+
+    def chunk(
+        self,
+        text: str,
+        base_metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Split text into chunks using ISO section boundaries."""
+        if not text or not text.strip():
+            return []
+
+        # Check if this is ISO-structured content
+        if not self._has_iso_structure(text):
+            return self.base_chunker.chunk(text, base_metadata)
+
+        sections = self._parse_sections(text)
+        return self._sections_to_chunks(sections, base_metadata)
+
+    def chunk_with_pages(
+        self,
+        pages: list[dict],
+        base_metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Chunk page-by-page or use sections if available."""
+        # If pages already have section metadata, use that
+        if pages and "section_number" in pages[0]:
+            return self._chunk_structured_pages(pages, base_metadata)
+
+        # Otherwise combine and parse
+        combined = "\n\n".join(
+            p.get("content", "") for p in pages if p.get("content", "").strip()
+        )
+        return self.chunk(combined, base_metadata)
+
+    def _has_iso_structure(self, text: str) -> bool:
+        """Check if text has ISO-style numbered sections."""
+        matches = self.SECTION_RE.findall(text[:3000], re.MULTILINE)
+        return len(matches) >= 2
+
+    def _parse_sections(self, text: str) -> list[dict]:
+        """Parse text into sections."""
+        lines = text.split('\n')
+        sections = []
+        current_section = None
+        buffer = []
+
+        for line in lines:
+            match = self.SECTION_RE.match(line.strip())
+            if match:
+                # Save previous section
+                if current_section and buffer:
+                    current_section["content"] = "\n".join(buffer).strip()
+                    if current_section["content"]:
+                        sections.append(current_section)
+
+                # Start new section
+                section_num, section_title = match.groups()
+                current_section = {
+                    "section_number": section_num,
+                    "section_title": section_title.strip(),
+                    "content": "",
+                }
+                buffer = [line]
+            else:
+                buffer.append(line)
+
+        # Save last section
+        if current_section and buffer:
+            current_section["content"] = "\n".join(buffer).strip()
+            if current_section["content"]:
+                sections.append(current_section)
+
+        return sections
+
+    def _sections_to_chunks(
+        self,
+        sections: list[dict],
+        base_metadata: dict | None,
+    ) -> list[Chunk]:
+        """Convert sections to chunks."""
+        chunks = []
+        global_idx = 0
+
+        for section in sections:
+            section_num = section["section_number"]
+            section_title = section["section_title"]
+            content = section["content"]
+
+            # Prepend section context
+            content_with_context = f"[{section_num} {section_title}]\n{content}"
+
+            if len(content_with_context) <= self.chunk_size:
+                # Single chunk
+                meta = dict(base_metadata or {})
+                meta.update({
+                    "chunk_index": global_idx,
+                    "chunk_strategy": "iso",
+                    "section_number": section_num,
+                    "section_title": section_title,
+                })
+                chunks.append(
+                    Chunk(
+                        id=str(uuid.uuid4()),
+                        content=content_with_context,
+                        index=global_idx,
+                        metadata=meta,
+                    )
+                )
+                global_idx += 1
+            else:
+                # Section too large, split with base chunker
+                sub_chunks = self.base_chunker.chunk(content_with_context, base_metadata)
+                for sub_chunk in sub_chunks:
+                    sub_chunk.index = global_idx
+                    sub_chunk.metadata["chunk_index"] = global_idx
+                    sub_chunk.metadata["chunk_strategy"] = "iso"
+                    sub_chunk.metadata["section_number"] = section_num
+                    sub_chunk.metadata["section_title"] = section_title
+                    global_idx += 1
+                chunks.extend(sub_chunks)
+
+        return chunks
+
+    def _chunk_structured_pages(
+        self,
+        pages: list[dict],
+        base_metadata: dict | None,
+    ) -> list[Chunk]:
+        """Chunk pages that already have section metadata."""
+        chunks = []
+        global_idx = 0
+
+        for page in pages:
+            section_num = page.get("section_number", "")
+            section_title = page.get("section_title", "")
+            content = page.get("content", "")
+
+            if not content.strip():
+                continue
+
+            meta = dict(base_metadata or {})
+            meta.update({
+                "chunk_index": global_idx,
+                "chunk_strategy": "iso",
+                "section_number": section_num,
+                "section_title": section_title,
+            })
+
+            if len(content) <= self.chunk_size:
+                chunks.append(
+                    Chunk(
+                        id=str(uuid.uuid4()),
+                        content=content,
+                        index=global_idx,
+                        metadata=meta,
+                    )
+                )
+                global_idx += 1
+            else:
+                # Split large sections
+                sub_chunks = self.base_chunker.chunk(content, base_metadata)
+                for sub_chunk in sub_chunks:
+                    sub_chunk.index = global_idx
+                    sub_chunk.metadata.update(meta)
+                    sub_chunk.metadata["chunk_index"] = global_idx
+                    global_idx += 1
+                chunks.extend(sub_chunks)
+
+        return chunks
+
+
 class AdaptiveChunker:
     """Auto-detect document structure and apply the best chunking strategy.
 
@@ -994,12 +1184,12 @@ def create_chunker(
     strategy: str | None = None,
     chunk_size: int | None = None,
     chunk_overlap: int | None = None,
-) -> RecursiveChunker | EmbeddingSemanticChunker | TableChunker | HierarchicalChunker | AdaptiveChunker:
+) -> RecursiveChunker | EmbeddingSemanticChunker | TableChunker | HierarchicalChunker | ISOChunker | AdaptiveChunker:
     """Factory function to create chunker based on settings.
 
     Args:
         strategy: One of "recursive", "semantic", "table", "hierarchical",
-                  or "adaptive". Defaults to ``settings.chunk_strategy``.
+                  "iso", or "adaptive". Defaults to ``settings.chunk_strategy``.
         chunk_size: Override chunk size.
         chunk_overlap: Override chunk overlap.
 
@@ -1019,6 +1209,11 @@ def create_chunker(
         )
     elif strategy == "hierarchical":
         return HierarchicalChunker(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+    elif strategy == "iso":
+        return ISOChunker(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
         )

@@ -202,3 +202,70 @@ class MetadataExtractor:
             metadata["tags"] = ",".join(sorted(tags))
 
         return metadata
+
+
+def enrich_iso_metadata(text: str, filename: str = "") -> dict | None:
+    """Detect and extract ISO/KS standard metadata from document.
+
+    Args:
+        text: Document text content (first few pages recommended)
+        filename: Filename for additional context
+
+    Returns:
+        dict with ISO metadata keys, or None if not an ISO standard
+    """
+    # ISO/KS standard number pattern
+    iso_pattern = re.compile(
+        r'(?:ISO|IEC|KS\s*[A-Z](?:\s*[A-Z])?(?:\s*IEC)?)\s*[\d\-]+(?::[\d]{4})?',
+        re.IGNORECASE
+    )
+
+    # Search in text and filename
+    search_text = text[:3000] if text else ""
+    match = iso_pattern.search(search_text)
+    if not match:
+        match = iso_pattern.search(filename)
+
+    if not match:
+        return None
+
+    # Found ISO/KS standard
+    metadata = {
+        "is_iso_standard": True,
+        "standard_number": match.group(0),
+        "standard_type": "iso",
+    }
+
+    # Extract organization type
+    standard_num = match.group(0).upper()
+    if standard_num.startswith("KS"):
+        metadata["standard_type"] = "ks"
+        # Extract KS category (e.g., KS B, KS C)
+        ks_cat_match = re.search(r'KS\s*([A-Z](?:\s*[A-Z])?)', standard_num)
+        if ks_cat_match:
+            metadata["ks_category"] = ks_cat_match.group(1).replace(" ", "")
+    elif "IEC" in standard_num:
+        metadata["standard_type"] = "iec"
+    else:
+        metadata["standard_type"] = "iso"
+
+    # Extract year
+    year_match = re.search(r':(\d{4})', standard_num)
+    if year_match:
+        metadata["standard_year"] = year_match.group(1)
+
+    # Try to find title (usually near the standard number)
+    lines = search_text.split('\n')
+    for i, line in enumerate(lines):
+        if match.group(0) in line:
+            # Look at next few lines for title
+            for j in range(i + 1, min(i + 4, len(lines))):
+                potential_title = lines[j].strip()
+                # Filter out empty lines and section numbers
+                if potential_title and not re.match(r'^\d+(?:\.\d+)*\s', potential_title):
+                    if len(potential_title) > 10:  # Reasonable title length
+                        metadata["standard_title"] = potential_title[:200]
+                        break
+            break
+
+    return metadata
