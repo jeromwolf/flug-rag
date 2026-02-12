@@ -370,19 +370,636 @@ class EmbeddingSemanticChunker:
         return pipe_lines >= 2
 
 
-# Backward-compatible alias
-SemanticChunker = RecursiveChunker
+class TableChunker:
+    """Split table content row-by-row while preserving headers.
+
+    Designed for tabular documents such as spec sheets and Korean regulatory
+    tables commonly found in HWP/PDF files. Non-table regions are delegated
+    to RecursiveChunker.
+
+    Detection patterns:
+    - Markdown-style pipe-delimited tables (``|col|col|``)
+    - Tab-separated tables (3+ consecutive lines with equal tab count)
+    - Separator rows like ``|---|---|`` or ``+---+---+``
+    """
+
+    # Separator row that sits between header and body
+    _SEPARATOR_RE = re.compile(r'^[\s|+\-:]+$')
+
+    def __init__(
+        self,
+        chunk_size: int | None = None,
+        chunk_overlap: int | None = None,
+    ):
+        self.chunk_size = chunk_size or settings.chunk_size
+        self.chunk_overlap = chunk_overlap or settings.chunk_overlap
+        self.base_chunker = RecursiveChunker(chunk_size, chunk_overlap)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def chunk(
+        self,
+        text: str,
+        base_metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Split *text* into chunks, treating table regions specially."""
+        if not text or not text.strip():
+            return []
+
+        regions = self._split_regions(text)
+        chunks: list[Chunk] = []
+        global_idx = 0
+
+        for kind, content in regions:
+            if kind == "table":
+                table_chunks = self._chunk_table(content, base_metadata, global_idx)
+                chunks.extend(table_chunks)
+                global_idx += len(table_chunks)
+            else:
+                text_chunks = self.base_chunker.chunk(content, base_metadata)
+                for c in text_chunks:
+                    c.index = global_idx
+                    c.metadata["chunk_index"] = global_idx
+                    global_idx += 1
+                chunks.extend(text_chunks)
+
+        return chunks
+
+    def chunk_with_pages(
+        self,
+        pages: list[dict],
+        base_metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Chunk page-by-page, preserving page numbers."""
+        all_chunks: list[Chunk] = []
+        global_idx = 0
+
+        for page in pages:
+            page_num = page.get("page_num", 0)
+            content = page.get("content", "")
+            if not content.strip():
+                continue
+
+            page_meta = dict(base_metadata or {})
+            page_meta["page_number"] = page_num
+
+            page_chunks = self.chunk(content, base_metadata=page_meta)
+            for c in page_chunks:
+                c.index = global_idx
+                c.metadata["chunk_index"] = global_idx
+                global_idx += 1
+            all_chunks.extend(page_chunks)
+
+        return all_chunks
+
+    # ------------------------------------------------------------------
+    # Region detection
+    # ------------------------------------------------------------------
+
+    def _split_regions(self, text: str) -> list[tuple[str, str]]:
+        """Split *text* into alternating ("text", ...) and ("table", ...) regions."""
+        lines = text.split('\n')
+        regions: list[tuple[str, str]] = []
+        buf: list[str] = []
+        in_table = False
+
+        i = 0
+        while i < len(lines):
+            # Look-ahead: does a table start here?
+            table_end = self._detect_table_end(lines, i)
+            if table_end is not None and not in_table:
+                # Flush preceding text
+                if buf:
+                    regions.append(("text", "\n".join(buf)))
+                    buf = []
+                # Collect table lines
+                regions.append(("table", "\n".join(lines[i:table_end])))
+                i = table_end
+                continue
+
+            buf.append(lines[i])
+            i += 1
+
+        if buf:
+            regions.append(("text", "\n".join(buf)))
+
+        return regions
+
+    def _detect_table_end(self, lines: list[str], start: int) -> int | None:
+        """If a table begins at *start*, return the index past its last row.
+
+        Returns ``None`` when no table is detected.
+        """
+        # --- Pipe-delimited tables ---
+        if self._is_pipe_line(lines[start]):
+            end = start + 1
+            while end < len(lines) and (self._is_pipe_line(lines[end]) or self._SEPARATOR_RE.match(lines[end])):
+                end += 1
+            if end - start >= 3:
+                return end
+
+        # --- Tab-separated tables ---
+        tab_count = lines[start].count('\t')
+        if tab_count >= 2:
+            end = start + 1
+            while end < len(lines) and lines[end].count('\t') == tab_count:
+                end += 1
+            if end - start >= 3:
+                return end
+
+        return None
+
+    @staticmethod
+    def _is_pipe_line(line: str) -> bool:
+        """Return True if *line* looks like a pipe-delimited table row."""
+        return line.count('|') >= 2
+
+    # ------------------------------------------------------------------
+    # Table chunking
+    # ------------------------------------------------------------------
+
+    def _chunk_table(
+        self,
+        table_text: str,
+        base_metadata: dict | None,
+        start_idx: int,
+    ) -> list[Chunk]:
+        """Chunk a single table region row-by-row with header context."""
+        lines = [l for l in table_text.split('\n') if l.strip()]
+        if not lines:
+            return []
+
+        # Identify header and data rows
+        header_line = lines[0]
+        data_lines: list[str] = []
+        for line in lines[1:]:
+            if self._SEPARATOR_RE.match(line):
+                continue  # skip separator rows
+            data_lines.append(line)
+
+        if not data_lines:
+            # Table with only a header – return as single chunk
+            meta = dict(base_metadata or {})
+            meta.update(chunk_index=start_idx, chunk_strategy="table", has_table=True, table_header=header_line)
+            return [Chunk(id=str(uuid.uuid4()), content=header_line, index=start_idx, metadata=meta)]
+
+        # Group small rows together to avoid tiny chunks
+        groups: list[list[str]] = []
+        current_group: list[str] = []
+        current_len = 0
+
+        for row in data_lines:
+            row_with_header = f"{header_line}\n{row}"
+            row_len = len(row_with_header)
+
+            if current_group and current_len + len(row) + 1 > self.chunk_size:
+                groups.append(current_group)
+                current_group = []
+                current_len = 0
+
+            current_group.append(row)
+            current_len += len(row) + 1  # +1 for newline
+
+            # Also enforce: if individual rows are very small (< 50 chars),
+            # keep accumulating unless we would exceed chunk_size
+            if len(row) >= 50 and current_len + len(header_line) + 1 >= 50:
+                # Row is substantial enough on its own – flush
+                if current_len + len(header_line) + 1 <= self.chunk_size:
+                    continue  # still fits, keep accumulating
+                groups.append(current_group)
+                current_group = []
+                current_len = 0
+
+        if current_group:
+            groups.append(current_group)
+
+        chunks: list[Chunk] = []
+        for group in groups:
+            body = "\n".join(group)
+            content = f"{header_line}\n{body}"
+            meta = dict(base_metadata or {})
+            idx = start_idx + len(chunks)
+            meta.update(
+                chunk_index=idx,
+                chunk_strategy="table",
+                has_table=True,
+                table_header=header_line,
+            )
+            chunks.append(Chunk(id=str(uuid.uuid4()), content=content, index=idx, metadata=meta))
+
+        return chunks
+
+
+class HierarchicalChunker:
+    """Create parent-child chunk structures for hierarchical documents.
+
+    Targets Korean legal texts (법령), company regulations (사규), and
+    ISO-style numbered sections. Each child chunk gets the parent title
+    prepended so it can stand alone during retrieval.
+
+    Hierarchy levels:
+        0 – Article  (제N조)
+        1 – Paragraph (①~⑳ or 제N항)
+        2 – Item      (N. or 제N호)
+        3 – Sub-item  (가. 나. 다. …)
+    """
+
+    # --- Korean legal patterns ---
+    ARTICLE_RE = re.compile(r'^제\d+조(?:의\d+)?\s*[\(\(]?')
+    PARAGRAPH_RE = re.compile(r'^[①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳]|^제?\d+항\s')
+    ITEM_RE = re.compile(r'^\d+\.\s|^제?\d+호\s')
+    SUBITEM_RE = re.compile(r'^[가나다라마바사아자차카타파하]\.\s')
+
+    # --- ISO / numbered section patterns ---
+    ISO_SECTION_RE = re.compile(r'^(\d+(?:\.\d+)*)\s')
+
+    # Circled numbers for quick lookup
+    _CIRCLE_NUMS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'
+
+    def __init__(
+        self,
+        chunk_size: int | None = None,
+        chunk_overlap: int | None = None,
+        include_parent_context: bool = True,
+    ):
+        self.chunk_size = chunk_size or settings.chunk_size
+        self.chunk_overlap = chunk_overlap or settings.chunk_overlap
+        self.include_parent_context = include_parent_context
+        self.base_chunker = RecursiveChunker(chunk_size, chunk_overlap)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def chunk(
+        self,
+        text: str,
+        base_metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Split *text* using hierarchical structure when detected."""
+        if not text or not text.strip():
+            return []
+
+        if not self._has_legal_structure(text):
+            return self.base_chunker.chunk(text, base_metadata)
+
+        sections = self._parse_sections(text)
+        return self._sections_to_chunks(sections, base_metadata)
+
+    def chunk_with_pages(
+        self,
+        pages: list[dict],
+        base_metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """Combine all pages and apply hierarchical chunking.
+
+        Hierarchical structures (articles, paragraphs) commonly span page
+        boundaries, so we combine first and chunk the whole text.
+        """
+        combined = "\n\n".join(
+            p.get("content", "") for p in pages if p.get("content", "").strip()
+        )
+        if not combined.strip():
+            return []
+
+        return self.chunk(combined, base_metadata)
+
+    # ------------------------------------------------------------------
+    # Structure detection
+    # ------------------------------------------------------------------
+
+    def _has_legal_structure(self, text: str) -> bool:
+        """Return True when *text* contains >= 2 article headings."""
+        return len(self.ARTICLE_RE.findall(text, re.MULTILINE if False else 0)) >= 2 or \
+               len(re.findall(r'^제\d+조', text, re.MULTILINE)) >= 2
+
+    # ------------------------------------------------------------------
+    # Parsing
+    # ------------------------------------------------------------------
+
+    def _line_level(self, line: str) -> int | None:
+        """Return the hierarchy level of *line*, or None for plain text."""
+        stripped = line.strip()
+        if not stripped:
+            return None
+        if self.ARTICLE_RE.match(stripped):
+            return 0
+        if self.PARAGRAPH_RE.match(stripped):
+            return 1
+        if self.ITEM_RE.match(stripped):
+            return 2
+        if self.SUBITEM_RE.match(stripped):
+            return 3
+        return None
+
+    def _extract_title(self, line: str) -> str:
+        """Extract a short title from a heading line.
+
+        For ``제1조(목적) 이 법은 ...`` returns ``제1조(목적)``.
+        """
+        stripped = line.strip()
+        # 제N조(title) ...
+        m = re.match(r'(제\d+조(?:의\d+)?\s*[\(\(][^)\)]*[\)\)])', stripped)
+        if m:
+            return m.group(1)
+        # 제N조 ...
+        m = re.match(r'(제\d+조(?:의\d+)?)', stripped)
+        if m:
+            return m.group(1)
+        # Circled number
+        if stripped and stripped[0] in self._CIRCLE_NUMS:
+            return stripped[0]
+        # Numbered item
+        m = re.match(r'(\d+\.)\s', stripped)
+        if m:
+            return m.group(1)
+        # Korean sub-item
+        m = re.match(r'([가나다라마바사아자차카타파하]\.)\s', stripped)
+        if m:
+            return m.group(1)
+        # Fallback – first 30 chars
+        return stripped[:30]
+
+    def _parse_sections(self, text: str) -> list[dict]:
+        """Parse *text* into a flat list of section dicts.
+
+        Each dict: ``{level, title, content, children: []}``
+        """
+        lines = text.split('\n')
+        sections: list[dict] = []
+        current: dict | None = None
+        buf: list[str] = []
+
+        def _flush():
+            nonlocal current, buf
+            if current is not None:
+                current["content"] = "\n".join(buf).strip()
+                sections.append(current)
+            elif buf:
+                # Text before the first heading
+                sections.append({"level": -1, "title": "", "content": "\n".join(buf).strip(), "children": []})
+            buf = []
+
+        for line in lines:
+            level = self._line_level(line)
+            if level is not None and level == 0:
+                _flush()
+                current = {
+                    "level": level,
+                    "title": self._extract_title(line),
+                    "content": "",
+                    "children": [],
+                }
+                buf = [line]
+            else:
+                buf.append(line)
+
+        _flush()
+
+        # Now split each article-level section into sub-sections (paragraphs, items)
+        for section in sections:
+            if section["level"] != 0:
+                continue
+            section["children"] = self._parse_children(section["content"])
+
+        return sections
+
+    def _parse_children(self, article_text: str) -> list[dict]:
+        """Parse paragraphs / items within a single article's text."""
+        lines = article_text.split('\n')
+        children: list[dict] = []
+        current_child: dict | None = None
+        buf: list[str] = []
+
+        def _flush_child():
+            nonlocal current_child, buf
+            if current_child is not None:
+                current_child["content"] = "\n".join(buf).strip()
+                children.append(current_child)
+            buf = []
+
+        for line in lines:
+            level = self._line_level(line)
+            if level is not None and level >= 1:
+                _flush_child()
+                current_child = {
+                    "level": level,
+                    "title": self._extract_title(line),
+                    "content": "",
+                }
+                buf = [line]
+            else:
+                buf.append(line)
+
+        _flush_child()
+        return children
+
+    # ------------------------------------------------------------------
+    # Chunk creation
+    # ------------------------------------------------------------------
+
+    def _sections_to_chunks(
+        self,
+        sections: list[dict],
+        base_metadata: dict | None,
+    ) -> list[Chunk]:
+        chunks: list[Chunk] = []
+        idx = 0
+
+        for section in sections:
+            parent_title = section["title"]
+            parent_id = str(uuid.uuid4())
+            full_content = section["content"]
+            children = section.get("children", [])
+
+            # Pre-heading text or sections without hierarchy
+            if section["level"] < 0 or not children:
+                # Small enough – emit as single chunk
+                if len(full_content) <= self.chunk_size:
+                    meta = dict(base_metadata or {})
+                    meta.update(
+                        chunk_index=idx,
+                        chunk_strategy="hierarchical",
+                        hierarchy_level=max(section["level"], 0),
+                        parent_title=parent_title,
+                    )
+                    chunks.append(Chunk(id=parent_id, content=full_content, index=idx, metadata=meta))
+                    idx += 1
+                else:
+                    # Too large – fallback to base chunker
+                    fallback = self.base_chunker.chunk(full_content, base_metadata)
+                    for c in fallback:
+                        c.index = idx
+                        c.metadata["chunk_index"] = idx
+                        c.metadata["chunk_strategy"] = "hierarchical"
+                        c.metadata["parent_title"] = parent_title
+                        idx += 1
+                    chunks.extend(fallback)
+                continue
+
+            # --- Article with children ---
+            # Emit parent chunk (full article text) if it fits
+            if len(full_content) <= self.chunk_size:
+                meta = dict(base_metadata or {})
+                meta.update(
+                    chunk_index=idx,
+                    chunk_strategy="hierarchical",
+                    hierarchy_level=0,
+                    parent_title=parent_title,
+                )
+                chunks.append(Chunk(id=parent_id, content=full_content, index=idx, metadata=meta))
+                idx += 1
+            else:
+                # Parent too large – emit only child chunks
+                pass
+
+            # Emit child chunks
+            for child in children:
+                child_content = child["content"]
+                if self.include_parent_context and parent_title:
+                    child_content = f"[{parent_title}] {child_content}"
+
+                if len(child_content) <= self.chunk_size:
+                    meta = dict(base_metadata or {})
+                    meta.update(
+                        chunk_index=idx,
+                        chunk_strategy="hierarchical",
+                        hierarchy_level=child["level"],
+                        parent_id=parent_id,
+                        parent_title=parent_title,
+                    )
+                    chunks.append(Chunk(id=str(uuid.uuid4()), content=child_content, index=idx, metadata=meta))
+                    idx += 1
+                else:
+                    # Child too large – split with base chunker, keep parent context
+                    fallback = self.base_chunker.chunk(child_content, base_metadata)
+                    for c in fallback:
+                        c.index = idx
+                        c.metadata["chunk_index"] = idx
+                        c.metadata["chunk_strategy"] = "hierarchical"
+                        c.metadata["hierarchy_level"] = child["level"]
+                        c.metadata["parent_id"] = parent_id
+                        c.metadata["parent_title"] = parent_title
+                        idx += 1
+                    chunks.extend(fallback)
+
+        return chunks
+
+
+class AdaptiveChunker:
+    """Auto-detect document structure and apply the best chunking strategy.
+
+    Strategy selection order:
+    1. Hierarchical – if the text contains Korean legal article patterns
+       (제N조 appearing >= 2 times).
+    2. Table – if > 50 % of lines are pipe- or tab-delimited.
+    3. Recursive – general-purpose fallback.
+    """
+
+    def __init__(
+        self,
+        chunk_size: int | None = None,
+        chunk_overlap: int | None = None,
+    ):
+        self.recursive = RecursiveChunker(chunk_size, chunk_overlap)
+        self.table = TableChunker(chunk_size, chunk_overlap)
+        self.hierarchical = HierarchicalChunker(chunk_size, chunk_overlap)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def chunk(
+        self,
+        text: str,
+        base_metadata: dict | None = None,
+    ) -> list[Chunk]:
+        if not text or not text.strip():
+            return []
+
+        if self._has_legal_structure(text):
+            return self.hierarchical.chunk(text, base_metadata)
+        if self._is_mostly_table(text):
+            return self.table.chunk(text, base_metadata)
+        return self.recursive.chunk(text, base_metadata)
+
+    def chunk_with_pages(
+        self,
+        pages: list[dict],
+        base_metadata: dict | None = None,
+    ) -> list[Chunk]:
+        """For paged documents, choose strategy based on combined content."""
+        combined = "\n\n".join(
+            p.get("content", "") for p in pages if p.get("content", "").strip()
+        )
+        if not combined.strip():
+            return []
+
+        # Hierarchical structures span pages – process as single text
+        if self._has_legal_structure(combined):
+            return self.hierarchical.chunk(combined, base_metadata)
+
+        # Otherwise process page-by-page, choosing table vs recursive per page
+        all_chunks: list[Chunk] = []
+        global_idx = 0
+
+        for page in pages:
+            page_num = page.get("page_num", 0)
+            content = page.get("content", "")
+            if not content.strip():
+                continue
+
+            page_meta = dict(base_metadata or {})
+            page_meta["page_number"] = page_num
+
+            if self._is_mostly_table(content):
+                page_chunks = self.table.chunk(content, base_metadata=page_meta)
+            else:
+                page_chunks = self.recursive.chunk(content, base_metadata=page_meta)
+
+            for c in page_chunks:
+                c.index = global_idx
+                c.metadata["chunk_index"] = global_idx
+                global_idx += 1
+            all_chunks.extend(page_chunks)
+
+        return all_chunks
+
+    # ------------------------------------------------------------------
+    # Detection heuristics
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _has_legal_structure(text: str) -> bool:
+        """Check if text contains Korean legal article patterns (>= 2)."""
+        return len(re.findall(r'^제\d+조', text, re.MULTILINE)) >= 2
+
+    @staticmethod
+    def _is_mostly_table(text: str) -> bool:
+        """Return True when > 50 % of non-empty lines look tabular."""
+        lines = [l for l in text.split('\n') if l.strip()]
+        if not lines:
+            return False
+        table_lines = sum(1 for l in lines if l.count('|') >= 2 or l.count('\t') >= 2)
+        return table_lines / len(lines) > 0.5
+
+
+# Backward-compatible alias – now uses adaptive strategy
+SemanticChunker = AdaptiveChunker
 
 
 def create_chunker(
     strategy: str | None = None,
     chunk_size: int | None = None,
     chunk_overlap: int | None = None,
-) -> RecursiveChunker | EmbeddingSemanticChunker:
+) -> RecursiveChunker | EmbeddingSemanticChunker | TableChunker | HierarchicalChunker | AdaptiveChunker:
     """Factory function to create chunker based on settings.
 
     Args:
-        strategy: "recursive" or "semantic". Defaults to settings.chunk_strategy.
+        strategy: One of "recursive", "semantic", "table", "hierarchical",
+                  or "adaptive". Defaults to ``settings.chunk_strategy``.
         chunk_size: Override chunk size.
         chunk_overlap: Override chunk overlap.
 
@@ -395,7 +1012,22 @@ def create_chunker(
         return EmbeddingSemanticChunker(
             max_chunk_size=chunk_size,
         )
-    else:
+    elif strategy == "table":
+        return TableChunker(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+    elif strategy == "hierarchical":
+        return HierarchicalChunker(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+    elif strategy == "adaptive":
+        return AdaptiveChunker(
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+    else:  # "recursive" default
         return RecursiveChunker(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
