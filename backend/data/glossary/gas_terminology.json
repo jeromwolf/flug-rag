@@ -1,0 +1,124 @@
+{
+  "terms": [
+    {
+      "term": "정압기",
+      "synonyms": ["가스정압기", "정압장치", "레귤레이터", "regulator"],
+      "related": ["압력조정기", "감압밸브"],
+      "english": "pressure regulator",
+      "category": "설비",
+      "definition": "가스의 압력을 일정하게 유지하는 장치"
+    },
+    {
+      "term": "안전차단밸브",
+      "synonyms": ["긴급차단밸브", "차단밸브", "safety valve"],
+      "related": ["안전밸브", "차단장치"],
+      "english": "emergency shut-off valve",
+      "category": "안전설비",
+      "definition": "비상 시 가스 공급을 차단하는 밸브"
+    },
+    {
+      "term": "액화천연가스",
+      "synonyms": ["LNG", "엘엔지"],
+      "related": ["천연가스", "CNG"],
+      "english": "Liquefied Natural Gas",
+      "category": "가스종류",
+      "definition": "천연가스를 -162도로 냉각하여 액화시킨 가스"
+    },
+    {
+      "term": "액화석유가스",
+      "synonyms": ["LPG", "엘피지", "프로판"],
+      "related": ["부탄", "프로판가스"],
+      "english": "Liquefied Petroleum Gas",
+      "category": "가스종류",
+      "definition": "석유에서 추출한 프로판, 부탄 등을 액화시킨 가스"
+    },
+    {
+      "term": "압축천연가스",
+      "synonyms": ["CNG", "씨엔지"],
+      "related": ["천연가스", "LNG"],
+      "english": "Compressed Natural Gas",
+      "category": "가스종류",
+      "definition": "천연가스를 200~250기압으로 압축한 가스"
+    },
+    {
+      "term": "가스배관망",
+      "synonyms": ["배관망", "가스관", "공급관"],
+      "related": ["도시가스망", "배관시설"],
+      "english": "gas pipeline network",
+      "category": "인프라",
+      "definition": "가스를 수송하는 배관 시스템"
+    },
+    {
+      "term": "한국가스공사",
+      "synonyms": ["가스공사", "KOGAS", "코가스"],
+      "related": ["한국가스기술공사"],
+      "english": "Korea Gas Corporation",
+      "category": "기관",
+      "definition": "천연가스 도입 및 공급을 담당하는 공기업"
+    },
+    {
+      "term": "한국가스기술공사",
+      "synonyms": ["가스기술공사", "가공", "KGTC"],
+      "related": ["한국가스공사"],
+      "english": "Korea Gas Technology Corporation",
+      "category": "기관",
+      "definition": "가스 기술 연구 및 개발을 담당하는 공기업"
+    },
+    {
+      "term": "도시가스사업법",
+      "synonyms": ["도시가스법"],
+      "related": ["가스안전관리법", "한국가스공사법"],
+      "english": "City Gas Business Act",
+      "category": "법률",
+      "definition": "도시가스 사업에 관한 법률"
+    },
+    {
+      "term": "고압가스 안전관리법",
+      "synonyms": ["고압가스법", "안관법"],
+      "related": ["액화석유가스법", "도시가스법"],
+      "english": "High Pressure Gas Safety Control Act",
+      "category": "법률",
+      "definition": "고압가스의 제조, 저장, 판매 등의 안전관리에 관한 법률"
+    },
+    {
+      "term": "액화석유가스의 안전관리 및 사업법",
+      "synonyms": ["LP가스법", "LPG법", "액화석유가스법"],
+      "related": ["고압가스법", "도시가스법"],
+      "english": "LPG Safety and Business Act",
+      "category": "법률",
+      "definition": "액화석유가스의 안전관리 및 사업에 관한 법률"
+    },
+    {
+      "term": "가스미터",
+      "synonyms": ["계량기", "미터기", "gas meter"],
+      "related": ["검침", "사용량측정"],
+      "english": "gas meter",
+      "category": "계량설비",
+      "definition": "가스 사용량을 측정하는 계량 장치"
+    },
+    {
+      "term": "정압소",
+      "synonyms": ["정압스테이션", "감압소", "pressure station"],
+      "related": ["정압기", "배관시설"],
+      "english": "pressure reduction station",
+      "category": "설비",
+      "definition": "고압 가스를 저압으로 감압하는 시설"
+    },
+    {
+      "term": "가스누출경보기",
+      "synonyms": ["누출경보기", "가스감지기", "gas detector"],
+      "related": ["가스차단기", "안전장치"],
+      "english": "gas leak detector",
+      "category": "안전설비",
+      "definition": "가스 누출을 감지하여 경보하는 장치"
+    },
+    {
+      "term": "메탄",
+      "synonyms": ["CH4", "천연가스주성분"],
+      "related": ["천연가스", "LNG"],
+      "english": "methane",
+      "category": "가스성분",
+      "definition": "천연가스의 주성분인 탄화수소"
+    }
+  ]
+}

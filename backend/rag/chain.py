@@ -187,6 +187,24 @@ class RAGChain:
         except Exception as e:
             logger.debug("Query correction skipped: %s", e)
 
+        # Terminology expansion for search (SFR: 기술용어 사전)
+        terminology_info = None
+        search_query = question  # Default: use corrected question for search
+        try:
+            from .terminology import get_terminology_service
+            ts = get_terminology_service()
+            expansion = ts.expand_query(question)
+            if expansion.was_expanded:
+                terminology_info = {
+                    "matched_terms": expansion.matched_terms,
+                    "expansions": expansion.expansions,
+                }
+                # Use expanded query for retrieval, keep original for LLM
+                search_query = expansion.expanded_query
+                logger.info("Query expanded with terminology: %d terms matched", len(expansion.matched_terms))
+        except Exception as e:
+            logger.debug("Terminology expansion skipped: %s", e)
+
         # Use override LLM if specified
         llm = self.llm
         temp_llm = None
@@ -239,6 +257,7 @@ class RAGChain:
                 response = await self._rag_query(
                     question, llm, filters, start_time, user_id, correction_info, temperature,
                     force_multi_query=agentic_use_multi_query, override_top_k=agentic_top_k,
+                    search_query=search_query, terminology_info=terminology_info,
                 )
 
             # Add agentic routing metadata (exclude internal _params)
@@ -270,8 +289,13 @@ class RAGChain:
         temperature: float | None = None,
         force_multi_query: bool = False,
         override_top_k: int | None = None,
+        search_query: str | None = None,
+        terminology_info: dict | None = None,
     ) -> RAGResponse:
         """RAG mode: retrieve documents then generate."""
+        # Use expanded search query if provided, else fall back to question
+        search_query = search_query or question
+
         # Step 0+1: Retrieve (with optional HyDE and Multi-Query)
         hyde_used = False
         multi_query_used = False
@@ -301,7 +325,7 @@ class RAGChain:
                     query_count=settings.multi_query_count,
                 )
                 retrieval_results = await mq_retriever.retrieve(
-                    query=question,
+                    query=search_query,
                     top_k=effective_top_k,
                     filters=filters,
                     hyde_embedding=hyde_embedding,
@@ -313,7 +337,7 @@ class RAGChain:
         # Standard retrieval (fallback)
         if not multi_query_used:
             retrieval_results = await self.retriever.retrieve(
-                query=question,
+                query=search_query,
                 top_k=effective_top_k,
                 filters=filters,
                 hyde_embedding=hyde_embedding if hyde_used else None,
@@ -420,6 +444,10 @@ class RAGChain:
         # Add query correction info if present
         if correction_info:
             metadata["query_correction"] = correction_info
+
+        # Add terminology expansion info if present
+        if terminology_info:
+            metadata["terminology_expansion"] = terminology_info
 
         # Add HyDE info if used
         if hyde_used:

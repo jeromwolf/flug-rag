@@ -75,6 +75,20 @@ class QueryCorrector:
         for orig, corrected in sorted(self._typos.items(), key=lambda x: -len(x[0])):
             self._all_patterns.append((orig, corrected, "typo"))
 
+        # Load additional synonyms from terminology dictionary
+        try:
+            from .terminology import get_terminology_service
+            ts = get_terminology_service()
+            if ts.is_loaded:
+                for entry in ts.get_all_terms():
+                    for syn in entry.synonyms:
+                        if syn != entry.term and syn not in self._synonyms:
+                            self._synonyms[syn] = entry.term
+                self._rebuild_patterns()
+                logger.debug("Loaded %d terms from terminology dictionary", ts.entry_count)
+        except Exception as e:
+            logger.debug("Terminology dictionary integration skipped: %s", e)
+
     def correct(self, query: str) -> CorrectionResult:
         """쿼리 교정 실행."""
         if not query or not query.strip():
@@ -154,6 +168,19 @@ class QueryCorrector:
 
     def get_typos(self) -> dict[str, str]:
         return dict(self._typos)
+
+    def expand_with_terminology(self, query: str) -> tuple[str, list[dict]]:
+        """Expand query with terminology synonyms for search.
+
+        Returns: (expanded_query, expansions_list)
+        """
+        try:
+            from .terminology import get_terminology_service
+            ts = get_terminology_service()
+            result = ts.expand_query(query)
+            return result.expanded_query, result.expansions
+        except Exception:
+            return query, []
 
 
 # Singleton
