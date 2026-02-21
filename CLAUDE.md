@@ -27,9 +27,11 @@ npm run dev
 ```bash
 cd backend
 pytest tests/ -v                              # 전체 테스트
+python tests/benchmark_all.py                 # 통합 벤치마크 (120문항, 4개 데이터셋)
 python tests/benchmark_kogas_law.py           # 한국가스공사법 벤치마크 (50문항)
 python tests/benchmark_internal_rules.py      # 내부규정 벤치마크 (60문항)
-python tests/benchmark_optimizer.py           # 자동 파라미터 최적화
+python tests/benchmark_parametric.py          # 자동 파라미터 최적화 (grid search)
+python tests/failure_analyzer.py              # 실패 사례 자동 분석
 ```
 
 ### 문서 인제스트
@@ -113,7 +115,10 @@ flux-rag/
 ├── frontend/             # React + TypeScript + MUI
 │   └── src/
 │       ├── pages/        # Chat, Admin, Documents, Monitor, QualityDashboard, AgentBuilder
-│       └── components/   # ContentManager, CustomToolBuilder, EthicsPledge 등
+│       ├── components/
+│       │   └── chat/     # ChatSidebar, ChatTopBar, MessageBubble, SourcesPanel 등 8개
+│       ├── hooks/        # useStreamingChat, useSessions, useFeedback 등 5개
+│       └── stores/       # Zustand 상태 관리 (appStore)
 ├── k8s/                  # Kubernetes 배포
 └── scripts/              # 유틸리티 스크립트
 ```
@@ -160,16 +165,26 @@ flux-rag/
 
 ## 벤치마크 결과
 
-### 한국가스공사법 (Phase 1 - 완료)
-- 성공률: **100%** (50/50)
-- 평균 신뢰도: 0.999
-- 카테고리: factual(20), inference(15), multi_hop(10), negative(5)
+### 통합 벤치마크 (4개 데이터셋, 120문항)
+- 성공률: **95.8%** (115/120)
+- 모델: qwen2.5:14b (Ollama, temperature 0.1)
+- 벡터스토어: 39,739 chunks (ALIO 19,274 / 내부규정 19,035 / 홍보물 1,012 / 출장보고서 301 / 정관 89 / 법률 28)
 
-### 내부규정 (Phase 2 - 진행 중)
-- 성공률: **93.3%** (56/60)
-- 평균 composite: 0.6495
-- 카테고리: factual(25), inference(15), multi_hop(10), negative(10)
-- 목표: 95%+ 성공률
+| 데이터셋 | 문항 수 | 성공률 | 비고 |
+|---------|--------|--------|------|
+| 한국가스공사법 | 50 | **100%** (50/50) | Phase 1 완료 |
+| 내부규정 | 60 | **98.3%** (59/60) | Phase 2 완료 |
+| 인쇄홍보물 | 20 | **100%** (20/20) | Phase 3 완료 |
+| ALIO 공시 | 20 | **100%** (20/20) | Phase 3 완료 |
+| 국외출장 보고서 | 20 | **80%** (16/20) | PDF 텍스트 추출 품질 이슈 (OCR 재인제스트 필요) |
+
+### 주요 튜닝 포인트
+- 도메인별 시스템 프롬프트 자동 선택 (legal/technical/general)
+- 카테고리별 few-shot 예시 (법률 8개, 일반 도메인 확장)
+- 모델 크기 인식 프롬프팅 (7B/14B 별도 간결성 지시)
+- 카테고리별 가중치 평가 (factual/inference/negative/multi_hop)
+- 응답 검증 + 자동 재시도 (깨진 출력, 중국어 누출 감지)
+- source_type 기반 자동 필터링 (질문 키워드 → ChromaDB 메타데이터 필터)
 
 ## 테스트 계정
 
@@ -274,16 +289,16 @@ asyncio.run(check())
   - 카테고리별 가중치 평가 (`rag/evaluator.py` - factual/inference/negative 별도 가중치)
   - 길이 패널티 도입 (2.5x 초과 답변 감점)
 
-### Phase 2: 내부규정 벤치마크 튜닝 (진행 중)
-- **현재 상태**: 60문항 93.3% 성공 (56/60), 평균 composite 0.6495
-- **목표**: 95%+ 성공률
-- **실패 문항 패턴**:
-  - 답변 과잉 (factual Q3,Q22,Q24,Q25) - ROUGE 저하
-  - 추론 부족 (inference Q27,Q39) - 규정 재진술만
-  - 다중 규정 연결 실패 (multi_hop Q47,Q53)
-  - 부정 질문 오답 (negative Q58,Q59) - 범위 외 규정 참조
+### Phase 2: 내부규정 벤치마크 튜닝 (완료)
+- **결과**: 60문항 98.3% 성공 (59/60)
+- **개선사항**:
+  - 다중 규정 연계 처리 시스템 프롬프트 추가
+  - 추론 거부 방지 지시 (규정 해석/의미 추론 허용)
+  - few-shot 예시 8개로 확대 (factual + negative + inference + multi_hop 전 카테고리)
+  - 산술 계산 명시적 허용 (변동액/차이/증감 계산)
+  - 응답 검증 + 자동 재시도 로직 (깨진 출력 감지)
 - **벤치마크**: `python tests/benchmark_internal_rules.py`
-- **골든 데이터셋**: `tests/golden_dataset_internal_rules.json`
+- **골든 데이터셋**: `tests/golden_dataset_internal_rules.json` (60문항)
 
 ### SFR 기능 개발 (완료)
 - **SFR-002 사용자 컴플라이언스**: AI 윤리서약, 접근요청/승인 워크플로
@@ -298,17 +313,22 @@ asyncio.run(check())
 - **SFR-018 커스텀 도구**: 노코드 MCP 도구 빌더, 규정검토/안전점검 도메인 도구
 - **고급 RAG**: Self-RAG, Multi-Query, Agentic RAG, HyDE, Query Corrector
 
-### Phase 3: 나머지 데이터셋 (예정)
-- 국외출장 결과보고서 (100 files)
-- 인쇄홍보물 (7 files)
-- ALIO 검색결과 (403 files)
+### Phase 3: 나머지 데이터셋 벤치마크 (완료)
+- **인쇄홍보물**: 20문항 100% 성공, 골든 데이터셋 `tests/golden_dataset_brochure.json`
+- **ALIO 공시**: 20문항 100% 성공, 골든 데이터셋 `tests/golden_dataset_alio.json`
+- **국외출장 보고서**: 20문항 80% 성공, 골든 데이터셋 `tests/golden_dataset_travel.json`
+  - 잔여 실패 4건: PDF 텍스트 추출 품질 이슈 (Upstage OCR 재인제스트 필요)
+
+### 잔여 작업
+- **출장보고서 OCR 재인제스트**: 깨진 PDF 텍스트 수정 (Upstage Document Parse 적용)
+- **운영 배포 준비**: vLLM 서빙, K8s 매니페스트, Redis 캐시
 
 ## 데이터 위치
 
-| 데이터셋 | 경로 | 파일 수 | 상태 |
-|---------|------|--------|------|
-| 한국가스공사법 | `data/sample_dataset/한국가스공사법/` | PDF + 관련법 | 벤치마크 완료 (100%) |
-| 내부규정 | `data/uploads/한국가스기술공사_내부규정/` | 676 HWP | 인제스트 완료, 튜닝 중 |
-| 국외출장 보고서 | `data/uploads/국외출장_결과보고서/` | 100 files | 인제스트 대기 |
-| 인쇄홍보물 | `data/uploads/인쇄홍보물/` | 7 PDF | 인제스트 대기 |
-| ALIO 검색결과 | `data/uploads/ALIO_한국가스기술공사_검색결과/` | 403 files | 인제스트 대기 |
+| 데이터셋 | 경로 | 파일 수 | 청크 수 | 벤치마크 |
+|---------|------|--------|--------|---------|
+| 한국가스공사법 | `data/sample_dataset/한국가스공사법/` | PDF + 관련법 | 28 (법률) + 89 (정관) | 100% (50/50) |
+| 내부규정 | `data/uploads/한국가스기술공사_내부규정/` | 676 HWP | 19,035 | 98.3% (59/60) |
+| 국외출장 보고서 | `data/uploads/국외출장_결과보고서/` | 100 files | 301 | 80% (16/20) |
+| 인쇄홍보물 | `data/uploads/인쇄홍보물/` | 7 PDF | 1,012 | 100% (20/20) |
+| ALIO 검색결과 | `data/uploads/ALIO_한국가스기술공사_검색결과/` | 403 files | 19,274 | 100% (20/20) |
