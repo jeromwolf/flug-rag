@@ -114,7 +114,7 @@ async def run_benchmark(model_name: str | None = None, limit: int | None = None)
             eval_result = await evaluator.evaluate(q["answer"], answer)
 
             # 카테고리별 성공 기준
-            category_score = AnswerEvaluator.compute_category_score(eval_result, q["category"])
+            category_score = AnswerEvaluator.compute_category_score(eval_result, q["category"], expected=q["answer"], actual=answer)
             CATEGORY_THRESHOLDS = {
                 "factual": 0.50,
                 "inference": 0.50,

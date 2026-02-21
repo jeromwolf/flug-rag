@@ -1,0 +1,177 @@
+{
+  "dataset_info": {
+    "name": "한국가스기술공사 국외출장 결과보고서 RAG 벤치마크 골든 데이터셋",
+    "version": "1.0",
+    "source": "한국가스기술공사 국외출장 결과보고서 (멕시코, 파나마, 베트남, 요르단, UAE/오만, 호주, 쿠웨이트, 미국, 수소학회 등)",
+    "total_questions": 20,
+    "categories": {
+      "factual": 8,
+      "inference": 6,
+      "multi_hop": 4,
+      "negative": 2
+    },
+    "created_for": "한국가스기술공사 생성형 AI 플랫폼 구축 사업 벤치마크"
+  },
+  "questions": [
+    {
+      "id": 1,
+      "category": "factual",
+      "question": "멕시코 Manzanillo LNG 터미널 출장의 주요 업무는 무엇이었나요?",
+      "answer": "LNG LP Pump Overhaul 작업으로, Pump 취외, 취부 및 성능 테스트를 수행하였습니다.",
+      "source_document": "멕시코 Manzanillo LNG Terminal 출장보고서",
+      "difficulty": "easy"
+    },
+    {
+      "id": 2,
+      "category": "factual",
+      "question": "멕시코 Manzanillo LNG 터미널 출장에 참여한 인원은 몇 명이며 누구인가요?",
+      "answer": "총 4명이 참여하였으며, 김준식, 박성욱, 이민정, 이상조 과장입니다.",
+      "source_document": "멕시코 Manzanillo LNG Terminal 출장보고서",
+      "difficulty": "easy"
+    },
+    {
+      "id": 3,
+      "category": "factual",
+      "question": "파나마 Colon LNG 터미널 O&M Training 교육 기간과 교육 대상은 무엇인가요?",
+      "answer": "교육기간은 2023년 8월 21일부터 8월 25일까지 5일간이며, 교육대상은 AES Panama O&M 담당직원 20명입니다.",
+      "source_document": "파나마 Colon LNG Terminal 증설공사 시운전 용역 출장보고서",
+      "difficulty": "easy"
+    },
+    {
+      "id": 4,
+      "category": "factual",
+      "question": "파나마 LNG 터미널 O&M Training 교육강사 5명의 소속과 이름을 알려주세요.",
+      "answer": "교육강사 5명은 안전품질처 박노현 주임, 인재경영실 김진하 차장과 김준식 과장, 공급기술처 박성욱 과장, 인천지사 이흥엽 부장입니다.",
+      "source_document": "파나마 Colon LNG Terminal 증설공사 시운전 용역 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 5,
+      "category": "factual",
+      "question": "베트남 PVGAS 주배관 설계용역 출장의 목적과 출장지는 어디인가요?",
+      "answer": "출장 목적은 FCL 발급 및 착수회의 참석이며, 출장지는 베트남 호치민입니다.",
+      "source_document": "베트남 PVGAS 주배관 설계용역 출장보고서",
+      "difficulty": "easy"
+    },
+    {
+      "id": 6,
+      "category": "factual",
+      "question": "요르단 암모니아 저장탱크 EPC 출장에 참여한 인원과 출장지는 어디인가요?",
+      "answer": "출장자는 해외사업개발부 이병갑 과장, 정영호 선임, LNG저장탱크사업부 김용근 대리이며, 출장지는 요르단 암만과 아카바입니다.",
+      "source_document": "요르단 암모니아 저장탱크 EPC 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 7,
+      "category": "factual",
+      "question": "호주 출장에서 방문한 주요 기관과 기업은 어디인가요?",
+      "answer": "QUT(퀸즐랜드공과대학교), Fortescue Future Industries, Stanwell, Brisbane Port, Hills International College를 방문하였으며, 국내기업으로는 KAIST(액화수소 저장탱크), 래티스테놀러지, 한국중발전, 지필로스가 참여하였습니다.",
+      "source_document": "호주 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 8,
+      "category": "factual",
+      "question": "미국 West Coast Air Liquide 방문에서 확인한 주요 기술은 무엇인가요?",
+      "answer": "액화수소 생산/저장/운송 전주기 원천기술, Big Data 기반 운전기술, Plant 설비관리 기술을 확인하였으며, Opex 비용절감과 원가경쟁력 강화 방안을 논의하였습니다.",
+      "source_document": "미국 West Coast Air Liquide 방문 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 9,
+      "category": "inference",
+      "question": "멕시코 Manzanillo LNG 터미널 출장이 26박 27일로 장기간인 이유는 무엇이라고 추론할 수 있나요?",
+      "answer": "LNG LP Pump Overhaul 작업은 Pump 취외(분해), 취부(재조립) 및 성능 테스트까지 포함하는 복합 공정으로, 각 단계별로 정밀한 작업과 충분한 테스트 기간이 필요합니다. 특히 LNG 설비는 극저온 환경에서 운용되므로 안전과 품질 확보를 위해 단계별 검증이 필수적이어서 장기 출장이 불가피한 것으로 추론됩니다.",
+      "source_document": "멕시코 Manzanillo LNG Terminal 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 10,
+      "category": "inference",
+      "question": "파나마 O&M Training에 다양한 부서(안전품질처, 인재경영실, 공급기술처, 인천지사)의 강사가 참여한 이유는 무엇이라고 추론할 수 있나요?",
+      "answer": "LNG 터미널 O&M(운영 및 유지보수)은 안전관리, 인력운영, 가스공급 기술, 현장 운영 등 다양한 분야의 전문성이 요구됩니다. 각 분야의 전문가가 강사로 참여함으로써 AES Panama 직원들에게 종합적이고 체계적인 교육을 제공하기 위한 것으로 추론됩니다. 이는 LNG 터미널 운영의 다학제적 특성을 반영한 교육 구성입니다.",
+      "source_document": "파나마 Colon LNG Terminal 증설공사 시운전 용역 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 11,
+      "category": "inference",
+      "question": "베트남 PVGAS 출장이 2박 4일의 짧은 일정으로 진행된 이유는 무엇이라고 추론할 수 있나요?",
+      "answer": "출장 목적이 FCL 발급 및 착수회의 참석이라는 행정적·절차적 업무에 한정되어 있기 때문입니다. 현장 시공이나 기술 지원과 달리 문서 발급과 회의 참석은 단기간에 완료할 수 있는 업무이므로 최소한의 일정으로 계획된 것으로 추론됩니다.",
+      "source_document": "베트남 PVGAS 주배관 설계용역 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 12,
+      "category": "inference",
+      "question": "UAE/오만 수소기반 대중교통 인프라 출장에서 대사관 방문과 핵심 인사 교류가 포함된 이유는 무엇이라고 추론할 수 있나요?",
+      "answer": "수소기반 대중교통 인프라 사업은 국토교통부 주관 국가 R&D 과제로, 해외에서 수전해 방식 수소버스충전소를 구축하고 실증하는 대규모 프로젝트입니다. 이러한 프로젝트는 현지 정부의 허가, 협력, 부지 확보 등 정부 간 협력이 필수적이므로 대사관을 통한 외교적 지원과 에너지·환경 분야 고위 인사와의 네트워크 구축이 사업 추진의 핵심 요소로 추론됩니다.",
+      "source_document": "UAE/오만 수소기반 대중교통 인프라 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 13,
+      "category": "inference",
+      "question": "쿠웨이트/요르단 출장에서 AOO사와 MOU를 체결할 때 사장이 직접 참석한 이유는 무엇이라고 추론할 수 있나요?",
+      "answer": "MOU 체결은 기업 간 공식적인 협력 관계를 수립하는 중요한 의사결정이므로 최고 경영자인 사장의 직접 참석이 필요합니다. 또한 NOOOO사 최고경영자와의 회의도 포함되어 있어, 경영진 간 전략적 파트너십 구축을 위해 사장급의 참석이 필수적인 것으로 추론됩니다.",
+      "source_document": "쿠웨이트/요르단 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 14,
+      "category": "inference",
+      "question": "수소 품질분석 학회 출장에서 대전 내 수소 기업 지원기술 확대를 목표로 한 이유는 무엇이라고 추론할 수 있나요?",
+      "answer": "한국가스기술공사의 사업 거점이나 관련 연구기관이 대전에 위치하고 있어, 학회에서 습득한 수소 시료 채취 장치 개발 노하우와 최신 기술 동향을 대전 지역 수소 기업에 적용하여 지역 수소 산업 생태계를 강화하려는 목표로 추론됩니다. 이는 공사의 기술 지원 역할을 지역 산업 발전에 연계하려는 전략입니다.",
+      "source_document": "수소 품질분석 학회 출장보고서",
+      "difficulty": "hard"
+    },
+    {
+      "id": 15,
+      "category": "multi_hop",
+      "question": "김준식 과장과 박성욱 과장이 참여한 출장들을 모두 알려주세요. 두 사람이 여러 출장에 공통으로 참여한 이유는 무엇인가요?",
+      "answer": "김준식 과장은 멕시코 Manzanillo LNG 터미널 출장(LNG LP Pump Overhaul)과 파나마 Colon LNG 터미널 O&M Training 출장(교육강사, 인재경영실 소속)에 참여하였습니다. 박성욱 과장도 동일하게 멕시코 출장과 파나마 출장(교육강사, 공급기술처 소속)에 참여하였습니다. 두 사람이 LNG 터미널 관련 출장에 공통으로 참여한 것은 LNG 설비 정비 및 운영 분야의 전문성을 보유하고 있어, Overhaul 작업과 O&M 교육 모두에 핵심 인력으로 활용된 것입니다.",
+      "source_document": "멕시코 Manzanillo LNG Terminal 출장보고서, 파나마 Colon LNG Terminal 증설공사 시운전 용역 출장보고서",
+      "difficulty": "hard"
+    },
+    {
+      "id": 16,
+      "category": "multi_hop",
+      "question": "김용근 대리가 참여한 출장들을 비교하면, 한국가스기술공사의 해외사업 분야가 어떻게 다각화되어 있는지 알 수 있나요?",
+      "answer": "김용근 대리(LNG저장탱크사업부)는 베트남 PVGAS 주배관 설계용역 출장과 요르단 암모니아 저장탱크 EPC 출장에 참여하였습니다. 베트남 출장은 가스 주배관 설계 분야이고, 요르단 출장은 암모니아 저장탱크 EPC 분야입니다. 이를 통해 한국가스기술공사가 LNG 분야를 넘어 가스 배관 설계, 암모니아 저장탱크까지 해외사업 영역을 다각화하고 있음을 확인할 수 있습니다.",
+      "source_document": "베트남 PVGAS 주배관 설계용역 출장보고서, 요르단 암모니아 저장탱크 EPC 출장보고서",
+      "difficulty": "hard"
+    },
+    {
+      "id": 17,
+      "category": "multi_hop",
+      "question": "호주 출장과 UAE/오만 출장을 종합하면, 한국가스기술공사의 수소 사업 전략은 어떤 방향인가요?",
+      "answer": "호주 출장에서는 QUT, Fortescue Future Industries, Stanwell 등을 방문하여 수소 및 신재생에너지 사업을 탐색하였고, KAIST(액화수소 저장탱크) 등 국내기업과도 협력하였습니다. UAE/오만 출장에서는 국토교통부 주관 국가 과제로 수전해 방식 수소버스충전소 구축 및 실증을 추진하였습니다. 이를 종합하면, 한국가스기술공사는 수소 생산(수전해)부터 저장(액화수소 탱크), 활용(수소버스충전소)까지 수소 밸류체인 전반을 아우르는 글로벌 사업 전략을 추진하고 있습니다.",
+      "source_document": "호주 출장보고서, UAE/오만 수소기반 대중교통 인프라 출장보고서",
+      "difficulty": "hard"
+    },
+    {
+      "id": 18,
+      "category": "multi_hop",
+      "question": "미국 Air Liquide 방문과 수소 품질분석 학회 출장을 연계하면, 한국가스기술공사의 수소 기술 역량 강화 방향은 무엇인가요?",
+      "answer": "미국 Air Liquide 방문에서는 액화수소 생산/저장/운송 전주기 원천기술과 Big Data 기반 운전기술, Plant 설비관리 기술을 확인하였고, 수소 품질분석 학회에서는 수소 시료 채취 장치 개발 노하우를 습득하고 FDFC 국제학회에 참석하였습니다. 이를 연계하면, 한국가스기술공사는 수소의 생산-저장-운송 기반 기술(Air Liquide)과 수소 품질 관리 기술(학회)을 동시에 확보하여 수소 사업 전반의 기술 경쟁력을 강화하려는 전략을 추진하고 있습니다.",
+      "source_document": "미국 West Coast Air Liquide 방문 출장보고서, 수소 품질분석 학회 출장보고서",
+      "difficulty": "medium"
+    },
+    {
+      "id": 19,
+      "category": "negative",
+      "question": "국외출장 결과보고서에서 출장 경비 정산 내역이나 항공편 정보가 포함되어 있나요?",
+      "answer": "제시된 국외출장 결과보고서에서 출장 경비 정산 내역이나 항공편 정보에 대한 구체적인 내용은 확인되지 않습니다. 출장보고서는 주로 출장 목적, 기간, 출장자, 방문처, 업무 내용 및 성과를 중심으로 작성되어 있습니다.",
+      "source_document": "해당없음",
+      "difficulty": "easy"
+    },
+    {
+      "id": 20,
+      "category": "negative",
+      "question": "국외출장 결과보고서에서 국내 가스배관 유지보수 작업에 대한 내용이 있나요?",
+      "answer": "제시된 국외출장 결과보고서는 모두 해외 현장(멕시코, 파나마, 베트남, 요르단, UAE/오만, 호주, 쿠웨이트, 미국 등)에서의 업무를 다루고 있으며, 국내 가스배관 유지보수 작업에 대한 내용은 포함되어 있지 않습니다.",
+      "source_document": "해당없음",
+      "difficulty": "easy"
+    }
+  ]
+}

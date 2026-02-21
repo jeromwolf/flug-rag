@@ -147,7 +147,7 @@ async def run_benchmark(model_name: str | None = None, limit: int | None = None)
             eval_result = await evaluator.evaluate(q["answer"], answer)
 
             # Category-specific composite score
-            cat_score = AnswerEvaluator.compute_category_score(eval_result, q["category"])
+            cat_score = AnswerEvaluator.compute_category_score(eval_result, q["category"], expected=q["answer"], actual=answer)
 
             # 성공 기준: 카테고리별 임계값 + 카테고리별 confidence 기준
             threshold = CATEGORY_THRESHOLDS.get(q["category"], DEFAULT_THRESHOLD)

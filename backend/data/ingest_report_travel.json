@@ -1,0 +1,611 @@
+{
+  "timestamp": "2026-02-12 14:44:51",
+  "total_files": 100,
+  "success": 100,
+  "failed": 0,
+  "total_chunks": 301,
+  "elapsed_minutes": 1.6,
+  "failed_files": [],
+  "results": [
+    {
+      "filename": "[붙임] 국외출장결과보고서-게시용.pdf",
+      "status": "completed",
+      "chunks": 3,
+      "elapsed_s": 5.8
+    },
+    {
+      "filename": "[붙임] 예비피그 제작 관련 선진글로벌 피깅사 벤치마킹 국외출장 결과보고서(공사 홈페이지 개시용).pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장 결과보고서 (1).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.5
+    },
+    {
+      "filename": "국외출장 결과보고서.pdf",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.2
+    },
+    {
+      "filename": "국외출장 보고서_경기도 에너지 분야 투자 유치 홍보 관련 국외(호주)출장 결과 보고.hwp",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.7
+    },
+    {
+      "filename": "국외출장계획서 (1).pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장계획서.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_240417-240421.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_250810-250813 - 게시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_250811-250815 - 게시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_베트남 YHP Refrigerated LPG 저장탱크 설계용역 60_ 3D Modeling Review 및 Engineering Information 회의 참석 관련 국외출장 결과보고_게시용.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "국외출장보고_베트남 YHP Refrigerated LPG 저장탱크 설계용역 HAZOP Workshop 참석 관련 국외출장 결과보고_게시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_베트남 YHP Refrigerated LPG 저장탱크 설계용역 Tank Foundation 및 Pile Deviation 대면회의 참석 관련 국외출장 결과보고_게시용.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "국외출장보고서 (1).pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고서 (2).pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고서.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "국외출장보고서_액화공기이용 80MW DC 냉각 타당성 검토_게시용.pdf",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 8.1
+    },
+    {
+      "filename": "요약 국외출장 결과보고서(홈페이지 공시용)_베트남.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약 국외출장결과보고서(2024년 해외 천연가스 설비 정비사업 조사 및 벤치마킹).pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약 국외출장결과보고서(ADIPEC 2024 부스운영 및 컨퍼런스 참석을 위한 국외출장).pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약 국외출장결과보고서(홈페이지 공시용)_Gastech 2024 참석을 위한 국외출장.pdf",
+      "status": "completed",
+      "chunks": 3,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약 국외출장결과보고서(홈페이지 공시용)_인도네시아.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약 국외출장결과보고서(홈페이지 공시용)_콜롬비아.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약 국외출장결과보고서_베트남 PVGAS 주배관 설계용역 FCL 발급 및 착수회의.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약 국외출장보고서_베트남 주배관 증설 설계용역 협상을 위한 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약 국외출장보고서_토고 로메 LNG 터미널 및 발전소 구축사업 현장조사를 위한 국외출장.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약국외출장보고_250928-251001 - 게시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약국외출장보고_251102-251108 - 게시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약본_국외출장보고서_미국 LNG 저장탱크 및 데이터센터 출장.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약출장보고서_Cambodia Petroleum Terminal Pre-FEED.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_Gastech 2025 참석을 위한 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_UAE 중동지사 지사 워킹비자 갱신 및 중동지역 신규사업 협의 국외출장 요약보고서.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_UAE 중동지사 지사장 변경 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_방글라데시 스마트 가스미터링 ODA 사업.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_베트남 PV Gas 관련 LNG 프로젝트 입찰참여 및 관련 업무협의 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_베트남 PVGAS Thi Vai 확장 FEED 입찰_ 주배관 증설 계약체결 및 착수회의 참석.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_베트남 PVGAS 관련 신규 LNG 프로젝트 업무협의 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_베트남 주배관 설계 국외 출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_베트남 주배관 설계용역 업무협의 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_사우디 아람코 VE 참석 및 벤더 등록 업무협의 국외 출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_요르단 암모니아 저장탱크 EPC 프로젝트.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_인도네시아 Nusa Tenggara_ North Papua LNG 공급 인프라 구축 사업 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_인도네시아 Nusa Tenggara_ North Papua LNG공급 인프라 구축 사업 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_인도네시아 누사텡가라 LNG 인프라 구축사업_공시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_중동지사 변경 후속업무 및 대행사 변경계약 협의 등을 위한 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_카타르 및 사우디아라비아 신규 진출을 위한 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_쿠웨이트 Al-zour LNG Terminal O&M용역 관련 기술영업활동 출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_한베트남 오프쇼어 테크커넥트 참석.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_해외기술자문용역 중간회의 출장(일본_ 오사카).pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_해외기술자문용역 착수회의 출장(일본_ 오사카).pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "(요약)국외출장보고_200122_울산계량설비 FAT 참석.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "[붙임1]국외출장결과보고서(UAE_오만).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.7
+    },
+    {
+      "filename": "[붙임] 국외출장결과보고서.pdf",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 7.4
+    },
+    {
+      "filename": "국외출장 결과보고서 (1).pdf",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 7.3
+    },
+    {
+      "filename": "국외출장 결과보고서 (2).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.4
+    },
+    {
+      "filename": "국외출장 결과보고서 (3).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.7
+    },
+    {
+      "filename": "국외출장 결과보고서(West Coast).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.6
+    },
+    {
+      "filename": "국외출장 결과보고서.hwp",
+      "status": "completed",
+      "chunks": 3,
+      "elapsed_s": 0.5
+    },
+    {
+      "filename": "국외출장 결과보고서.pdf",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.2
+    },
+    {
+      "filename": "국외출장 요약보고(미국)_공시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장 요약보고서(베트남)_공시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장결과보고서(UAE_ 카타르)_공시용.pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.5
+    },
+    {
+      "filename": "국외출장결과보고서(미국_트리니다드토바고_ 가이아나)_공시용.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "국외출장결과보고서(베트남)_공시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장결과보고서(이탈리아)_공시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장결과보고서(카타르_ 요르단).pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.4
+    },
+    {
+      "filename": "국외출장결과보고서(쿠웨이트_ 요르단)_홈페이지공시용.pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.4
+    },
+    {
+      "filename": "국외출장결과보고서_로우카본 블루수소 생산기지 기공식.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장계획(안) (1).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.5
+    },
+    {
+      "filename": "국외출장계획(안).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.6
+    },
+    {
+      "filename": "국외출장보고.pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 5.6
+    },
+    {
+      "filename": "국외출장보고_220425_GEP-I 주기기 현황점검_외부제출용.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "국외출장보고_Full Modeling을 적용한 LNG 저장탱크 SSI 해석연구_게시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_베트남 YHP Refrigerated LPG 저장탱크 설계용역 국외출장 보고_게시용 (1).pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_베트남 YHP Refrigerated LPG 저장탱크 설계용역 국외출장 보고_게시용 (2).pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_베트남 YHP Refrigerated LPG 저장탱크 설계용역 국외출장 보고_게시용.pdf",
+      "status": "completed",
+      "chunks": 2,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_베트남 호치민_221218-221221 - 게시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고_중국 북경_230905-230908 - 게시용.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장보고서 (게시용).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 4.9
+    },
+    {
+      "filename": "국외출장보고서 게시용.hwp",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.4
+    },
+    {
+      "filename": "국외출장보고서.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "국외출장요약보고서_인도네시아 Arun 프로젝트.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "베트남 YHP Refrigerated LPG 사업 국외출장 보고 홈페이지 게시.pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.4
+    },
+    {
+      "filename": "수소산업 전주기제품 안전성 지원센터 위탁운영 사업 국외출장계획(안).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.7
+    },
+    {
+      "filename": "싱가포르 Gastech 2023 Conference 국외출장 보고_공시용.pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.4
+    },
+    {
+      "filename": "요약출장보고서.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_LNG충전터미널 프로젝트_200205.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_강진수소(공시용).hwp",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약출장보고서_베트남 Northern LNG Terminal .hwp",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.4
+    },
+    {
+      "filename": "요약출장보고서_베트남 북부 LNG 터미널 프로젝트(공시용).pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_베트남_220728.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_사우디 사업개발(공시용).hwp",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.4
+    },
+    {
+      "filename": "요약출장보고서_인도네시아 Arun 최종협상.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_인도네시아 대표사무소_220727.hwp",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.3
+    },
+    {
+      "filename": "요약출장보고서_인도네시아 프로젝트_211125.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_인도네시아_220926.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "요약출장보고서_카타르 신규 LNG 설계 및 O&M사업 진출 및 영업 네트워크 구축 관련 국외출장.pdf",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.2
+    },
+    {
+      "filename": "한_인니 오프쇼어 Congress 참석 국외출장보고서(공시용).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.7
+    },
+    {
+      "filename": "해외수소인프라 국외출장결과보고서.pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 21.9
+    },
+    {
+      "filename": "「2030 부산엑스포 유치 경제사절단 참석 관련」출장 보고서.pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 7.1
+    }
+  ]
+}
