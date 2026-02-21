@@ -35,6 +35,10 @@ export const useAppStore = create<AppState>((set) => ({
   sidebarOpen: true,
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
-  darkMode: false,
-  toggleDarkMode: () => set((state) => ({ darkMode: !state.darkMode })),
+  darkMode: typeof window !== 'undefined' && localStorage.getItem('flux_dark_mode') === 'true',
+  toggleDarkMode: () => set((state) => {
+    const newMode = !state.darkMode;
+    localStorage.setItem('flux_dark_mode', String(newMode));
+    return { darkMode: newMode };
+  }),
 }));
