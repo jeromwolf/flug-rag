@@ -96,6 +96,7 @@ class MultiQueryRetriever:
         top_k: int | None = None,
         filters: dict | None = None,
         hyde_embedding: list[float] | None = None,
+        rerank_top_n: int | None = None,
     ) -> list[RetrievalResult]:
         """Retrieve using multiple query variants.
 
@@ -126,7 +127,7 @@ class MultiQueryRetriever:
         for i, q in enumerate(all_queries):
             # Only use hyde_embedding for the original query
             emb = hyde_embedding if i == 0 else None
-            tasks.append(self.retriever.retrieve(query=q, top_k=top_k, filters=filters, hyde_embedding=emb))
+            tasks.append(self.retriever.retrieve(query=q, top_k=top_k, filters=filters, hyde_embedding=emb, rerank_top_n=rerank_top_n))
 
         all_results = await asyncio.gather(*tasks, return_exceptions=True)
 

@@ -77,6 +77,24 @@ class MetadataExtractor:
                 return "법률"
             return "내부규정"
 
+        # Travel report detection
+        travel_patterns = ["출장", "국외출장", "출장보고", "출장결과"]
+        for p in travel_patterns:
+            if p in path_lower:
+                return "출장보고서"
+
+        # Brochure/promotional material detection
+        brochure_patterns = ["홍보물", "인쇄홍보물", "브로셔", "20년사", "회사소개"]
+        for p in brochure_patterns:
+            if p in path_lower:
+                return "홍보물"
+
+        # ALIO public disclosure detection
+        alio_patterns = ["alio", "알리오", "공시", "검색결과"]
+        for p in alio_patterns:
+            if p in path_lower:
+                return "ALIO공시"
+
         return "기타"
 
     def extract(self, text: str, filename: str = "", file_path: str = "") -> dict:

@@ -77,12 +77,12 @@ class Settings(BaseSettings):
     confidence_low: float = 0.5
 
     # RAG - Score filtering
-    retrieval_score_threshold: float = 0.0  # minimum retrieval score (0 = no filtering)
+    retrieval_score_threshold: float = 0.15  # minimum retrieval score (0 = no filtering)
     context_max_chunks: int = 0  # max chunks for LLM context (0 = use rerank_top_n)
 
     # RAG - LLM control
-    llm_max_tokens: int = 2048
-    llm_temperature: float = 0.3  # Lower = more precise (0.1 for legal, 0.7 for general)
+    llm_max_tokens: int = 1024  # Optimized via parametric grid search
+    llm_temperature: float = 0.2  # Balanced: 0.1=negative-optimal, 0.3=factual-optimal
 
     # RAG - Query expansion
     query_expansion_enabled: bool = False  # HyDE (Hypothetical Document Embeddings)
@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     # RAG - Advanced techniques
     multi_query_enabled: bool = False  # Multi-query retrieval (multiple perspectives)
     multi_query_count: int = 3  # Number of alternative queries to generate
-    self_rag_enabled: bool = False  # Self-RAG (self-reflective RAG with hallucination check)
+    self_rag_enabled: bool = True  # Self-RAG (self-reflective RAG with hallucination check)
     self_rag_max_retries: int = 1  # Max retries if answer is not grounded
     agentic_rag_enabled: bool = False  # Agentic RAG (dynamic strategy routing)
 

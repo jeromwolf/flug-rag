@@ -45,6 +45,24 @@ def detect_source_type(source: str, filename: str = "") -> str:
         if kw in combined:
             return "내부규정"
 
+    # Travel report detection
+    travel_keywords = ["출장", "국외출장", "출장보고", "출장결과"]
+    for kw in travel_keywords:
+        if kw in combined:
+            return "출장보고서"
+
+    # Brochure/promotional material detection
+    brochure_keywords = ["홍보물", "인쇄홍보물", "브로셔", "20년사", "회사소개"]
+    for kw in brochure_keywords:
+        if kw in combined:
+            return "홍보물"
+
+    # ALIO public disclosure detection
+    alio_keywords = ["alio", "알리오", "공시", "검색결과"]
+    for kw in alio_keywords:
+        if kw in combined:
+            return "ALIO공시"
+
     # Path-based detection (also NFC-normalized)
     nfc_raw = unicodedata.normalize("NFC", f"{source} {filename}")
     if "한국가스공사법" in nfc_raw:
@@ -70,7 +88,7 @@ def main():
     print(f"Total chunks in collection: {total}")
 
     batch_size = 500
-    stats = {"법률": 0, "내부규정": 0, "정관": 0, "기타": 0, "already_set": 0}
+    stats = {"법률": 0, "내부규정": 0, "정관": 0, "출장보고서": 0, "홍보물": 0, "ALIO공시": 0, "기타": 0, "already_set": 0}
     patched = 0
 
     for offset in range(0, total, batch_size):
@@ -84,7 +102,7 @@ def main():
         metadatas_to_update = []
 
         for doc_id, metadata in zip(results["ids"], results["metadatas"]):
-            if metadata.get("source_type"):
+            if metadata.get("source_type") and metadata["source_type"] != "기타":
                 stats["already_set"] += 1
                 continue
 
@@ -115,6 +133,9 @@ def main():
     print(f"  법률 (law): {stats['법률']}")
     print(f"  내부규정 (rules): {stats['내부규정']}")
     print(f"  정관 (articles): {stats['정관']}")
+    print(f"  출장보고서 (travel): {stats['출장보고서']}")
+    print(f"  홍보물 (brochure): {stats['홍보물']}")
+    print(f"  ALIO공시 (ALIO): {stats['ALIO공시']}")
     print(f"  기타 (other): {stats['기타']}")
     print(f"  Total patched: {patched}")
 

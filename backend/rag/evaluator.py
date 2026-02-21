@@ -221,6 +221,8 @@ class AnswerEvaluator:
     def compute_category_score(
         eval_result: "AnswerEvaluation",
         category: str,
+        expected: str = "",
+        actual: str = "",
     ) -> float:
         """Compute category-adjusted composite score.
 
@@ -239,6 +241,59 @@ class AnswerEvaluator:
             + weights["rouge_l"] * eval_result.rouge_l
             + weights["rouge_1"] * eval_result.rouge_1
         ) * eval_result.length_penalty
+
+        # Negation-aware penalty for negative category
+        if category == "negative" and expected and actual:
+            neg_markers = [
+                "확인되지 않습니다",
+                "규정은 없습니다",
+                "규정이 없습니다",
+                "포함하고 있지 않습니다",
+                "해당 규정이 없습니다",
+                "해당 내용은 확인되지",
+                "명시되어 있지 않습니다",
+                "규정하고 있지 않",
+                "관한 규정은 없",
+                "관련 규정은 없",
+                "절차는 명시되어 있지",
+                "규정은 포함하고 있지",
+                "별도로 규정하고 있지",
+                "직접적인 규정은 없",
+                # Broader negation patterns for non-regulation documents
+                "제공하지 않습니다",
+                "포함되어 있지 않습니다",
+                "포함되어 있지 않",
+                "명시되지 않았",
+                "언급이 없습니다",
+                "확인할 수 없습니다",
+                "확인할 수 없",
+                "정보는 없습니다",
+                "정보가 없습니다",
+                "내용은 없습니다",
+                "내용이 없습니다",
+                "포함하지 않",
+                "다루고 있지 않",
+                "기재되어 있지 않",
+                "수록되어 있지 않",
+                "나타나 있지 않",
+                "찾을 수 없",
+                "없는 것으로",
+            ]
+            # Also use regex fallback for common Korean negation endings
+            import re
+            neg_pattern = re.compile(
+                r'(확인되지|포함되어 있지|포함하고 있지|제공하지|없습니다|않습니다'
+                r'|않았다|않았습니다|없다고|없으며|없음)'
+            )
+            expected_negative = any(m in expected for m in neg_markers)
+            actual_negative = (
+                any(m in actual for m in neg_markers)
+                or bool(neg_pattern.search(actual))
+            )
+            # If golden says "doesn't exist" but actual says "exists" -> heavy penalty
+            if expected_negative and not actual_negative:
+                score *= 0.3
+
         return round(score, 4)
 
     @staticmethod

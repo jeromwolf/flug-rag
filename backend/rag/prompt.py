@@ -1,5 +1,7 @@
 """Prompt template management with YAML-based templates and few-shot support."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +19,7 @@ class PromptManager:
         self._few_shot_examples: list[dict] = []
         self._legal_examples: list[dict] = []
         self._technical_examples: list[dict] = []
+        self._general_examples: list[dict] = []
         self._load_prompts()
 
     def _load_prompts(self):
@@ -33,6 +36,7 @@ class PromptManager:
                 self._few_shot_examples = data.get("examples", [])
                 self._legal_examples = data.get("legal_examples", [])
                 self._technical_examples = data.get("technical_examples", [])
+                self._general_examples = data.get("general_examples", [])
 
     def get_system_prompt(self, name: str) -> str:
         """Get a system prompt by name."""
@@ -47,38 +51,48 @@ class PromptManager:
         Returns:
             "legal" for 법률/규정 documents,
             "technical" for 기술/매뉴얼/사내문서,
-            "general" for unclassified.
+            "general" for unclassified (홍보물, 출장보고서, ALIO공시 등).
         """
         import re
 
         legal_score = 0
         technical_score = 0
+        general_score = 0
 
         for chunk in context_chunks:
             metadata = chunk.get("metadata", {})
             filename = (metadata.get("filename", "") or "").lower()
             category = metadata.get("category", "") or ""
+            source_type = metadata.get("source_type", "") or ""
             content = chunk.get("content", "") or ""
+
+            # General signals (공시, 홍보물, 출장보고서)
+            if source_type in ("홍보물", "출장보고서", "ALIO공시"):
+                general_score += 3
+            if category in ("brochure", "travel_report", "public_disclosure"):
+                general_score += 2
 
             # Legal signals
             if category == "규정":
                 legal_score += 2
+            if source_type in ("법률", "내부규정", "정관"):
+                legal_score += 3
             if re.search(r'(법|시행령|시행규칙|조례|규정)', filename):
                 legal_score += 2
             if re.search(r'제\d+조', content):
                 legal_score += 1
 
             # Technical signals
-            if category in ("매뉴얼", "점검", "보고서", "계획서", "교육"):
+            if category in ("매뉴얼", "점검", "계획서", "교육"):
                 technical_score += 2
             if re.search(r'(매뉴얼|지침서|절차서|안내서|점검표)', filename):
                 technical_score += 2
             if re.search(r'(점검|측정|설비|배관|밸브)', content) and not re.search(r'제\d+조', content):
                 technical_score += 1
 
-        if legal_score > technical_score:
+        if legal_score > technical_score and legal_score > general_score:
             return "legal"
-        elif technical_score > legal_score:
+        elif technical_score > legal_score and technical_score > general_score:
             return "technical"
         return "general"
 
@@ -88,21 +102,32 @@ class PromptManager:
             return self._legal_examples
         elif doc_type == "technical" and self._technical_examples:
             return self._technical_examples
-        return self._few_shot_examples
+        elif doc_type == "general" and self._general_examples:
+            return self._general_examples
+        return self._general_examples or self._few_shot_examples
 
     @staticmethod
     def _get_conciseness_suffix(model_hint: str | None = None) -> str:
-        """Get extra conciseness instruction for smaller models."""
+        """Get extra conciseness instruction based on model size."""
         if not model_hint:
             return ""
         model_lower = model_hint.lower()
         small_patterns = ["7b", "8b", "3b", "1b", "1.5b", "mini", "tiny", "small"]
+        medium_patterns = ["14b", "13b", "12b", "15b", "20b"]
         if any(p in model_lower for p in small_patterns):
             return (
                 "\n\n[추가 지시 - 반드시 따르세요]\n"
                 "- 반드시 1~3문장으로만 답변하세요.\n"
                 "- 법 조문의 원문을 그대로 인용하세요.\n"
                 "- 추가 해석이나 부연 설명을 절대 덧붙이지 마세요."
+            )
+        if any(p in model_lower for p in medium_patterns):
+            return (
+                "\n\n[추가 지시 - 반드시 따르세요]\n"
+                "- 사실(factual) 질문: 50~150자로 간결하게 답변하세요.\n"
+                "- 부정(negative) 질문: 100~250자로, '확인되지 않습니다'와 함께 이유를 설명하세요.\n"
+                "- 핵심 사실만 답변하고, 컨텍스트의 원문 표현을 그대로 사용하세요.\n"
+                "- 불필요한 서론, 반복, 부연 설명을 삼가세요."
             )
         return ""
 
@@ -156,7 +181,7 @@ class PromptManager:
 
         if examples:
             user_parts.append("참고 예시:")
-            for ex in examples[:6]:  # Max 6 examples (law + regulation styles)
+            for ex in examples[:8]:  # Max 8 examples (cover all categories: factual + negative + inference + multi_hop)
                 user_parts.append(f"질문: {ex['question']}\n답변: {ex['answer']}")
             user_parts.append("")
 

@@ -75,6 +75,7 @@ class HybridRetriever:
         filters: dict | None = None,
         use_rerank: bool | None = None,
         hyde_embedding: list[float] | None = None,
+        rerank_top_n: int | None = None,
     ) -> list[RetrievalResult]:
         """Execute hybrid search and optional re-ranking.
 
@@ -118,7 +119,8 @@ class HybridRetriever:
             combined = await self._rerank(query, combined)
 
         # Return top N
-        results = combined[: self.rerank_top_n if use_rerank else top_k]
+        effective_rerank_n = rerank_top_n or self.rerank_top_n
+        results = combined[: effective_rerank_n if use_rerank else top_k]
 
         # Apply score threshold filtering
         if self.score_threshold > 0:
