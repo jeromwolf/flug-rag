@@ -71,7 +71,7 @@ pip install -q \
     "sentence-transformers>=3.4.0" \
     "chromadb>=0.6.0" \
     "pymupdf>=1.25.0" \
-    "pyhwp>=0.6.0" \
+    "pyhwp==0.1b15" \
     "python-docx>=1.1.0" \
     "openpyxl>=3.1.0" \
     "python-pptx>=1.0.0" \
