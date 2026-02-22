@@ -22,34 +22,30 @@ uname -a
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null || echo "WARNING: No GPU detected"
 echo "RAM: $(free -h | grep Mem | awk '{print $2}')"
 echo "Disk: $(df -h / | tail -1 | awk '{print $4}') free"
+PYTHON_VERSION=$(python3 --version 2>&1)
+echo "Python: $PYTHON_VERSION"
 echo ""
 
 # --- Install system dependencies ---
 echo "[2/8] Installing system dependencies..."
 apt-get update -qq && apt-get install -y -qq \
     git curl wget build-essential \
-    python3.11 python3.11-venv python3-pip \
+    python3-venv python3-pip python3-dev \
     redis-server \
     2>/dev/null || true
-
-# Ensure python3 points to 3.11+
-python3 --version
 
 # --- Clone or update repo ---
 echo ""
 echo "[3/8] Setting up project..."
 PROJECT_DIR="/workspace/flux-rag"
 
-if [ -d "$PROJECT_DIR" ]; then
+if [ -d "$PROJECT_DIR/.git" ]; then
     echo "Project exists, pulling latest..."
     cd "$PROJECT_DIR"
     git pull origin main || true
 else
     echo "Cloning repository..."
-    echo ">>> You need to clone the repo manually or use rsync <<<"
-    echo ">>> Option A: git clone <your-repo-url> $PROJECT_DIR"
-    echo ">>> Option B: From local machine: rsync -avz --exclude='.venv' --exclude='data/chroma_db' -e 'ssh -i ~/.ssh/id_ed25519' ./backend/ 5nwlnv1i1rwafk-64411f61@ssh.runpod.io:/workspace/flux-rag/backend/"
-    mkdir -p "$PROJECT_DIR"
+    git clone https://github.com/jeromwolf/flug-rag.git "$PROJECT_DIR" 2>/dev/null || true
 fi
 
 cd "$PROJECT_DIR/backend"
@@ -63,13 +59,43 @@ fi
 source .venv/bin/activate
 pip install --upgrade pip setuptools wheel -q
 
-# Install poetry and dependencies
-pip install poetry -q
-poetry config virtualenvs.create false
-poetry install --no-interaction --no-ansi 2>&1 | tail -5
-
-# Install Korean tokenizer for BM25
-pip install kiwipiepy -q
+# Install dependencies via pip (skip poetry to avoid version constraint issues)
+echo "Installing Python dependencies via pip..."
+pip install -q \
+    "fastapi>=0.115.0" \
+    "uvicorn[standard]>=0.34.0" \
+    "python-multipart>=0.0.18" \
+    "openai>=1.60.0" \
+    "anthropic>=0.43.0" \
+    "httpx>=0.28.0" \
+    "sentence-transformers>=3.4.0" \
+    "chromadb>=0.6.0" \
+    "pymupdf>=1.25.0" \
+    "pyhwp>=0.6.0" \
+    "python-docx>=1.1.0" \
+    "openpyxl>=3.1.0" \
+    "python-pptx>=1.0.0" \
+    "rank-bm25>=0.2.2" \
+    "flashrank>=0.2.0" \
+    "langchain-text-splitters>=0.3.0" \
+    "pydantic>=2.10.0" \
+    "pydantic-settings>=2.7.0" \
+    "aiosqlite>=0.20.0" \
+    "minio>=7.2.0" \
+    "python-jose[cryptography]>=3.3.0" \
+    "passlib[bcrypt]>=1.7.4" \
+    "bcrypt>=4.2.0" \
+    "apscheduler>=3.10.0" \
+    "watchdog>=6.0.0" \
+    "pyyaml>=6.0" \
+    "python-dotenv>=1.0.0" \
+    "numpy" \
+    "sse-starlette>=2.2.0" \
+    "psutil>=5.9" \
+    "redis>=5.0.0" \
+    "rouge-score>=0.1.2" \
+    "kiwipiepy" \
+    2>&1 | tail -3
 
 echo "Python packages installed."
 python3 -c "import fastapi; print(f'FastAPI {fastapi.__version__}')"
@@ -90,7 +116,7 @@ sleep 3
 echo "Pulling qwen2.5:14b (this may take a while)..."
 ollama pull qwen2.5:14b
 
-echo "Pulling embedding model info check..."
+echo "Model list:"
 ollama list
 
 # --- Redis ---
@@ -197,8 +223,6 @@ echo "     source .venv/bin/activate"
 echo "     uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4"
 echo ""
 echo "  4. Access from outside RunPod:"
-echo "     - RunPod dashboard → Pod → Connect → HTTP Port 8000"
-echo "     - Or use SSH port forwarding:"
-echo "       ssh -L 8000:localhost:8000 -i ~/.ssh/id_ed25519 5nwlnv1i1rwafk-64411f61@ssh.runpod.io"
+echo "     - RunPod dashboard > Pod > Connect > HTTP Port 8000"
 echo ""
 echo "============================================"
