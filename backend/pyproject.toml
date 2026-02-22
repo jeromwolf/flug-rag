@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "한국가스기술공사 생성형 AI 플랫폼 RAG 프레임워크"
 authors = ["Kelly"]
 readme = "README.md"
-python = "^3.11"
 
 [tool.poetry.dependencies]
 python = "^3.11"
