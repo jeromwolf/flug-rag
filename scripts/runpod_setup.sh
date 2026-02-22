@@ -29,7 +29,7 @@ echo ""
 # --- Install system dependencies ---
 echo "[2/8] Installing system dependencies..."
 apt-get update -qq && apt-get install -y -qq \
-    git curl wget build-essential \
+    git curl wget build-essential zstd \
     python3-venv python3-pip python3-dev \
     redis-server \
     2>/dev/null || true
