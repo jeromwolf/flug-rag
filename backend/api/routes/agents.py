@@ -3,7 +3,10 @@
 import asyncio
 import json
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+
+from auth.dependencies import get_current_user, require_role
+from auth.models import Role, User
 
 from agent.chaining.templates import CHAIN_TEMPLATES, list_chain_templates
 from agent.mcp.registry import ToolRegistry, create_default_registry
@@ -44,14 +47,14 @@ def _get_dashboard() -> DashboardDataProvider:
 
 
 @router.get("/agents/tools")
-async def list_tools():
+async def list_tools(current_user: User = Depends(get_current_user)):
     """List all available MCP tools."""
     registry = _get_registry()
     return {"tools": registry.list_schemas(), "count": registry.tool_count}
 
 
 @router.post("/agents/tools/{tool_name}/execute")
-async def execute_tool(tool_name: str, arguments: dict = {}):
+async def execute_tool(tool_name: str, arguments: dict = {}, current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """Execute a specific MCP tool."""
     registry = _get_registry()
     tracker = _get_tracker()
@@ -84,13 +87,13 @@ async def execute_tool(tool_name: str, arguments: dict = {}):
 
 
 @router.get("/agents/chains")
-async def list_chains():
+async def list_chains(current_user: User = Depends(get_current_user)):
     """List available chain templates."""
     return {"chains": list_chain_templates()}
 
 
 @router.post("/agents/chains/{template}/execute")
-async def execute_chain(template: str, input_data: dict = {}):
+async def execute_chain(template: str, input_data: dict = {}, current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """Execute a chain template.
 
     Note: In production, chain steps would have real agent execute functions.
@@ -150,7 +153,7 @@ async def execute_chain(template: str, input_data: dict = {}):
 
 
 @router.get("/agents/monitor/metrics")
-async def get_metrics(time_range: int | None = None):
+async def get_metrics(time_range: int | None = None, current_user: User = Depends(get_current_user)):
     """Get execution metrics.
 
     Args:
@@ -161,21 +164,21 @@ async def get_metrics(time_range: int | None = None):
 
 
 @router.get("/agents/monitor/active")
-async def get_active_executions():
+async def get_active_executions(current_user: User = Depends(get_current_user)):
     """Get currently active executions."""
     dashboard = _get_dashboard()
     return {"executions": dashboard.get_active_executions()}
 
 
 @router.get("/agents/monitor/overview")
-async def get_overview():
+async def get_overview(current_user: User = Depends(get_current_user)):
     """Get dashboard overview with metrics and recent executions."""
     dashboard = _get_dashboard()
     return dashboard.get_overview()
 
 
 @router.get("/agents/monitor/tools")
-async def get_tool_stats():
+async def get_tool_stats(current_user: User = Depends(get_current_user)):
     """Get tool usage statistics."""
     dashboard = _get_dashboard()
     return dashboard.get_tool_usage_stats()
@@ -215,6 +218,18 @@ _ws_manager = ConnectionManager()
 @router.websocket("/agents/monitor/ws")
 async def monitor_websocket(websocket: WebSocket):
     """WebSocket endpoint for real-time execution updates."""
+    # Validate JWT from query parameter
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008)
+        return
+    try:
+        from auth.jwt_handler import verify_token
+        verify_token(token)
+    except Exception:
+        await websocket.close(code=1008)
+        return
+
     await _ws_manager.connect(websocket)
 
     # Register tracker callback to broadcast updates

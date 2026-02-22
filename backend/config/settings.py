@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 8000
-    cors_origins: list[str] = ["*"]  # Override with CORS_ORIGINS env var (comma-separated)
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]  # Override with CORS_ORIGINS env var
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./data/sqlite.db"

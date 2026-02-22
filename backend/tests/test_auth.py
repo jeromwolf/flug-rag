@@ -455,10 +455,14 @@ class TestAuditLogging:
             "/api/auth/login",
             json={"username": "admin", "password": "admin123"},
         )
-        # The audit_logger singleton is in-process, so we can read directly
-        from auth.audit import audit_logger
+        # Wait for fire-and-forget audit task to complete
+        import asyncio
+        await asyncio.sleep(0.1)
 
-        events = audit_logger.get_events(limit=5, action="LOGIN")
+        # Use async singleton directly (sync proxy cannot return data in async context)
+        from auth.audit import get_audit_logger
+        logger_instance = await get_audit_logger()
+        events = await logger_instance.get_events(limit=5, action="LOGIN")
         assert len(events) >= 1
         latest = events[0]
         assert latest["username"] == "admin"

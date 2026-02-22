@@ -701,11 +701,29 @@ class RAGChain:
 
             if mode == "direct":
                 system, user_prompt = self.prompt_manager.build_direct_prompt(question)
-                # Note: Output guardrails not applied in streaming mode (tokens streamed one-by-one)
+                accumulated = []
                 async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
+                    accumulated.append(token)
                     yield {"event": "chunk", "data": {"content": token}}
+
+                # Post-stream output guardrails
+                full_response = "".join(accumulated)
+                guardrail_triggered = False
+                try:
+                    from .guardrails import get_guardrails_manager
+                    guard = await get_guardrails_manager()
+                    out_result = await guard.check_output(full_response, user_id=user_id)
+                    if not out_result.passed and out_result.action == "block":
+                        guardrail_triggered = True
+                        yield {"event": "guardrail_warning", "data": {"message": out_result.message or "응답이 안전 필터에 의해 차단되었습니다.", "triggered_rules": out_result.triggered_rules}}
+                except Exception as e:
+                    logger.debug("Streaming guardrails output check skipped: %s", e)
+
                 latency_ms = int((time.time() - start_time) * 1000)
-                yield {"event": "end", "data": {"confidence_score": 0.5, "confidence_level": "medium", "latency_ms": latency_ms, "note": "검색 근거 없이 LLM만으로 생성된 답변"}}
+                end_data = {"confidence_score": 0.5, "confidence_level": "medium", "latency_ms": latency_ms, "note": "검색 근거 없이 LLM만으로 생성된 답변"}
+                if guardrail_triggered:
+                    end_data["guardrail_blocked"] = True
+                yield {"event": "end", "data": end_data}
                 return
 
             # RAG mode with streaming
@@ -775,21 +793,35 @@ class RAGChain:
                 warning = self.quality.get_safety_message(confidence)
                 yield {"event": "chunk", "data": {"content": warning + "\n\n"}}
 
-            # Stream LLM response
-            # Note: Output guardrails not applied in streaming mode (tokens streamed one-by-one)
+            # Stream LLM response with post-stream guardrails
+            accumulated = []
             async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
+                accumulated.append(token)
                 yield {"event": "chunk", "data": {"content": token}}
 
+            # Post-stream output guardrails
+            full_response = "".join(accumulated)
+            guardrail_triggered = False
+            try:
+                from .guardrails import get_guardrails_manager
+                guard = await get_guardrails_manager()
+                out_result = await guard.check_output(full_response, user_id=user_id)
+                if not out_result.passed and out_result.action == "block":
+                    guardrail_triggered = True
+                    yield {"event": "guardrail_warning", "data": {"message": out_result.message or "응답이 안전 필터에 의해 차단되었습니다.", "triggered_rules": out_result.triggered_rules}}
+            except Exception as e:
+                logger.debug("Streaming guardrails output check skipped: %s", e)
+
             latency_ms = int((time.time() - start_time) * 1000)
-            yield {
-                "event": "end",
-                "data": {
-                    "confidence_score": round(confidence, 3),
-                    "confidence_level": self.quality.get_confidence_level(confidence),
-                    "latency_ms": latency_ms,
-                    "source_count": len(results),
-                },
+            end_data = {
+                "confidence_score": round(confidence, 3),
+                "confidence_level": self.quality.get_confidence_level(confidence),
+                "latency_ms": latency_ms,
+                "source_count": len(results),
             }
+            if guardrail_triggered:
+                end_data["guardrail_blocked"] = True
+            yield {"event": "end", "data": end_data}
         finally:
             if temp_llm is not None:
                 await temp_llm.close()

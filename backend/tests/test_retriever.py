@@ -100,9 +100,6 @@ class TestHybridRetriever:
         assert len(tokens) > 0
         assert all(isinstance(t, str) for t in tokens)
 
-    def test_invalidate_cache(self, retriever):
-        retriever._bm25_index = "something"
-        retriever._bm25_corpus = ["data"]
-        retriever.invalidate_bm25_cache()
-        assert retriever._bm25_index is None
-        assert retriever._bm25_corpus is None
+    def test_bm25_score_candidates_returns_empty_for_no_candidates(self, retriever):
+        results = retriever._bm25_score_candidates("가스 배관", [])
+        assert results == []

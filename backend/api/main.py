@@ -20,11 +20,13 @@ async def lifespan(app: FastAPI):
     security_logger = logging.getLogger("flux-rag.security")
 
     # Security checks
-    # C-02: JWT secret check
-    if settings.auth_enabled and settings.jwt_secret_key in ("change-me-in-production-jwt-secret", "change-me-in-production"):
-        security_logger.critical(
-            "!!! SECURITY WARNING: Using default JWT secret key. "
-            "Set JWT_SECRET_KEY environment variable before production deployment. !!!"
+    # C-02: JWT secret check – block startup with default secret
+    if settings.auth_enabled and settings.jwt_secret_key in (
+        "change-me-in-production-jwt-secret", "change-me-in-production",
+    ):
+        raise RuntimeError(
+            "FATAL: Default JWT secret key detected with AUTH_ENABLED=true. "
+            "Set JWT_SECRET_KEY environment variable to a secure random value."
         )
 
     # C-03: Default password warning
@@ -34,12 +36,13 @@ async def lifespan(app: FastAPI):
             "Default accounts (admin/manager/user/viewer) use weak passwords."
         )
 
-    # C-04: Auth disabled warning
+    # H-07: Auth disabled – strong warning
     if not settings.auth_enabled:
-        security_logger.warning(
-            "!!! AUTH_ENABLED=false: All endpoints are accessible without authentication. "
-            "Set AUTH_ENABLED=true for production deployment. !!!"
-        )
+        for _ in range(3):
+            security_logger.critical(
+                ">>> AUTH_ENABLED=false: ALL endpoints accessible WITHOUT authentication. "
+                "Set AUTH_ENABLED=true for production. <<<"
+            )
 
     # 1. Cache initialization
     if settings.cache_enabled:
@@ -131,10 +134,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+        if not settings.debug:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 
-cors_origins = settings.cors_origins if hasattr(settings, 'cors_origins') else ["*"]
+cors_origins = settings.cors_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,

@@ -11,9 +11,11 @@ SFR-005: 문서 동기화 시스템 엔드포인트
 from dataclasses import asdict
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from auth.dependencies import get_current_user, require_role
+from auth.models import Role, User
 from pipeline.scheduler import get_scheduler
 from pipeline.sync import get_sync_engine
 
@@ -60,7 +62,7 @@ class SyncHistoryResponse(BaseModel):
 
 
 @router.get("/status", response_model=SyncStatusResponse)
-async def get_sync_status():
+async def get_sync_status(current_user: User = Depends(get_current_user)):
     """
     스케줄러 상태 조회
 
@@ -85,7 +87,10 @@ async def get_sync_status():
 
 
 @router.post("/trigger", response_model=SyncResultResponse)
-async def trigger_sync(source_dir: str | None = None):
+async def trigger_sync(
+    source_dir: str | None = None,
+    current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))
+):
     """
     즉시 동기화 실행
 
@@ -98,7 +103,18 @@ async def trigger_sync(source_dir: str | None = None):
     try:
         engine = get_sync_engine()
 
-        # 동기화 실행
+        # H-04: Validate source_dir to prevent path traversal
+        if source_dir:
+            from pathlib import Path
+            from config.settings import settings
+            allowed_base = Path(settings.upload_dir).resolve()
+            resolved = Path(source_dir).resolve()
+            if not resolved.is_relative_to(allowed_base):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Access denied: directory is outside allowed sync paths"
+                )
+
         result = engine.run_sync(source_dir)
 
         # dataclass를 dict로 변환 후 Response 모델로 변환
@@ -110,7 +126,10 @@ async def trigger_sync(source_dir: str | None = None):
 
 
 @router.post("/schedule")
-async def schedule_sync(request: ScheduleRequest):
+async def schedule_sync(
+    request: ScheduleRequest,
+    current_user: User = Depends(require_role([Role.ADMIN]))
+):
     """
     동기화 스케줄 설정 및 시작
 
@@ -145,7 +164,7 @@ async def schedule_sync(request: ScheduleRequest):
 
 
 @router.post("/stop")
-async def stop_sync():
+async def stop_sync(current_user: User = Depends(require_role([Role.ADMIN]))):
     """
     스케줄러 중지
 
@@ -164,7 +183,8 @@ async def stop_sync():
 
 @router.get("/history", response_model=SyncHistoryResponse)
 async def get_sync_history(
-    limit: Annotated[int, Query(ge=1, le=100)] = 10
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+    current_user: User = Depends(get_current_user)
 ):
     """
     동기화 이력 조회

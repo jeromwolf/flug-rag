@@ -55,9 +55,6 @@ class HybridRetriever:
         self.bm25_b = bm25_b if bm25_b is not None else settings.bm25_b
         self._reranker = None
         self._kiwi = None
-        self._bm25_corpus: list[dict] | None = None
-        self._bm25_index: BM25Okapi | None = None
-        self._bm25_doc_count: int = 0  # Track doc count for auto-invalidation
 
     def _retrieval_cache_key(self, query: str, top_k: int | None, filters: dict | None, hyde: bool = False) -> str:
         """Build a cache key for retrieval results."""
@@ -105,14 +102,15 @@ class HybridRetriever:
         except Exception:
             pass
 
-        # Run vector search and BM25 in parallel
-        vector_results, bm25_results = await asyncio.gather(
-            self._vector_search(query, top_k, filters, hyde_embedding=hyde_embedding),
-            self._bm25_search(query, top_k),
-        )
+        # Stage 1: Vector search with expanded pool for BM25 re-scoring
+        expanded_k = top_k * 3  # Fetch 3x candidates for BM25 scoring
+        vector_results = await self._vector_search(query, expanded_k, filters, hyde_embedding=hyde_embedding)
+
+        # Stage 2: BM25 score the vector candidates (no full-corpus load)
+        bm25_results = self._bm25_score_candidates(query, vector_results)
 
         # Combine results
-        combined = self._merge_results(vector_results, bm25_results)
+        combined = self._merge_results(vector_results[:top_k], bm25_results)
 
         # Re-rank if enabled
         if use_rerank and combined:
@@ -150,74 +148,32 @@ class HybridRetriever:
             filters=filters,
         )
 
-    async def _bm25_search(self, query: str, top_k: int) -> list[dict]:
-        """Search by BM25 keyword matching."""
-        # Auto-invalidate if document count changed (H-4)
-        current_count = await self.vectorstore.count()
-        if current_count != self._bm25_doc_count:
-            self._bm25_index = None
-            self._bm25_corpus = None
-
-        if self._bm25_index is None:
-            await self._build_bm25_index()
-
-        if self._bm25_index is None or self._bm25_corpus is None:
+    def _bm25_score_candidates(self, query: str, candidates: list[SearchResult]) -> list[dict]:
+        """Score pre-fetched candidates with BM25 (no full-corpus index needed)."""
+        if not candidates:
             return []
 
         tokenized_query = self._tokenize(query)
-        scores = self._bm25_index.get_scores(tokenized_query)
 
-        # Get top-k indices
-        top_indices = sorted(
-            range(len(scores)), key=lambda i: scores[i], reverse=True
-        )[:top_k]
+        # Build a small BM25 index from candidates only
+        corpus_tokens = [self._tokenize(c.content) for c in candidates]
+        if not corpus_tokens or not tokenized_query:
+            return []
+
+        bm25 = BM25Okapi(corpus_tokens, k1=self.bm25_k1, b=self.bm25_b)
+        scores = bm25.get_scores(tokenized_query)
 
         results = []
-        for idx in top_indices:
-            if scores[idx] > 0:
-                doc = self._bm25_corpus[idx]
+        for i, candidate in enumerate(candidates):
+            if scores[i] > 0:
                 results.append({
-                    "id": doc["id"],
-                    "content": doc["content"],
-                    "score": float(scores[idx]),
-                    "metadata": doc.get("metadata", {}),
+                    "id": candidate.id,
+                    "content": candidate.content,
+                    "score": float(scores[i]),
+                    "metadata": candidate.metadata,
                 })
 
         return results
-
-    async def _build_bm25_index(self):
-        """Build BM25 index from all documents in vectorstore.
-
-        Uses BaseVectorStore.get_all_documents() abstraction (H-2 fix)
-        instead of accessing internal ChromaDB _collection.
-        """
-        count = await self.vectorstore.count()
-        if count == 0:
-            return
-
-        try:
-            all_docs = await self.vectorstore.get_all_documents()
-        except NotImplementedError:
-            logger.warning(
-                "BM25 index skipped: %s does not support get_all_documents()",
-                type(self.vectorstore).__name__,
-            )
-            return
-
-        if not all_docs:
-            return
-
-        self._bm25_corpus = []
-        tokenized_corpus = []
-
-        for doc in all_docs:
-            content = doc.get("content", "")
-            self._bm25_corpus.append(doc)
-            tokenized_corpus.append(self._tokenize(content))
-
-        self._bm25_index = BM25Okapi(tokenized_corpus, k1=self.bm25_k1, b=self.bm25_b)
-        self._bm25_doc_count = count
-        logger.debug("BM25 index built with %d documents", count)
 
     def _tokenize(self, text: str) -> list[str]:
         """Korean morphological tokenization using kiwipiepy."""
@@ -313,7 +269,3 @@ class HybridRetriever:
                 return None
         return self._reranker
 
-    def invalidate_bm25_cache(self):
-        """Invalidate BM25 index (call after document changes)."""
-        self._bm25_index = None
-        self._bm25_corpus = None

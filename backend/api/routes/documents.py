@@ -212,14 +212,6 @@ async def delete_document(
     # Invalidate caches
     await _invalidate_document_cache()
 
-    # Invalidate BM25 index
-    try:
-        from api.routes.chat import _rag_chain
-        if _rag_chain is not None:
-            _rag_chain.retriever.invalidate_bm25_cache()
-    except Exception:
-        pass
-
     return {"status": "deleted", "id": document_id, "chunks_deleted": chunks_deleted}
 
 

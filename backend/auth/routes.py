@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
-from auth.audit import AuditAction, audit_logger
+from auth.audit import AuditAction, audit_logger, get_audit_logger
 from auth.dependencies import get_current_user, require_role
 from auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 from auth.ldap_provider import ldap_provider
@@ -306,7 +306,8 @@ async def get_audit_logs(
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))] = None,
 ):
     """Retrieve audit log entries (admin only)."""
-    events = audit_logger.get_events(limit=limit, user_id=user_id, action=action)
+    logger_instance = await get_audit_logger()
+    events = await logger_instance.get_events(limit=limit, user_id=user_id, action=action)
     return {"events": events, "total": len(events)}
 
 

@@ -10,6 +10,7 @@ aiosqlite 기반 매니저의 공통 패턴 추출:
 import asyncio
 import logging
 from abc import abstractmethod
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
@@ -43,8 +44,28 @@ class AsyncSQLiteManager:
             async with self._lock:
                 if not self._initialized:
                     async with aiosqlite.connect(self.db_path) as db:
+                        await db.execute("PRAGMA journal_mode=WAL")
+                        await db.execute("PRAGMA synchronous=NORMAL")
+                        await db.execute("PRAGMA busy_timeout=5000")
                         await self._create_tables(db)
                     self._initialized = True
+
+    @asynccontextmanager
+    async def get_connection(self):
+        """Get a connection with standard pragmas applied.
+
+        Usage:
+            async with self.get_connection() as db:
+                await db.execute("SELECT ...")
+
+        Applies WAL mode and busy timeout automatically.
+        """
+        await self._ensure_initialized()
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute("PRAGMA journal_mode=WAL")
+            await db.execute("PRAGMA synchronous=NORMAL")
+            await db.execute("PRAGMA busy_timeout=5000")
+            yield db
 
     @abstractmethod
     async def _create_tables(self, db: aiosqlite.Connection):

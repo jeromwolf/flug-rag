@@ -6,14 +6,17 @@ later review by administrators.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-import sqlite3
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
+import aiosqlite
+
 from config.settings import settings
+from core.db.base import AsyncSQLiteManager, create_async_singleton
 
 logger = logging.getLogger(__name__)
 
@@ -35,56 +38,43 @@ class AuditAction(str, Enum):
     USER_DEACTIVATED = "USER_DEACTIVATED"
 
 
-class AuditLogger:
-    """Lightweight synchronous audit logger backed by SQLite."""
+class AuditLogger(AsyncSQLiteManager):
+    """Async audit logger backed by SQLite."""
 
     def __init__(self, db_path: str | None = None) -> None:
         if db_path is None:
             data_dir = Path(settings.data_dir)
             data_dir.mkdir(parents=True, exist_ok=True)
             db_path = str(data_dir / "audit.db")
-        self._db_path = db_path
-        self._ensure_table()
+        super().__init__(Path(db_path))
 
-    # ------------------------------------------------------------------
-    # Schema
-    # ------------------------------------------------------------------
+    async def _create_tables(self, db: aiosqlite.Connection):
+        await db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id          TEXT PRIMARY KEY,
+                timestamp   TEXT NOT NULL,
+                user_id     TEXT,
+                username    TEXT,
+                action      TEXT NOT NULL,
+                resource    TEXT,
+                details     TEXT,
+                ip_address  TEXT
+            )
+            """
+        )
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log (user_id)"
+        )
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log (action)"
+        )
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log (timestamp)"
+        )
+        await db.commit()
 
-    def _ensure_table(self) -> None:
-        try:
-            with sqlite3.connect(self._db_path) as conn:
-                conn.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS audit_log (
-                        id          TEXT PRIMARY KEY,
-                        timestamp   TEXT NOT NULL,
-                        user_id     TEXT,
-                        username    TEXT,
-                        action      TEXT NOT NULL,
-                        resource    TEXT,
-                        details     TEXT,
-                        ip_address  TEXT
-                    )
-                    """
-                )
-                conn.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log (user_id)"
-                )
-                conn.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log (action)"
-                )
-                conn.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log (timestamp)"
-                )
-                conn.commit()
-        except Exception:
-            logger.exception("Failed to initialise audit database")
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
-    def log_event(
+    async def log_event(
         self,
         user_id: str | None,
         username: str | None,
@@ -93,34 +83,34 @@ class AuditLogger:
         details: str = "",
         ip_address: str = "",
     ) -> None:
-        """Record an audit event."""
+        """Record an audit event (async)."""
         event_id = str(uuid.uuid4())
         timestamp = datetime.now(timezone.utc).isoformat()
         action_str = action.value if isinstance(action, AuditAction) else str(action)
 
         try:
-            with sqlite3.connect(self._db_path) as conn:
-                conn.execute(
+            async with self.get_connection() as db:
+                await db.execute(
                     """
                     INSERT INTO audit_log (id, timestamp, user_id, username, action, resource, details, ip_address)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (event_id, timestamp, user_id, username, action_str, resource, details, ip_address),
                 )
-                conn.commit()
+                await db.commit()
         except Exception:
             logger.exception("Failed to write audit event %s", action_str)
 
-    def get_events(
+    async def get_events(
         self,
         limit: int = 100,
         user_id: str | None = None,
         action: str | None = None,
     ) -> list[dict]:
-        """Retrieve recent audit events with optional filters."""
+        """Retrieve recent audit events with optional filters (async)."""
         try:
-            with sqlite3.connect(self._db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            async with self.get_connection() as db:
+                db.row_factory = aiosqlite.Row
                 query = "SELECT * FROM audit_log WHERE 1=1"
                 params: list = []
                 if user_id:
@@ -132,12 +122,45 @@ class AuditLogger:
                 query += " ORDER BY timestamp DESC LIMIT ?"
                 params.append(limit)
 
-                rows = conn.execute(query, params).fetchall()
+                cursor = await db.execute(query, params)
+                rows = await cursor.fetchall()
                 return [dict(r) for r in rows]
         except Exception:
             logger.exception("Failed to read audit events")
             return []
 
 
-# Module-level singleton
-audit_logger = AuditLogger()
+# Async singleton factory
+get_audit_logger = create_async_singleton(AuditLogger)
+
+
+# Backward-compatible sync-looking wrapper that schedules in event loop
+class _AuditLoggerProxy:
+    """Proxy that makes audit_logger.log_event() work from sync contexts
+    by scheduling the async call via fire-and-forget."""
+
+    def log_event(self, **kwargs) -> None:
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._async_log_event(**kwargs))
+        except RuntimeError:
+            # No running loop - skip audit (shouldn't happen in FastAPI)
+            logger.warning("No event loop for audit logging")
+
+    async def _async_log_event(self, **kwargs) -> None:
+        instance = await get_audit_logger()
+        await instance.log_event(**kwargs)
+
+    def get_events(self, **kwargs) -> list[dict]:
+        """Sync get_events - callers should migrate to async."""
+        try:
+            asyncio.get_running_loop()
+            # Can't await in sync context, return empty
+            logger.warning("Sync get_events called; migrate caller to async")
+            return []
+        except RuntimeError:
+            return []
+
+
+# Module-level backward-compatible singleton
+audit_logger = _AuditLoggerProxy()
