@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from auth.audit import AuditAction, audit_logger, get_audit_logger
 from auth.dependencies import get_current_user, require_role
@@ -36,6 +36,7 @@ class LoginResponse(BaseModel):
     token_type: str = "bearer"
     expires_at: str
     user: UserResponse
+    must_change_password: bool = False
 
 
 class UserResponse(BaseModel):
@@ -54,6 +55,23 @@ class RefreshRequest(BaseModel):
 
 class RoleUpdateRequest(BaseModel):
     role: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, description="새 비밀번호 (최소 8자, 대문자+숫자+특수문자 포함)")
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        import re
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("비밀번호에 대문자가 최소 1자 포함되어야 합니다")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("비밀번호에 숫자가 최소 1자 포함되어야 합니다")
+        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]", v):
+            raise ValueError("비밀번호에 특수문자가 최소 1자 포함되어야 합니다")
+        return v
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +187,7 @@ async def login(body: LoginRequest, request: Request):
 
     # Success -- build tokens
     tokens = _build_token_pair(user)
+    must_change = await user_store.get_must_change_password(user.id)
 
     audit_logger.log_event(
         user_id=user.id,
@@ -185,6 +204,7 @@ async def login(body: LoginRequest, request: Request):
     return LoginResponse(
         **tokens,
         user=_user_to_response(user),
+        must_change_password=must_change,
     )
 
 
@@ -193,17 +213,11 @@ async def refresh_token(body: RefreshRequest, request: Request):
     """Exchange a valid refresh token for a new access + refresh pair."""
     client_ip = _get_client_ip(request)
     try:
-        payload = verify_token(body.refresh_token)
+        payload = verify_token(body.refresh_token, required_type="refresh")
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
-        )
-
-    if payload.get("type") != "refresh":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not a refresh token",
         )
 
     username = payload.get("sub")
@@ -254,6 +268,40 @@ async def get_current_user_info(
     if current_user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     return _user_to_response(current_user)
+
+
+@router.post("/auth/change-password")
+async def change_password(
+    body: ChangePasswordRequest,
+    request: Request,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Change the current user's password."""
+    if current_user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    user_store = await get_user_store()
+    success = await user_store.change_password(
+        user_id=current_user.id,
+        current_password=body.current_password,
+        new_password=body.new_password,
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+
+    audit_logger.log_event(
+        user_id=current_user.id,
+        username=current_user.username,
+        action=AuditAction.PASSWORD_CHANGE,
+        resource="/api/auth/change-password",
+        ip_address=_get_client_ip(request),
+    )
+
+    return {"status": "password_changed"}
 
 
 @router.get("/auth/users", response_model=list[UserResponse])

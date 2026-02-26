@@ -42,7 +42,7 @@ _DEFAULT_CONFIGS: Dict[str, dict] = {
 def create_llm(
     provider: Optional[str] = None,
     model: Optional[str] = None,
-    temperature: float = 0.7,
+    temperature: float | None = None,
     max_tokens: int = 2048,
     **kwargs,
 ) -> BaseLLM:
@@ -70,7 +70,7 @@ def create_llm(
     config = {**_DEFAULT_CONFIGS.get(provider, {})}
     if model:
         config["model"] = model
-    config["temperature"] = temperature
+    config["temperature"] = temperature if temperature is not None else settings.llm_temperature
     config["max_tokens"] = max_tokens
     config.update(kwargs)
 

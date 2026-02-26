@@ -699,6 +699,78 @@ class RAGChain:
             except Exception as e:
                 logger.debug("Guardrails input check skipped: %s", e)
 
+            # Query correction (SFR-006)
+            correction_info = None
+            try:
+                from .query_corrector import get_query_corrector
+                corrector = get_query_corrector()
+                correction = corrector.correct(question)
+                if correction.was_corrected:
+                    correction_info = {
+                        "original": correction.original,
+                        "corrected": correction.corrected,
+                        "corrections": correction.corrections,
+                    }
+                    question = correction.corrected
+                    logger.info("Stream: Query corrected: '%s' -> '%s'", correction.original[:50], correction.corrected[:50])
+            except Exception as e:
+                logger.debug("Stream: Query correction skipped: %s", e)
+
+            # Terminology expansion for search
+            terminology_info = None
+            search_query = question
+            try:
+                from .terminology import get_terminology_service
+                ts = get_terminology_service()
+                expansion = ts.expand_query(question)
+                if expansion.was_expanded:
+                    terminology_info = {
+                        "matched_terms": expansion.matched_terms,
+                        "expansions": expansion.expansions,
+                    }
+                    search_query = expansion.expanded_query
+                    logger.info("Stream: Query expanded with terminology: %d terms matched", len(expansion.matched_terms))
+            except Exception as e:
+                logger.debug("Stream: Terminology expansion skipped: %s", e)
+
+            # Agentic RAG routing
+            agentic_meta = None
+            agentic_use_multi_query = False
+            agentic_top_k = None
+            if settings.agentic_rag_enabled and mode == "rag":
+                try:
+                    from .agentic import AgenticRAGRouter
+                    agentic_router = AgenticRAGRouter(llm=llm)
+                    decision = await agentic_router.route(question)
+                    agentic_meta = {
+                        "strategy": decision.strategy,
+                        "routing_confidence": decision.confidence,
+                        "reasoning": decision.reasoning,
+                    }
+                    logger.info("Stream: Agentic RAG: strategy=%s (confidence=%.2f)", decision.strategy, decision.confidence)
+                    if decision.params.get("mode") == "direct":
+                        mode = "direct"
+                    if decision.params.get("temperature") is not None:
+                        temperature = temperature if temperature is not None else decision.params["temperature"]
+                    agentic_use_multi_query = bool(decision.strategy == "multi_query_rag")
+                    if decision.params.get("top_k"):
+                        agentic_top_k = decision.params["top_k"]
+                except Exception as e:
+                    logger.warning("Stream: Agentic RAG routing failed: %s", e)
+
+            # Auto-detect multi-hop for multi-query retrieval
+            if not agentic_use_multi_query and self._detect_multi_hop(question):
+                agentic_use_multi_query = True
+                if agentic_top_k is None:
+                    agentic_top_k = 30
+                logger.info("Stream: Multi-hop query detected, forcing multi-query retrieval")
+
+            # Auto-detect source_type filter from question
+            if mode != "direct":
+                filters = self._auto_detect_filters(question, filters)
+                if filters and filters.get("source_type"):
+                    logger.info("Stream: Auto-detected source_type filter: %s", filters["source_type"])
+
             if mode == "direct":
                 system, user_prompt = self.prompt_manager.build_direct_prompt(question)
                 accumulated = []
@@ -723,6 +795,10 @@ class RAGChain:
                 end_data = {"confidence_score": 0.5, "confidence_level": "medium", "latency_ms": latency_ms, "note": "검색 근거 없이 LLM만으로 생성된 답변"}
                 if guardrail_triggered:
                     end_data["guardrail_blocked"] = True
+                if correction_info:
+                    end_data["query_correction"] = correction_info
+                if terminology_info:
+                    end_data["terminology_expansion"] = terminology_info
                 yield {"event": "end", "data": end_data}
                 return
 
@@ -738,7 +814,7 @@ class RAGChain:
                     logger.warning("HyDE expansion failed in streaming: %s", e)
 
             # Step 1: Retrieve (with optional multi-query for multi-hop questions)
-            use_multi_query_stream = settings.multi_query_enabled or self._detect_multi_hop(question)
+            use_multi_query_stream = settings.multi_query_enabled or agentic_use_multi_query
             multi_query_stream_used = False
             if use_multi_query_stream:
                 try:
@@ -749,10 +825,11 @@ class RAGChain:
                         query_count=settings.multi_query_count,
                     )
                     results = await mq_retriever.retrieve(
-                        query=question,
-                        top_k=30 if self._detect_multi_hop(question) else None,
+                        query=search_query,
+                        top_k=agentic_top_k,
                         filters=filters,
                         hyde_embedding=hyde_embedding,
+                        rerank_top_n=8 if agentic_use_multi_query else None,
                     )
                     multi_query_stream_used = True
                     logger.info("Streaming: multi-query retrieval used")
@@ -760,7 +837,7 @@ class RAGChain:
                     logger.warning("Streaming: multi-query failed, falling back: %s", e)
 
             if not multi_query_stream_used:
-                results = await self.retriever.retrieve(query=question, filters=filters, hyde_embedding=hyde_embedding)
+                results = await self.retriever.retrieve(query=search_query, filters=filters, hyde_embedding=hyde_embedding)
 
             chunk_scores = [r.score for r in results]
             confidence = self.quality.calculate_confidence(chunk_scores)
@@ -821,6 +898,12 @@ class RAGChain:
             }
             if guardrail_triggered:
                 end_data["guardrail_blocked"] = True
+            if correction_info:
+                end_data["query_correction"] = correction_info
+            if terminology_info:
+                end_data["terminology_expansion"] = terminology_info
+            if agentic_meta:
+                end_data["agentic_routing"] = agentic_meta
             yield {"event": "end", "data": end_data}
         finally:
             if temp_llm is not None:

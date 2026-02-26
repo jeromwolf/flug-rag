@@ -77,7 +77,7 @@ INJECTION_PATTERNS = [
 ]
 
 # Maximum input length (characters)
-MAX_INPUT_LENGTH = 5000
+MAX_INPUT_LENGTH = 10000
 
 
 class GuardrailsManager:

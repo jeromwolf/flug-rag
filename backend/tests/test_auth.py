@@ -116,9 +116,27 @@ class TestJWTHandler:
     def test_verify_refresh_token(self):
         user_data = {"id": "u1", "username": "testuser", "role": "user"}
         token = create_refresh_token(user_data)
-        payload = verify_token(token)
+        payload = verify_token(token, required_type="refresh")
         assert payload["sub"] == "testuser"
         assert payload["type"] == "refresh"
+
+    def test_refresh_token_rejected_as_access(self):
+        """Refresh token must be rejected when verified as access token."""
+        from jose import JWTError
+
+        user_data = {"id": "u1", "username": "testuser", "role": "user"}
+        token = create_refresh_token(user_data)
+        with pytest.raises(JWTError, match="Expected 'access' token"):
+            verify_token(token)  # default required_type="access"
+
+    def test_access_token_rejected_as_refresh(self):
+        """Access token must be rejected when verified as refresh token."""
+        from jose import JWTError
+
+        user_data = {"id": "u1", "username": "testuser", "role": "user"}
+        token = create_access_token(user_data)
+        with pytest.raises(JWTError, match="Expected 'refresh' token"):
+            verify_token(token, required_type="refresh")
 
     def test_verify_invalid_token(self):
         from jose import JWTError

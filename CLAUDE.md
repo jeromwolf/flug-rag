@@ -193,6 +193,10 @@ flux-rag/
 | Admin | admin | admin123 |
 | Manager | manager | manager123 |
 | User | user | user123 |
+| Viewer | viewer | viewer123 |
+
+> **주의**: 기본 비밀번호 사용 시 최초 로그인 후 `POST /api/auth/change-password`로 변경 필요 (`must_change_password` 플래그).
+> 비밀번호 요구사항: 최소 8자, 대문자 1자+, 숫자 1자+, 특수문자 1자+
 
 ## API 엔드포인트
 
@@ -225,6 +229,7 @@ flux-rag/
 - `GET/POST /api/guardrails/*` - 가드레일 규칙 관리
 - `POST /api/auth/login` - 로그인 (JWT)
 - `POST /api/auth/refresh` - 토큰 갱신
+- `POST /api/auth/change-password` - 비밀번호 변경 (복잡성 검증 포함)
 
 ### Tools & Content
 - `GET /api/mcp/tools` - MCP 도구 목록 (10개 내장 + 커스텀 도구 빌더)
@@ -319,9 +324,36 @@ asyncio.run(check())
 - **국외출장 보고서**: 20문항 80% 성공, 골든 데이터셋 `tests/golden_dataset_travel.json`
   - 잔여 실패 4건: PDF 텍스트 추출 품질 이슈 (Upstage OCR 재인제스트 필요)
 
+### 보안/성능 코드리뷰 수정 (2025-02 완료)
+
+총 14개 파일 수정, Architect 3라운드 리뷰 전부 APPROVED.
+
+#### P0 보안 수정 (2건)
+- **JWT 토큰 타입 검증**: `auth/jwt_handler.py` — `verify_token()`에 `required_type` 파라미터 추가. Refresh 토큰을 Access로 악용하는 취약점 차단
+- **기본 비밀번호 변경 강제**: `auth/user_store.py` — `must_change_password` 컬럼 추가, `change_password()` 메서드 (동일 비밀번호 재사용 차단). `auth/routes.py` — `POST /auth/change-password` 엔드포인트 + 복잡성 검증 (대문자+숫자+특수문자). `auth/audit.py` — `PASSWORD_CHANGE` 감사 이벤트 추가
+- 수정 파일: `auth/jwt_handler.py`, `auth/routes.py`, `auth/user_store.py`, `auth/audit.py`, `api/main.py`, `tests/test_auth.py`
+
+#### P1 정확성 수정 (3건)
+- **스트리밍 파이프라인 품질 복원**: `rag/chain.py` — `stream_query()`에 누락된 5개 전처리 단계 추가 (query correction, terminology, agentic routing, multi-hop, source_type 필터)
+- **Temperature 기본값 통일**: `core/llm/factory.py` — 하드코딩 0.7 제거, `settings.llm_temperature` 참조로 변경
+- **입력 길이 제한 통일**: `rag/guardrails.py` — `MAX_INPUT_LENGTH` 5000 → 10000 (API 스키마와 일치)
+
+#### P2 성능 수정 (4건)
+- **DB 커넥션 최적화**: `core/db/base.py` — 중복 PRAGMA 제거. `agent/memory.py` — AsyncSQLiteManager 상속으로 전면 재작성. `auth/user_store.py` — 12개 raw connect → `get_connection()` 통합
+- **배치 인제스트 병렬화**: `pipeline/ingest.py` — `asyncio.Semaphore(5)` + `gather()` 동시 처리
+- **BM25 이벤트루프 블로킹 해소**: `rag/retriever.py` — `asyncio.to_thread()` 오프로딩
+- **AbuseDetector 영속화**: `monitoring/abuse_detector.py` — AsyncSQLiteManager 기반 SQLite 재작성 (블랙리스트/이벤트 영속, 레이트리밋 인메모리 유지)
+
+#### P3 잔여 이슈 (미수정, 향후 작업)
+- 키워드 하드코딩 → YAML 외부화 (`rag/chain.py` source_type 키워드 맵)
+- 싱글톤 패턴 8종 통일 (일부 async, 일부 sync, 일부 module-level)
+- 프론트엔드 테스트 커버리지 0% → 최소 단위 테스트 추가 필요
+- DB 마이그레이션 시스템 부재 → Alembic 또는 자체 마이그레이션 도입 필요
+
 ### 잔여 작업
 - **출장보고서 OCR 재인제스트**: 깨진 PDF 텍스트 수정 (Upstage Document Parse 적용)
 - **운영 배포 준비**: vLLM 서빙, K8s 매니페스트, Redis 캐시
+- **배포 플랫폼**: RunPod A40 Community Cloud ($0.35/hr, 월 ~$259) 권장 — GCP 대비 3~5배 저렴
 
 ## 데이터 위치
 

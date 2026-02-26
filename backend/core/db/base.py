@@ -52,18 +52,13 @@ class AsyncSQLiteManager:
 
     @asynccontextmanager
     async def get_connection(self):
-        """Get a connection with standard pragmas applied.
+        """Get a connection with busy_timeout applied.
 
-        Usage:
-            async with self.get_connection() as db:
-                await db.execute("SELECT ...")
-
-        Applies WAL mode and busy timeout automatically.
+        WAL mode and synchronous=NORMAL are set once during initialization
+        and persist at the database level across connections.
         """
         await self._ensure_initialized()
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("PRAGMA journal_mode=WAL")
-            await db.execute("PRAGMA synchronous=NORMAL")
             await db.execute("PRAGMA busy_timeout=5000")
             yield db
 

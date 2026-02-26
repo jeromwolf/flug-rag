@@ -59,11 +59,11 @@ def create_refresh_token(
     return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
-def verify_token(token: str) -> dict[str, Any]:
+def verify_token(token: str, required_type: str = "access") -> dict[str, Any]:
     """Decode and verify a JWT.
 
     Returns the decoded payload dict on success.
-    Raises ``JWTError`` on failure (expired, tampered, etc.).
+    Raises ``JWTError`` on failure (expired, tampered, wrong type, etc.).
     """
     try:
         payload = jwt.decode(
@@ -74,6 +74,9 @@ def verify_token(token: str) -> dict[str, Any]:
         username: str | None = payload.get("sub")
         if username is None:
             raise JWTError("Token missing 'sub' claim")
+        token_type = payload.get("type")
+        if token_type != required_type:
+            raise JWTError(f"Expected '{required_type}' token, got '{token_type}'")
         return payload
     except JWTError:
         raise

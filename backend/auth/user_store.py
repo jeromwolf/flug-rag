@@ -59,6 +59,15 @@ class UserStore(AsyncSQLiteManager):
         """)
         await db.commit()
 
+        # Add must_change_password column if not exists
+        try:
+            await db.execute(
+                "ALTER TABLE users ADD COLUMN must_change_password INTEGER DEFAULT 0"
+            )
+            await db.commit()
+        except Exception:
+            pass  # Column already exists
+
         # Seed default users if table is empty
         async with db.execute("SELECT COUNT(*) FROM users") as cursor:
             row = await cursor.fetchone()
@@ -73,8 +82,8 @@ class UserStore(AsyncSQLiteManager):
                 await db.execute(
                     """
                     INSERT OR IGNORE INTO users
-                    (id, username, email, full_name, department, role, is_active, password_hash, created_at, last_login)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, username, email, full_name, department, role, is_active, password_hash, created_at, last_login, must_change_password)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         user.id,
@@ -87,6 +96,7 @@ class UserStore(AsyncSQLiteManager):
                         hashed,
                         user.created_at.isoformat(),
                         None,
+                        1,  # must_change_password = True for default users
                     ),
                 )
             await db.commit()
@@ -117,9 +127,7 @@ class UserStore(AsyncSQLiteManager):
 
     async def authenticate(self, username: str, password: str) -> User | None:
         """Verify credentials. Returns ``User`` on success, ``None`` on failure."""
-        await self._ensure_initialized()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             async with db.execute(
                 "SELECT * FROM users WHERE username = ?", (username,)
@@ -139,7 +147,7 @@ class UserStore(AsyncSQLiteManager):
 
         # Update last_login
         now = datetime.now(timezone.utc).isoformat()
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             await db.execute(
                 "UPDATE users SET last_login = ? WHERE id = ?",
                 (now, user.id),
@@ -151,9 +159,7 @@ class UserStore(AsyncSQLiteManager):
 
     async def get_by_username(self, username: str) -> User | None:
         """Look up a user by username."""
-        await self._ensure_initialized()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             async with db.execute(
                 "SELECT * FROM users WHERE username = ?", (username,)
@@ -166,9 +172,7 @@ class UserStore(AsyncSQLiteManager):
 
     async def get_by_id(self, user_id: str) -> User | None:
         """Look up a user by their unique ID."""
-        await self._ensure_initialized()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             async with db.execute(
                 "SELECT * FROM users WHERE id = ?", (user_id,)
@@ -181,9 +185,7 @@ class UserStore(AsyncSQLiteManager):
 
     async def list_users(self) -> list[User]:
         """Return all users."""
-        await self._ensure_initialized()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             async with db.execute("SELECT * FROM users ORDER BY username") as cursor:
                 rows = await cursor.fetchall()
@@ -192,9 +194,7 @@ class UserStore(AsyncSQLiteManager):
 
     async def update_role(self, user_id: str, new_role: Role) -> User | None:
         """Update a user's role. Returns the updated user or ``None`` if not found."""
-        await self._ensure_initialized()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             cursor = await db.execute(
                 "UPDATE users SET role = ? WHERE id = ?",
                 (new_role.value, user_id),
@@ -207,9 +207,7 @@ class UserStore(AsyncSQLiteManager):
 
     async def set_active(self, user_id: str, active: bool) -> User | None:
         """Activate or deactivate a user. Returns the updated user or ``None``."""
-        await self._ensure_initialized()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             cursor = await db.execute(
                 "UPDATE users SET is_active = ? WHERE id = ?",
                 (1 if active else 0, user_id),
@@ -226,11 +224,9 @@ class UserStore(AsyncSQLiteManager):
         Used for LDAP auto-creation and HR sync.  If *password* is ``None``
         the password_hash is set to an empty string (external auth only).
         """
-        await self._ensure_initialized()
-
         hashed = pwd_context.hash(password) if password else ""
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             await db.execute(
                 """
                 INSERT OR IGNORE INTO users
@@ -256,14 +252,56 @@ class UserStore(AsyncSQLiteManager):
 
     async def update_department(self, user_id: str, department: str) -> None:
         """Update a user's department field."""
-        await self._ensure_initialized()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             await db.execute(
                 "UPDATE users SET department = ? WHERE id = ?",
                 (department, user_id),
             )
             await db.commit()
+
+    async def change_password(
+        self, user_id: str, current_password: str, new_password: str
+    ) -> bool:
+        """Change a user's password. Returns True on success, False if current password is wrong or new password is the same."""
+        async with self.get_connection() as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT password_hash FROM users WHERE id = ?", (user_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+
+        if row is None:
+            return False
+
+        current_hash = dict(row).get("password_hash", "")
+        if not current_hash or not pwd_context.verify(current_password, current_hash):
+            return False
+
+        if current_password == new_password:
+            return False
+
+        new_hash = pwd_context.hash(new_password)
+        async with self.get_connection() as db:
+            await db.execute(
+                "UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?",
+                (new_hash, user_id),
+            )
+            await db.commit()
+
+        return True
+
+    async def get_must_change_password(self, user_id: str) -> bool:
+        """Check if user must change their password."""
+        async with self.get_connection() as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT must_change_password FROM users WHERE id = ?", (user_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+
+        if row is None:
+            return False
+        return bool(dict(row).get("must_change_password", 0))
 
 
 # Singleton factory

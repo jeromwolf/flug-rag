@@ -36,6 +36,7 @@ class AuditAction(str, Enum):
     SETTINGS_CHANGE = "SETTINGS_CHANGE"
     USER_CREATED = "USER_CREATED"
     USER_DEACTIVATED = "USER_DEACTIVATED"
+    PASSWORD_CHANGE = "PASSWORD_CHANGE"
 
 
 class AuditLogger(AsyncSQLiteManager):

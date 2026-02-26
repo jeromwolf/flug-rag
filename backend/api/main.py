@@ -32,8 +32,9 @@ async def lifespan(app: FastAPI):
     # C-03: Default password warning
     if settings.auth_enabled:
         security_logger.warning(
-            "AUTH_ENABLED=true: Ensure default user passwords have been changed. "
-            "Default accounts (admin/manager/user/viewer) use weak passwords."
+            "WARNING: DEFAULT CREDENTIALS DETECTED: Demo users (admin/manager/user/viewer) "
+            "have default passwords. Change them immediately in production! "
+            "Use POST /api/auth/change-password to update."
         )
 
     # H-07: Auth disabled – strong warning

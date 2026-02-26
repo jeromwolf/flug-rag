@@ -1,5 +1,6 @@
 """Document ingest orchestrator: load → chunk → embed → store."""
 
+import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
@@ -229,19 +230,27 @@ class IngestPipeline:
         file_paths: list[str | Path],
         extra_metadata: dict | None = None,
         dp_mode: str = "auto",
+        max_concurrent: int = 5,
     ) -> list[IngestResult]:
-        """Ingest multiple documents sequentially.
+        """Ingest multiple documents with bounded concurrency.
 
         Args:
             file_paths: List of file paths.
             extra_metadata: Shared metadata for all documents.
             dp_mode: Document Parse mode - "auto", "force_dp", or "local_only".
+            max_concurrent: Maximum parallel ingestion tasks (default 5).
 
         Returns:
-            List of IngestResult for each document.
+            List of IngestResult for each document (order preserved).
         """
-        results = []
-        for path in file_paths:
-            result = await self.ingest(path, extra_metadata=extra_metadata, dp_mode=dp_mode)
-            results.append(result)
-        return results
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def _ingest_with_limit(path: str | Path) -> IngestResult:
+            async with semaphore:
+                return await self.ingest(path, extra_metadata=extra_metadata, dp_mode=dp_mode)
+
+        results = await asyncio.gather(
+            *[_ingest_with_limit(p) for p in file_paths],
+            return_exceptions=False,
+        )
+        return list(results)

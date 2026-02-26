@@ -107,7 +107,7 @@ class HybridRetriever:
         vector_results = await self._vector_search(query, expanded_k, filters, hyde_embedding=hyde_embedding)
 
         # Stage 2: BM25 score the vector candidates (no full-corpus load)
-        bm25_results = self._bm25_score_candidates(query, vector_results)
+        bm25_results = await asyncio.to_thread(self._bm25_score_candidates, query, vector_results)
 
         # Combine results
         combined = self._merge_results(vector_results[:top_k], bm25_results)
