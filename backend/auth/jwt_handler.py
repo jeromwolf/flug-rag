@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -35,6 +36,7 @@ def create_access_token(
         "exp": expire,
         "iat": _now_utc(),
         "type": "access",
+        "jti": str(uuid.uuid4()),
     }
     return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
@@ -55,6 +57,7 @@ def create_refresh_token(
         "exp": expire,
         "iat": _now_utc(),
         "type": "refresh",
+        "jti": str(uuid.uuid4()),
     }
     return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
@@ -80,6 +83,26 @@ def verify_token(token: str, required_type: str = "access") -> dict[str, Any]:
         return payload
     except JWTError:
         raise
+
+
+async def verify_token_with_blacklist(
+    token: str,
+    required_type: str = "access",
+) -> dict[str, Any]:
+    """Decode, verify, and check the blacklist for a JWT.
+
+    This is the async counterpart of :func:`verify_token` that additionally
+    rejects tokens whose ``jti`` has been revoked.
+    """
+    payload = verify_token(token, required_type)
+    jti = payload.get("jti")
+    if jti:
+        from auth.token_blacklist import get_token_blacklist
+
+        blacklist = await get_token_blacklist()
+        if await blacklist.is_revoked(jti):
+            raise JWTError("Token has been revoked")
+    return payload
 
 
 def get_token_expiry(token: str) -> datetime | None:

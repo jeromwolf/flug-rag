@@ -143,8 +143,8 @@ async def upload_personal_document(
         # Clean up on failure
         if file_path.exists():
             file_path.unlink()
-        logger.error(f"Personal document upload failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        logger.error("Personal document upload failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="파일 업로드에 실패했습니다.")
 
 
 @router.get("", response_model=PersonalDocListResponse)
@@ -205,8 +205,8 @@ async def list_personal_documents(
         )
 
     except Exception as e:
-        logger.error(f"Failed to list personal documents: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to list personal documents: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다.")
 
 
 @router.delete("/{document_id}")
@@ -289,8 +289,8 @@ async def delete_personal_document(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to delete personal document: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to delete personal document: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다.")
 
 
 @router.post("/{document_id}/pii-scan")
@@ -359,5 +359,5 @@ async def scan_document_pii(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"PII scan failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("PII scan failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="처리 중 오류가 발생했습니다.")

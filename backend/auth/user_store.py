@@ -6,6 +6,7 @@ Seeds default demo users on first database creation.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,7 +79,7 @@ class UserStore(AsyncSQLiteManager):
             for u in get_default_users():
                 user = User(**u)
                 plain = _DEFAULT_PASSWORDS.get(user.username, "changeme")
-                hashed = pwd_context.hash(plain)
+                hashed = await asyncio.to_thread(pwd_context.hash, plain)
                 await db.execute(
                     """
                     INSERT OR IGNORE INTO users
@@ -138,7 +139,7 @@ class UserStore(AsyncSQLiteManager):
             return None
 
         hashed = dict(row).get("password_hash", "")
-        if not hashed or not pwd_context.verify(password, hashed):
+        if not hashed or not await asyncio.to_thread(pwd_context.verify, password, hashed):
             return None
 
         user = self._row_to_user(row)
@@ -224,7 +225,7 @@ class UserStore(AsyncSQLiteManager):
         Used for LDAP auto-creation and HR sync.  If *password* is ``None``
         the password_hash is set to an empty string (external auth only).
         """
-        hashed = pwd_context.hash(password) if password else ""
+        hashed = await asyncio.to_thread(pwd_context.hash, password) if password else ""
 
         async with self.get_connection() as db:
             await db.execute(
@@ -274,13 +275,13 @@ class UserStore(AsyncSQLiteManager):
             return False
 
         current_hash = dict(row).get("password_hash", "")
-        if not current_hash or not pwd_context.verify(current_password, current_hash):
+        if not current_hash or not await asyncio.to_thread(pwd_context.verify, current_password, current_hash):
             return False
 
         if current_password == new_password:
             return False
 
-        new_hash = pwd_context.hash(new_password)
+        new_hash = await asyncio.to_thread(pwd_context.hash, new_password)
         async with self.get_connection() as db:
             await db.execute(
                 "UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?",

@@ -142,8 +142,8 @@ async def process_document_ocr(
         )
 
     except Exception as e:
-        logger.error(f"OCR processing failed: {e}")
-        raise HTTPException(status_code=500, detail=f"OCR 처리 실패: {str(e)}")
+        logger.error("OCR processing failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="OCR 처리에 실패했습니다. 관리자에게 문의하세요.")
 
     finally:
         # 임시 파일 정리
@@ -181,9 +181,10 @@ async def switch_ocr_provider(
         except HTTPException:
             raise
         except Exception as e:
+            logger.error("On-premise OCR server check failed: %s", e, exc_info=True)
             raise HTTPException(
                 status_code=503,
-                detail=f"온프레미스 OCR 서버 확인 실패: {str(e)}"
+                detail="온프레미스 OCR 서버에 연결할 수 없습니다."
             )
 
     # 런타임 설정 변경

@@ -9,7 +9,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from agent import QueryRouter, get_memory
 from api.schemas import ChatRequest, ChatResponse
-from auth.dependencies import get_current_user
+from auth.dependencies import get_current_user, require_password_changed
 from auth.models import User
 from rag import RAGChain
 from rag.access_control import get_access_manager
@@ -87,7 +87,7 @@ async def _build_merged_filters(user, request_filters):
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest, current_user: User | None = Depends(get_current_user)):
+async def chat(request: ChatRequest, current_user: User | None = Depends(require_password_changed)):
     """Non-streaming chat endpoint."""
     # Create or get session
     session_id = request.session_id
@@ -148,7 +148,7 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(get_cur
 
 
 @router.post("/chat/stream")
-async def chat_stream(request: ChatRequest, current_user: User | None = Depends(get_current_user)):
+async def chat_stream(request: ChatRequest, current_user: User | None = Depends(require_password_changed)):
     """SSE streaming chat endpoint."""
     session_id = request.session_id
     if not session_id:

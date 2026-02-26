@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 
-from auth.jwt_handler import verify_token
+from auth.jwt_handler import verify_token, verify_token_with_blacklist
 from auth.models import ROLE_PERMISSIONS, Role, User
 from auth.user_store import get_user_store
 from config.settings import settings
@@ -43,7 +43,7 @@ async def get_current_user(
         )
 
     try:
-        payload = verify_token(token)
+        payload = await verify_token_with_blacklist(token)
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -67,6 +67,33 @@ async def get_current_user(
         )
 
     return user
+
+
+async def require_password_changed(
+    current_user: Annotated[User | None, Depends(get_current_user)],
+) -> User:
+    """Ensure user has changed their default password.
+
+    Blocks API access until the user calls ``/auth/change-password``.
+    When ``auth_enabled`` is ``False`` the check is skipped.
+    """
+    if current_user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    if not settings.auth_enabled:
+        return current_user
+
+    user_store = await get_user_store()
+    must_change = await user_store.get_must_change_password(current_user.id)
+
+    if must_change:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Password change required. Please change your default password before accessing this resource.",
+            headers={"X-Password-Change-Required": "true"},
+        )
+
+    return current_user
 
 
 def require_role(allowed_roles: list[Role]):

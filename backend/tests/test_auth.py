@@ -425,11 +425,12 @@ class TestRateLimiter:
 class TestAuditLogging:
     """Test audit log functionality."""
 
-    def test_log_and_retrieve(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_log_and_retrieve(self, tmp_path):
         db_path = str(tmp_path / "test_audit.db")
         logger = AuditLogger(db_path=db_path)
 
-        logger.log_event(
+        await logger.log_event(
             user_id="u1",
             username="admin",
             action=AuditAction.LOGIN,
@@ -438,32 +439,34 @@ class TestAuditLogging:
             ip_address="127.0.0.1",
         )
 
-        events = logger.get_events(limit=10)
+        events = await logger.get_events(limit=10)
         assert len(events) == 1
         assert events[0]["action"] == "LOGIN"
         assert events[0]["user_id"] == "u1"
         assert events[0]["ip_address"] == "127.0.0.1"
 
-    def test_filter_by_user(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_filter_by_user(self, tmp_path):
         db_path = str(tmp_path / "test_audit2.db")
         logger = AuditLogger(db_path=db_path)
 
-        logger.log_event("u1", "admin", AuditAction.LOGIN)
-        logger.log_event("u2", "user", AuditAction.LOGIN)
-        logger.log_event("u1", "admin", AuditAction.LOGOUT)
+        await logger.log_event("u1", "admin", AuditAction.LOGIN)
+        await logger.log_event("u2", "user", AuditAction.LOGIN)
+        await logger.log_event("u1", "admin", AuditAction.LOGOUT)
 
-        events = logger.get_events(user_id="u1")
+        events = await logger.get_events(user_id="u1")
         assert len(events) == 2
 
-    def test_filter_by_action(self, tmp_path):
+    @pytest.mark.asyncio
+    async def test_filter_by_action(self, tmp_path):
         db_path = str(tmp_path / "test_audit3.db")
         logger = AuditLogger(db_path=db_path)
 
-        logger.log_event("u1", "admin", AuditAction.LOGIN)
-        logger.log_event("u1", "admin", AuditAction.LOGOUT)
-        logger.log_event(None, "unknown", AuditAction.LOGIN_FAILED)
+        await logger.log_event("u1", "admin", AuditAction.LOGIN)
+        await logger.log_event("u1", "admin", AuditAction.LOGOUT)
+        await logger.log_event(None, "unknown", AuditAction.LOGIN_FAILED)
 
-        events = logger.get_events(action="LOGIN_FAILED")
+        events = await logger.get_events(action="LOGIN_FAILED")
         assert len(events) == 1
 
     @pytest.mark.asyncio

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field, field_validator
 
 from auth.audit import AuditAction, audit_logger, get_audit_logger
@@ -92,12 +92,20 @@ def _user_to_response(user: User) -> UserResponse:
 
 
 def _get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    """Extract client IP, only trusting X-Forwarded-For from configured proxies."""
     if request.client:
-        return request.client.host
-    return "unknown"
+        direct_ip = request.client.host
+    else:
+        direct_ip = "unknown"
+
+    if settings.trusted_proxy_ips:
+        trusted = {ip.strip() for ip in settings.trusted_proxy_ips.split(",") if ip.strip()}
+        if direct_ip in trusted:
+            forwarded = request.headers.get("X-Forwarded-For")
+            if forwarded:
+                return forwarded.split(",")[0].strip()
+
+    return direct_ip
 
 
 def _build_token_pair(user: User) -> dict:
@@ -220,6 +228,18 @@ async def refresh_token(body: RefreshRequest, request: Request):
             detail="Invalid or expired refresh token",
         )
 
+    # Reject already-revoked refresh tokens
+    old_jti = payload.get("jti")
+    if old_jti:
+        from auth.token_blacklist import get_token_blacklist
+
+        blacklist = await get_token_blacklist()
+        if await blacklist.is_revoked(old_jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token has been revoked",
+            )
+
     username = payload.get("sub")
     user_store = await get_user_store()
     user = await user_store.get_by_username(username) if username else None
@@ -230,6 +250,17 @@ async def refresh_token(body: RefreshRequest, request: Request):
         )
 
     tokens = _build_token_pair(user)
+
+    # Blacklist the old refresh token to prevent reuse (rotation)
+    if old_jti:
+        exp = payload.get("exp")
+        expires_at = (
+            datetime.fromtimestamp(exp, tz=timezone.utc)
+            if exp
+            else datetime.now(timezone.utc)
+        )
+        blacklist = await get_token_blacklist()
+        await blacklist.add(old_jti, expires_at, user_id=payload.get("user_id"))
 
     audit_logger.log_event(
         user_id=user.id,
@@ -247,8 +278,30 @@ async def logout(
     request: Request,
     current_user: Annotated[User | None, Depends(get_current_user)] = None,
 ):
-    """Logout (server-side audit only; client should discard tokens)."""
+    """Logout -- revoke the current access token and audit."""
     client_ip = _get_client_ip(request)
+
+    # Revoke the access token
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        try:
+            payload = verify_token(token, required_type="access")
+            jti = payload.get("jti")
+            if jti:
+                from auth.token_blacklist import get_token_blacklist
+
+                exp = payload.get("exp")
+                expires_at = (
+                    datetime.fromtimestamp(exp, tz=timezone.utc)
+                    if exp
+                    else datetime.now(timezone.utc)
+                )
+                blacklist = await get_token_blacklist()
+                await blacklist.add(jti, expires_at, user_id=payload.get("user_id"))
+        except Exception:
+            pass  # Token already invalid, still log the logout
+
     if current_user:
         audit_logger.log_event(
             user_id=current_user.id,
@@ -348,7 +401,7 @@ async def update_user_role(
 
 @router.get("/auth/audit")
 async def get_audit_logs(
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=1000),
     user_id: str | None = None,
     action: str | None = None,
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))] = None,

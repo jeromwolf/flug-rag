@@ -124,6 +124,8 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
     auth_enabled: bool = False  # Set True to enforce authentication
 
+    trusted_proxy_ips: str = ""  # Comma-separated trusted proxy IPs (e.g., "10.0.0.1,10.0.0.2")
+
     # Auth - LDAP / Active Directory
     ldap_server_url: str = ""
     ldap_base_dn: str = ""
