@@ -158,8 +158,9 @@ class GuardrailsManager:
 
     async def update_rule(self, rule_id: str, **kwargs) -> GuardRule:
         await self._ensure_initialized()
-        allowed = {"name", "rule_type", "pattern", "action", "message", "is_active", "priority"}
-        updates = {k: v for k, v in kwargs.items() if k in allowed}
+        _SAFE_COLUMN = re.compile(r'^[a-z_]+$')
+        _ALLOWED_COLUMNS = frozenset({"name", "rule_type", "pattern", "action", "message", "is_active", "priority"})
+        updates = {k: v for k, v in kwargs.items() if k in _ALLOWED_COLUMNS and _SAFE_COLUMN.match(k)}
         if not updates:
             raise ValueError("No valid fields to update")
 

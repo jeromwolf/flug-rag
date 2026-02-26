@@ -30,13 +30,36 @@ class ToolRegistry:
         return [tool.get_definition().to_schema() for tool in self._tools.values()]
 
     async def execute(self, tool_name: str, **kwargs) -> ToolResult:
-        """Execute a tool by name with given parameters."""
+        """Execute a tool by name with validated parameters."""
         tool = self._tools.get(tool_name)
         if not tool:
             return ToolResult(
                 success=False,
                 error=f"Tool not found: {tool_name}. Available: {list(self._tools.keys())}",
             )
+
+        # Validate arguments against tool's declared parameters
+        definition = tool.get_definition()
+        declared_params = {p.name for p in definition.parameters}
+        required_params = {p.name for p in definition.parameters if p.required}
+
+        # Check for unknown parameters (only if tool has declared params)
+        if declared_params:
+            unknown = set(kwargs.keys()) - declared_params
+            if unknown:
+                return ToolResult(
+                    success=False,
+                    error=f"Unknown parameters: {unknown}. Allowed: {declared_params}",
+                )
+
+            # Check for missing required parameters
+            missing = required_params - set(kwargs.keys())
+            if missing:
+                return ToolResult(
+                    success=False,
+                    error=f"Missing required parameters: {missing}",
+                )
+
         return await tool.execute(**kwargs)
 
     @property

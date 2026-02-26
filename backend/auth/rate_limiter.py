@@ -15,19 +15,24 @@ class RateLimiter:
         Maximum number of attempts allowed within *window_seconds*.
     window_seconds : float
         Sliding window duration in seconds.
+    max_keys : int
+        Maximum number of tracked keys before forced cleanup.
     """
 
-    def __init__(self, max_attempts: int = 5, window_seconds: float = 60.0) -> None:
+    def __init__(self, max_attempts: int = 5, window_seconds: float = 60.0, max_keys: int = 10000) -> None:
         self.max_attempts = max_attempts
         self.window_seconds = window_seconds
+        self.max_keys = max_keys
         # key -> list of timestamps
         self._attempts: dict[str, list[float]] = defaultdict(list)
+        self._cleanup_counter = 0
 
     def is_allowed(self, key: str) -> bool:
         """Return ``True`` if *key* has not exceeded the rate limit."""
         now = time.monotonic()
         if key in self._attempts:
             self._prune(key, now)
+        self._maybe_cleanup(now)
         return len(self._attempts.get(key, [])) < self.max_attempts
 
     def record(self, key: str) -> None:
@@ -51,6 +56,17 @@ class RateLimiter:
         self._attempts[key] = [t for t in self._attempts[key] if t > cutoff]
         if not self._attempts[key]:
             del self._attempts[key]
+
+    def _maybe_cleanup(self, now: float) -> None:
+        """Periodically clean all expired entries to prevent unbounded growth."""
+        self._cleanup_counter += 1
+        if self._cleanup_counter < 100 and len(self._attempts) < self.max_keys:
+            return
+        self._cleanup_counter = 0
+        cutoff = now - self.window_seconds
+        expired_keys = [k for k, ts in self._attempts.items() if not ts or ts[-1] <= cutoff]
+        for k in expired_keys:
+            del self._attempts[k]
 
 
 # Singleton for login rate-limiting: 5 attempts per 60 seconds

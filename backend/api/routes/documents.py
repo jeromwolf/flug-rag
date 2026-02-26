@@ -10,8 +10,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from api.schemas import DocumentListResponse, DocumentUploadResponse
-from auth.dependencies import get_current_user
-from auth.models import User
+from auth.dependencies import get_current_user, require_role
+from auth.models import Role, User
 from config.settings import settings
 from pipeline import IngestPipeline
 
@@ -166,7 +166,7 @@ async def list_documents(current_user: User | None = Depends(get_current_user)):
 @router.delete("/documents/{document_id}")
 async def delete_document(
     document_id: str,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER])),
 ):
     """Delete a document and its vector chunks."""
     upload_dir = Path(settings.upload_dir)
@@ -221,6 +221,7 @@ async def download_document(
     current_user: User | None = Depends(get_current_user),
 ):
     """원본 문서 파일 다운로드."""
+    logger.info("Document download: doc=%s user=%s", document_id, current_user.username if current_user else "anonymous")
     # Try MinIO first
     try:
         from core.storage import get_storage
