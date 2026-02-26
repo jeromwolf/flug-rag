@@ -7,6 +7,8 @@ from pathlib import Path
 
 import aiosqlite
 
+from core.db.base import AsyncSQLiteManager, create_async_singleton
+
 
 @dataclass
 class EmbeddingJob:
@@ -38,61 +40,50 @@ class EmbeddingStatus:
     recent_failures: list[EmbeddingJob]
 
 
-class EmbeddingTracker:
+class EmbeddingTracker(AsyncSQLiteManager):
     """Tracks embedding processing status for quality management."""
 
-    def __init__(self, db_path: str | None = None):
-        if db_path is None:
-            data_dir = Path(__file__).resolve().parent.parent.parent / "data"
-            data_dir.mkdir(parents=True, exist_ok=True)
-            db_path = str(data_dir / "embedding_tracker.db")
+    def __init__(self, db_path: Path | None = None):
+        db_path = db_path or (
+            Path(__file__).resolve().parent.parent.parent / "data" / "embedding_tracker.db"
+        )
+        super().__init__(db_path)
 
-        self.db_path = db_path
-        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
-        self._initialized = False
-
-    async def init_db(self):
+    async def _create_tables(self, db: aiosqlite.Connection):
         """Create table if not exists."""
-        if self._initialized:
-            return
-
-        async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS embedding_jobs (
-                    id TEXT PRIMARY KEY,
-                    document_id TEXT NOT NULL,
-                    filename TEXT NOT NULL,
-                    total_chunks INTEGER NOT NULL,
-                    success_count INTEGER DEFAULT 0,
-                    failure_count INTEGER DEFAULT 0,
-                    error_message TEXT,
-                    status TEXT NOT NULL,
-                    started_at TEXT NOT NULL,
-                    completed_at TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """)
-            await db.execute("""
-                CREATE INDEX IF NOT EXISTS idx_embedding_jobs_status
-                ON embedding_jobs(status, created_at)
-            """)
-            await db.execute("""
-                CREATE INDEX IF NOT EXISTS idx_embedding_jobs_document
-                ON embedding_jobs(document_id)
-            """)
-            await db.commit()
-
-        self._initialized = True
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS embedding_jobs (
+                id TEXT PRIMARY KEY,
+                document_id TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                total_chunks INTEGER NOT NULL,
+                success_count INTEGER DEFAULT 0,
+                failure_count INTEGER DEFAULT 0,
+                error_message TEXT,
+                status TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                completed_at TEXT,
+                created_at TEXT NOT NULL
+            )
+        """)
+        await db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_embedding_jobs_status
+            ON embedding_jobs(status, created_at)
+        """)
+        await db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_embedding_jobs_document
+            ON embedding_jobs(document_id)
+        """)
+        await db.commit()
 
     async def start_job(
         self, document_id: str, filename: str, total_chunks: int
     ) -> str:
         """Create new job, return job_id (uuid)."""
-        await self.init_db()
         job_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             await db.execute(
                 """INSERT INTO embedding_jobs
                    (id, document_id, filename, total_chunks, success_count,
@@ -108,9 +99,7 @@ class EmbeddingTracker:
         self, job_id: str, success_count: int, failure_count: int
     ):
         """Update counts for a job."""
-        await self.init_db()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             await db.execute(
                 """UPDATE embedding_jobs
                    SET success_count = ?, failure_count = ?
@@ -123,10 +112,9 @@ class EmbeddingTracker:
         self, job_id: str, status: str = "completed", error_message: str | None = None
     ):
         """Mark job done."""
-        await self.init_db()
         now = datetime.now(timezone.utc).isoformat()
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             await db.execute(
                 """UPDATE embedding_jobs
                    SET status = ?, error_message = ?, completed_at = ?
@@ -137,9 +125,7 @@ class EmbeddingTracker:
 
     async def get_status(self) -> EmbeddingStatus:
         """Get aggregate stats."""
-        await self.init_db()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
 
             # Get counts by status
@@ -190,9 +176,7 @@ class EmbeddingTracker:
 
     async def get_job_history(self, limit: int = 50) -> list[EmbeddingJob]:
         """Recent jobs."""
-        await self.init_db()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 """SELECT * FROM embedding_jobs
@@ -206,9 +190,7 @@ class EmbeddingTracker:
 
     async def get_failed_jobs(self) -> list[EmbeddingJob]:
         """All failed jobs."""
-        await self.init_db()
-
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 """SELECT * FROM embedding_jobs
@@ -235,14 +217,5 @@ class EmbeddingTracker:
         )
 
 
-# Singleton instance
-_tracker: EmbeddingTracker | None = None
-
-
-async def get_tracker() -> EmbeddingTracker:
-    """Get or create the singleton EmbeddingTracker instance."""
-    global _tracker
-    if _tracker is None:
-        _tracker = EmbeddingTracker()
-        await _tracker.init_db()
-    return _tracker
+# Singleton
+get_tracker = create_async_singleton(EmbeddingTracker)

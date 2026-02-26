@@ -54,7 +54,12 @@ class HybridRetriever:
         self.bm25_k1 = bm25_k1 if bm25_k1 is not None else settings.bm25_k1
         self.bm25_b = bm25_b if bm25_b is not None else settings.bm25_b
         self._reranker = None
-        self._kiwi = None
+        # Eagerly initialize Kiwi tokenizer to avoid thread-safety issues
+        try:
+            from kiwipiepy import Kiwi
+            self._kiwi = Kiwi()
+        except ImportError:
+            self._kiwi = None
 
     def _retrieval_cache_key(self, query: str, top_k: int | None, filters: dict | None, hyde: bool = False) -> str:
         """Build a cache key for retrieval results."""
@@ -63,7 +68,7 @@ class HybridRetriever:
             "st": self.score_threshold, "rr": self.use_rerank,
             "k1": self.bm25_k1, "b": self.bm25_b, "hyde": hyde,
         }, sort_keys=True, ensure_ascii=False)
-        return "retriever:search:" + hashlib.md5(raw.encode()).hexdigest()
+        return "retriever:search:" + hashlib.sha256(raw.encode()).hexdigest()[:32]
 
     async def retrieve(
         self,
@@ -178,12 +183,8 @@ class HybridRetriever:
     def _tokenize(self, text: str) -> list[str]:
         """Korean morphological tokenization using kiwipiepy."""
         if self._kiwi is None:
-            try:
-                from kiwipiepy import Kiwi
-                self._kiwi = Kiwi()
-            except ImportError:
-                import re
-                return re.findall(r'[\w]+', text.lower())
+            import re
+            return re.findall(r'[\w]+', text.lower())
         tokens = []
         for token in self._kiwi.tokenize(text):
             # 의미 있는 형태소만: 명사, 동사, 형용사, 어근, 숫자, 외국어

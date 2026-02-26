@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+import re
 import time
 from dataclasses import asdict, dataclass, field
 from typing import AsyncIterator
@@ -14,6 +15,14 @@ from rag.retriever import HybridRetriever, RetrievalResult
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+# Precompiled regex patterns for postprocessing (avoid per-call compilation)
+_RE_QA_PATTERN = re.compile(r'^Q[:：].*?(?:A[:：])\s*', re.DOTALL)
+_RE_A_PREFIX = re.compile(r'^(A[:：]|답변[:：])\s*')
+_RE_SOURCE_TAG = re.compile(r'\[출[처처][^\]]*\]')
+_RE_CJK_LEAKAGE = re.compile(r'[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]+[^\n]*$', re.MULTILINE)
+_RE_WHITESPACE = re.compile(r'[\s\-\n•·]')
+_RE_CHINESE = re.compile(r'[\u4e00-\u9fff]')
 
 
 @dataclass
@@ -182,32 +191,23 @@ class RAGChain:
     @staticmethod
     def _postprocess_answer(text: str) -> str:
         """Strip common LLM output artifacts."""
-        import re
         text = text.strip()
-        # Strip "Q: ... A:" pattern (LLM repeating the question)
-        text = re.sub(r'^Q[:：].*?(?:A[:：])\s*', '', text, flags=re.DOTALL)
-        # Strip "A:" or "답변:" prefix
-        text = re.sub(r'^(A[:：]|답변[:：])\s*', '', text.strip())
-        # Strip [출처: ...] or [출처] tags
-        text = re.sub(r'\[출[처처][^\]]*\]', '', text)
-        # Strip trailing Chinese/Japanese text (qwen2.5 leakage)
-        text = re.sub(r'[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]+[^\n]*$', '', text, flags=re.MULTILINE)
+        text = _RE_QA_PATTERN.sub('', text)
+        text = _RE_A_PREFIX.sub('', text.strip())
+        text = _RE_SOURCE_TAG.sub('', text)
+        text = _RE_CJK_LEAKAGE.sub('', text)
         return text.strip()
 
     @staticmethod
     def _is_valid_response(text: str) -> bool:
         """Check if LLM response is valid (not garbled/truncated/wrong language)."""
-        import re
         stripped = text.strip()
-        # Too short (garbled output like Q56)
         if len(stripped) < 15:
             return False
-        # Mostly whitespace/punctuation/newlines
-        content_chars = re.sub(r'[\s\-\n•·]', '', stripped)
+        content_chars = _RE_WHITESPACE.sub('', stripped)
         if len(content_chars) < 10:
             return False
-        # Predominantly Chinese characters (language switch like Q9)
-        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', stripped))
+        chinese_chars = len(_RE_CHINESE.findall(stripped))
         if chinese_chars > 0 and chinese_chars / max(len(stripped), 1) > 0.3:
             return False
         return True

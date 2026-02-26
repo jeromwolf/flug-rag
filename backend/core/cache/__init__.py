@@ -1,5 +1,7 @@
 """Caching layer for flux-rag with Redis and in-memory fallback."""
 
+import asyncio
+
 from config.settings import settings
 
 from .base import BaseCache
@@ -29,13 +31,17 @@ async def create_cache() -> BaseCache:
 
 # Module-level singleton (initialized lazily)
 _cache_instance: BaseCache | None = None
+_cache_lock = asyncio.Lock()
 
 
 async def get_cache() -> BaseCache:
     """Get or create the global cache singleton."""
     global _cache_instance
-    if _cache_instance is None:
-        _cache_instance = await create_cache()
+    if _cache_instance is not None:
+        return _cache_instance
+    async with _cache_lock:
+        if _cache_instance is None:
+            _cache_instance = await create_cache()
     return _cache_instance
 
 

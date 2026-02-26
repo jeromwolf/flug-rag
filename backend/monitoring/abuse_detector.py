@@ -158,6 +158,12 @@ class AbuseDetector(AsyncSQLiteManager):
         self._request_log[ip] = [t for t in self._request_log[ip] if t > window_start]
         self._request_log[ip].append(now)
 
+        # Periodic cleanup of stale keys to prevent unbounded memory growth
+        if len(self._request_log) > 10000:
+            stale = [k for k, v in self._request_log.items() if not v or v[-1] <= window_start]
+            for k in stale:
+                del self._request_log[k]
+
         if len(self._request_log[ip]) > self.rate_limit_max:
             event = AbuseEvent(
                 timestamp=datetime.now(timezone.utc).isoformat(),

@@ -13,9 +13,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 import aiosqlite
+
+from core.db.base import AsyncSQLiteManager, create_async_singleton
 
 logger = logging.getLogger(__name__)
 
@@ -80,62 +82,50 @@ INJECTION_PATTERNS = [
 MAX_INPUT_LENGTH = 10000
 
 
-class GuardrailsManager:
+class GuardrailsManager(AsyncSQLiteManager):
     """Guardrails 관리 + 검사 엔진"""
 
     def __init__(self, db_path: Optional[Path] = None):
-        self.db_path = db_path or Path("data/guardrails.db")
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._initialized = False
-        self._lock = asyncio.Lock()
+        super().__init__(db_path or Path("data/guardrails.db"))
         self._rules_cache: list[GuardRule] | None = None
 
-    async def _ensure_initialized(self):
-        if not self._initialized:
-            async with self._lock:
-                if not self._initialized:
-                    await self._init_db()
-                    self._initialized = True
-
-    async def _init_db(self):
-        async with aiosqlite.connect(self.db_path) as db:
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS guard_rules (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    rule_type TEXT NOT NULL,
-                    pattern TEXT NOT NULL,
-                    action TEXT DEFAULT 'block',
-                    message TEXT DEFAULT '',
-                    is_active INTEGER DEFAULT 1,
-                    priority INTEGER DEFAULT 0,
-                    created_at TEXT NOT NULL,
-                    created_by TEXT DEFAULT ''
-                )
-            """)
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS guard_logs (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    direction TEXT NOT NULL,
-                    rule_id TEXT,
-                    rule_name TEXT,
-                    action TEXT,
-                    user_id TEXT DEFAULT '',
-                    snippet TEXT DEFAULT ''
-                )
-            """)
-            await db.execute(
-                "CREATE INDEX IF NOT EXISTS idx_guard_logs_ts ON guard_logs(timestamp)"
+    async def _create_tables(self, db: aiosqlite.Connection):
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guard_rules (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                rule_type TEXT NOT NULL,
+                pattern TEXT NOT NULL,
+                action TEXT DEFAULT 'block',
+                message TEXT DEFAULT '',
+                is_active INTEGER DEFAULT 1,
+                priority INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                created_by TEXT DEFAULT ''
             )
-            await db.commit()
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guard_logs (
+                id TEXT PRIMARY KEY,
+                timestamp TEXT NOT NULL,
+                direction TEXT NOT NULL,
+                rule_id TEXT,
+                rule_name TEXT,
+                action TEXT,
+                user_id TEXT DEFAULT '',
+                snippet TEXT DEFAULT ''
+            )
+        """)
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_guard_logs_ts ON guard_logs(timestamp)"
+        )
+        await db.commit()
 
     # ==================== Rule CRUD ====================
 
     async def add_rule(self, name: str, rule_type: str, pattern: str,
                        action: str = "block", message: str = "",
                        priority: int = 0, created_by: str = "") -> GuardRule:
-        await self._ensure_initialized()
         rule = GuardRule(
             id=str(uuid.uuid4()),
             name=name, rule_type=rule_type, pattern=pattern,
@@ -143,7 +133,7 @@ class GuardrailsManager:
             created_at=datetime.now(timezone.utc).isoformat(),
             created_by=created_by,
         )
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             await db.execute(
                 """INSERT INTO guard_rules
                    (id, name, rule_type, pattern, action, message, is_active, priority, created_at, created_by)
@@ -157,7 +147,6 @@ class GuardrailsManager:
         return rule
 
     async def update_rule(self, rule_id: str, **kwargs) -> GuardRule:
-        await self._ensure_initialized()
         _SAFE_COLUMN = re.compile(r'^[a-z_]+$')
         _ALLOWED_COLUMNS = frozenset({"name", "rule_type", "pattern", "action", "message", "is_active", "priority"})
         updates = {k: v for k, v in kwargs.items() if k in _ALLOWED_COLUMNS and _SAFE_COLUMN.match(k)}
@@ -167,7 +156,7 @@ class GuardrailsManager:
         set_clause = ", ".join(f"{k} = ?" for k in updates)
         values = list(updates.values()) + [rule_id]
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             cursor = await db.execute(f"UPDATE guard_rules SET {set_clause} WHERE id = ?", values)
             if cursor.rowcount == 0:
                 raise ValueError(f"Rule not found: {rule_id}")
@@ -180,8 +169,7 @@ class GuardrailsManager:
                 return GuardRule(**{**dict(row), "is_active": bool(row["is_active"])})
 
     async def delete_rule(self, rule_id: str):
-        await self._ensure_initialized()
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             cursor = await db.execute("DELETE FROM guard_rules WHERE id = ?", (rule_id,))
             if cursor.rowcount == 0:
                 raise ValueError(f"Rule not found: {rule_id}")
@@ -189,11 +177,10 @@ class GuardrailsManager:
         self._rules_cache = None
 
     async def list_rules(self) -> list[GuardRule]:
-        await self._ensure_initialized()
         if self._rules_cache is not None:
             return self._rules_cache
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             async with db.execute(
                 "SELECT * FROM guard_rules WHERE is_active = 1 ORDER BY priority DESC, name"
@@ -205,8 +192,7 @@ class GuardrailsManager:
 
     async def list_all_rules(self) -> list[GuardRule]:
         """모든 규칙 (비활성 포함)"""
-        await self._ensure_initialized()
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             async with db.execute("SELECT * FROM guard_rules ORDER BY priority DESC, name") as cur:
                 rows = await cur.fetchall()
@@ -218,8 +204,8 @@ class GuardrailsManager:
         """입력 텍스트 검사."""
         # 1. Length check
         if len(text) > MAX_INPUT_LENGTH:
-            await self._log("input", "system", "length_limit", "block", user_id,
-                            f"입력 길이 초과: {len(text)} chars")
+            self._log_fire_and_forget("input", "system", "length_limit", "block", user_id,
+                                      f"입력 길이 초과: {len(text)} chars")
             return GuardResult(
                 passed=False,
                 triggered_rules=["length_limit"],
@@ -230,8 +216,8 @@ class GuardrailsManager:
         # 2. Built-in prompt injection patterns
         for pattern in INJECTION_PATTERNS:
             if re.search(pattern, text):
-                await self._log("input", "system", "injection_detect", "block", user_id,
-                                text[:100])
+                self._log_fire_and_forget("input", "system", "injection_detect", "block", user_id,
+                                          text[:100])
                 return GuardResult(
                     passed=False,
                     triggered_rules=["injection_detect"],
@@ -257,7 +243,7 @@ class GuardrailsManager:
 
                 if matched:
                     triggered.append(rule.name)
-                    await self._log("input", rule.id, rule.name, rule.action, user_id, text[:100])
+                    self._log_fire_and_forget("input", rule.id, rule.name, rule.action, user_id, text[:100])
                     if action_priority.get(rule.action, 0) > action_priority.get(worst_action, 0):
                         worst_action = rule.action
                         worst_message = rule.message
@@ -294,7 +280,7 @@ class GuardrailsManager:
                         if rule.action == "mask":
                             modified = re.sub(re.escape(rule.pattern), "[마스킹됨]", modified, flags=re.IGNORECASE)
                         elif rule.action == "block":
-                            await self._log("output", rule.id, rule.name, "block", user_id, text[:100])
+                            self._log_fire_and_forget("output", rule.id, rule.name, "block", user_id, text[:100])
                             return GuardResult(
                                 passed=False, triggered_rules=triggered, action="block",
                                 message=rule.message or "응답에 부적절한 내용이 포함되어 필터링되었습니다.",
@@ -305,7 +291,7 @@ class GuardrailsManager:
                         if rule.action == "mask":
                             modified = re.sub(rule.pattern, "[마스킹됨]", modified, flags=re.IGNORECASE)
                         elif rule.action == "block":
-                            await self._log("output", rule.id, rule.name, "block", user_id, text[:100])
+                            self._log_fire_and_forget("output", rule.id, rule.name, "block", user_id, text[:100])
                             return GuardResult(
                                 passed=False, triggered_rules=triggered, action="block",
                                 message=rule.message or "응답에 부적절한 내용이 포함되어 필터링되었습니다.",
@@ -324,7 +310,7 @@ class GuardrailsManager:
             pass
 
         if triggered:
-            await self._log("output", "system", ",".join(triggered), "mask", user_id, "")
+            self._log_fire_and_forget("output", "system", ",".join(triggered), "mask", user_id, "")
             return GuardResult(
                 passed=True, triggered_rules=triggered, action="mask",
                 modified_text=modified,
@@ -334,10 +320,15 @@ class GuardrailsManager:
 
     # ==================== Logging ====================
 
+    def _log_fire_and_forget(self, direction: str, rule_id: str, rule_name: str,
+                             action: str, user_id: str, snippet: str):
+        """Schedule log write without blocking the query critical path."""
+        asyncio.ensure_future(self._log(direction, rule_id, rule_name, action, user_id, snippet))
+
     async def _log(self, direction: str, rule_id: str, rule_name: str,
                    action: str, user_id: str, snippet: str):
         try:
-            async with aiosqlite.connect(self.db_path) as db:
+            async with self.get_connection() as db:
                 await db.execute(
                     """INSERT INTO guard_logs (id, timestamp, direction, rule_id, rule_name, action, user_id, snippet)
                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -349,7 +340,6 @@ class GuardrailsManager:
             logger.warning("Failed to log guard event: %s", e)
 
     async def get_logs(self, limit: int = 50, direction: str | None = None) -> list[GuardLog]:
-        await self._ensure_initialized()
         conditions = []
         params: list = []
         if direction:
@@ -358,7 +348,7 @@ class GuardrailsManager:
 
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
             async with db.execute(
                 f"SELECT * FROM guard_logs {where} ORDER BY timestamp DESC LIMIT ?",
@@ -369,16 +359,4 @@ class GuardrailsManager:
 
 
 # Singleton
-_manager: GuardrailsManager | None = None
-_manager_lock = asyncio.Lock()
-
-
-async def get_guardrails_manager() -> GuardrailsManager:
-    global _manager
-    if _manager is not None:
-        return _manager
-    async with _manager_lock:
-        if _manager is None:
-            _manager = GuardrailsManager()
-            await _manager._ensure_initialized()
-    return _manager
+get_guardrails_manager = create_async_singleton(GuardrailsManager)
