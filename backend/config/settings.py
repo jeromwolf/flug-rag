@@ -112,11 +112,6 @@ class Settings(BaseSettings):
     ocr_training_dir: str = "./data/ocr_training"
     ocr_training_image_dpi: int = 150
 
-    # Auth (legacy fields kept for backward compatibility)
-    secret_key: str = "change-me-in-production"
-    access_token_expire_minutes: int = 480
-    algorithm: str = "HS256"
-
     # Auth - JWT / SSO / EAM
     jwt_secret_key: str = "change-me-in-production-jwt-secret"
     jwt_algorithm: str = "HS256"

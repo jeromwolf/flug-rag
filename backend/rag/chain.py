@@ -177,7 +177,7 @@ class RAGChain:
             sort_keys=True,
             ensure_ascii=False,
         )
-        return "rag:query:" + hashlib.md5(raw.encode()).hexdigest()
+        return "rag:query:" + hashlib.sha256(raw.encode()).hexdigest()[:32]
 
     @staticmethod
     def _postprocess_answer(text: str) -> str:

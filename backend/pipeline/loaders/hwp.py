@@ -1,12 +1,16 @@
 """HWP document loader using hwp5txt, olefile, and LibreOffice fallbacks."""
 
 import asyncio
+import re
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
 from .base import BaseLoader, LoadedDocument
+
+# Shell metacharacters that must not appear in file paths passed to subprocess
+_UNSAFE_PATH_CHARS = re.compile(r'[;&|`$(){}!<>\x00]')
 
 
 class HWPLoader(BaseLoader):
@@ -19,6 +23,10 @@ class HWPLoader(BaseLoader):
         return await asyncio.to_thread(self._load_sync, path)
 
     def _load_sync(self, path: Path) -> LoadedDocument:
+        # Validate file path does not contain shell metacharacters
+        if _UNSAFE_PATH_CHARS.search(str(path)):
+            raise ValueError(f"Unsafe characters in file path: {path.name}")
+
         # Try hwp5txt first (best quality)
         try:
             return self._load_with_hwp5txt(path)

@@ -45,6 +45,13 @@ async def lifespan(app: FastAPI):
                 "Set AUTH_ENABLED=true for production. <<<"
             )
 
+    # MinIO default credential check
+    if settings.minio_enabled and settings.minio_access_key == "minioadmin" and settings.minio_secret_key == "minioadmin":
+        security_logger.critical(
+            "SECURITY: MinIO is enabled with DEFAULT credentials (minioadmin/minioadmin). "
+            "Set MINIO_ACCESS_KEY and MINIO_SECRET_KEY to secure values for production."
+        )
+
     # 1. Cache initialization
     if settings.cache_enabled:
         logger.info("Cache enabled; initializing cache backend...")
