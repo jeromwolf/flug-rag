@@ -401,10 +401,26 @@ ChatGPT/Claude.ai 수준의 모던 AI 챗봇 UI로 전면 리디자인. 11개 �
 - **RAG 워밍업**: `api/main.py` — 서버 시작 시 RAGChain 사전 초기화 (cold start 30~60초 해소)
 - **세션 user_id 필터링**: `memory.py` + `sessions.py` + `chat.py` — 다중 접속 시 프라이버시 보호
 
+### 제안서 갭 분석 기반 신규 기능 (2026-02 완료)
+
+제안서(한국가스기술공사_제안서_2026) 대비 구현 갭 분석 후 데모 필수 5개 기능 구현.
+
+- **듀얼 모델 라우팅**: `config/settings.py` + `agent/router.py` + `rag/chain.py` — QueryRouter에 `ModelTier(MAIN/LIGHT)` 추가, 질의 복잡도별 자동 모델 선택 (개발: 7b/14b, 운영: 32b/72b)
+- **멀티 응답 비교 뷰**: `frontend/src/components/chat/CompareView.tsx` — 두 모델 동시 SSE 스트리밍 + 속도/신뢰도 비교 요약
+- **HITL 3단계 피드백**: `MessageBubble.tsx` + `feedback.py` — 정확(+1)/부분정확(0)/부정확(-1) 3단계 (기존 2단계에서 확장)
+- **북마크**: `api/routes/bookmarks.py` + `client.ts` + `MessageBubble.tsx` — 중요 응답 저장/삭제/목록 조회
+- **Agent 시나리오 2종**: `agent/mcp/tools/report_draft_tool.py` (보고서 초안 작성), `training_material_tool.py` (교육자료 생성) — MCP 도구 프레임워크 기반
+
+### 제안서 문서
+
+- **업스테이지 미팅 Q&A**: `docs/upstage_meeting_qa_20260303.md` — 3/3 미팅용 라이선스/비용/기술/6단계 OCR 파이프라인 질문
+- **데모 시연 확인서 (서식7)**: `docs/서식7_데모시연확인서.md` — URL, ID/PW, LLM/RAG 모델 규격, 시연 기능 목록
+
 ### 잔여 작업
 - **출장보고서 OCR 재인제스트**: 깨진 PDF 텍스트 수정 (Upstage Document Parse 적용)
 - **운영 배포 준비**: vLLM 서빙, K8s 매니페스트, Redis 캐시
 - **배포 플랫폼**: RunPod A40 Community Cloud ($0.35/hr, 월 ~$259) 권장 — GCP 대비 3~5배 저렴
+- **제안서 후속 (제안 확정 후)**: SSO/LDAP 연동, ERP/EHSQ/그룹웨어 연동, NAS 동기화, Milvus/PostgreSQL 운영 배포, CI/CD, Blue-Green 배포, 성능 SLA 검증, 골든 500 데이터셋, OCR 6단계 후처리, 보안등급 ACL
 
 ## 데이터 위치
 
