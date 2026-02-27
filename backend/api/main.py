@@ -187,7 +187,7 @@ from auth.routes import router as auth_router
 app.include_router(auth_router, prefix="/api", tags=["auth"])
 
 # Register application routes
-from api.routes import admin, agents, chat, content, documents, feedback, folders, guardrails, logs, mcp, ocr, ocr_training, personal_knowledge, quality, sessions, statistics, sync, workflows
+from api.routes import admin, agents, bookmarks, chat, content, documents, feedback, folders, guardrails, logs, mcp, ocr, ocr_training, personal_knowledge, quality, sessions, statistics, sync, workflows
 
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(documents.router, prefix="/api", tags=["documents"])
@@ -207,6 +207,7 @@ app.include_router(logs.router, prefix="/api", tags=["logs"])
 app.include_router(guardrails.router, prefix="/api", tags=["guardrails"])
 app.include_router(content.router, prefix="/api", tags=["content"])
 app.include_router(ocr_training.router, prefix="/api", tags=["ocr-training"])
+app.include_router(bookmarks.router, prefix="/api", tags=["bookmarks"])
 
 
 @app.get("/health")

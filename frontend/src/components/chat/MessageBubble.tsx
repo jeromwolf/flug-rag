@@ -7,20 +7,24 @@ import {
   useTheme,
 } from "@mui/material";
 import {
-  ThumbUp as ThumbUpIcon,
-  ThumbDown as ThumbDownIcon,
+  CheckCircle as CheckCircleIcon,
+  RemoveCircleOutline as RemoveCircleOutlineIcon,
+  Cancel as CancelIcon,
   ContentCopy as CopyIcon,
   ReportProblem as ReportProblemIcon,
   Edit as EditIcon,
   AutoAwesome as AutoAwesomeIcon,
   Person as PersonIcon,
+  Bookmark as BookmarkIcon,
+  BookmarkBorder as BookmarkBorderIcon,
 } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { memo, useRef, useState } from "react";
+import { memo, useRef, useState, useCallback } from "react";
 import type { Message } from "../../types";
 import { ConfidenceBadge } from "./ConfidenceBadge";
 import { SourcesPanel } from "./SourcesPanel";
+import { bookmarksApi } from "../../api/client";
 
 // Code block with language header bar
 const CodeBlockWrapper = ({
@@ -143,6 +147,7 @@ interface MessageBubbleProps {
   onEditUserMessage?: (messageId: string, content: string) => void;
   sessionId: string | null;
   userRole?: string;
+  isBookmarked?: boolean;
 }
 
 export const MessageBubble = memo(function MessageBubble({
@@ -153,14 +158,41 @@ export const MessageBubble = memo(function MessageBubble({
   onEditUserMessage,
   sessionId,
   userRole,
+  isBookmarked = false,
 }: MessageBubbleProps) {
   const isUser = msg.role === "user";
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
 
+  const [bookmarked, setBookmarked] = useState(isBookmarked);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+
   const handleCopy = () => {
     navigator.clipboard.writeText(msg.content);
   };
+
+  const handleBookmarkToggle = useCallback(async () => {
+    if (bookmarkLoading || !sessionId) return;
+    setBookmarkLoading(true);
+    try {
+      if (bookmarked) {
+        await bookmarksApi.remove(msg.id);
+        setBookmarked(false);
+      } else {
+        await bookmarksApi.add({
+          message_id: msg.id,
+          session_id: sessionId,
+          content: msg.content,
+          role: msg.role,
+        });
+        setBookmarked(true);
+      }
+    } catch {
+      // 실패 시 상태 롤백 없이 조용히 처리
+    } finally {
+      setBookmarkLoading(false);
+    }
+  }, [bookmarked, bookmarkLoading, msg.id, msg.content, msg.role, sessionId]);
 
   const canEdit = !isUser && (userRole === "admin" || userRole === "manager");
 
@@ -329,24 +361,34 @@ export const MessageBubble = memo(function MessageBubble({
               >
                 {sessionId && (
                   <>
-                    <Tooltip title="도움이 됐어요">
+                    <Tooltip title="정확">
                       <IconButton
                         size="small"
                         onClick={() => onFeedback(msg.id, 1)}
-                        aria-label="긍정 평가"
-                        sx={{ color: "text.secondary" }}
+                        aria-label="정확"
+                        sx={{ color: "success.main" }}
                       >
-                        <ThumbUpIcon sx={{ fontSize: 16 }} />
+                        <CheckCircleIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="도움이 안 됐어요">
+                    <Tooltip title="부분정확">
+                      <IconButton
+                        size="small"
+                        onClick={() => onFeedback(msg.id, 0)}
+                        aria-label="부분정확"
+                        sx={{ color: "warning.main" }}
+                      >
+                        <RemoveCircleOutlineIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="부정확">
                       <IconButton
                         size="small"
                         onClick={() => onFeedback(msg.id, -1)}
-                        aria-label="부정 평가"
-                        sx={{ color: "text.secondary" }}
+                        aria-label="부정확"
+                        sx={{ color: "error.main" }}
                       >
-                        <ThumbDownIcon sx={{ fontSize: 16 }} />
+                        <CancelIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="오류 신고">
@@ -382,6 +424,26 @@ export const MessageBubble = memo(function MessageBubble({
                     <CopyIcon sx={{ fontSize: 16 }} />
                   </IconButton>
                 </Tooltip>
+                {sessionId && (
+                  <Tooltip title={bookmarked ? "북마크 해제" : "북마크"}>
+                    <IconButton
+                      size="small"
+                      onClick={handleBookmarkToggle}
+                      disabled={bookmarkLoading}
+                      aria-label={bookmarked ? "북마크 해제" : "북마크"}
+                      sx={{
+                        color: bookmarked ? "warning.main" : "text.secondary",
+                        "&:hover": { color: "warning.main" },
+                      }}
+                    >
+                      {bookmarked ? (
+                        <BookmarkIcon sx={{ fontSize: 16 }} />
+                      ) : (
+                        <BookmarkBorderIcon sx={{ fontSize: 16 }} />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                )}
               </Box>
             </Box>
           )}

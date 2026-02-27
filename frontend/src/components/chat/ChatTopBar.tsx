@@ -18,6 +18,7 @@ import {
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
   ContentCopy as ContentCopyIcon,
+  CompareArrows as CompareArrowsIcon,
 } from "@mui/icons-material";
 import { useQuery } from "@tanstack/react-query";
 import { adminApi } from "../../api/client";
@@ -35,6 +36,8 @@ interface ChatTopBarProps {
   onToggleDarkMode: () => void;
   messages: Message[];
   onShowSnackbar: (msg: string, severity: "success" | "error" | "info") => void;
+  compareMode: boolean;
+  onToggleCompareMode: () => void;
 }
 
 const FALLBACK_MODELS = [
@@ -57,6 +60,8 @@ export function ChatTopBar({
   onToggleDarkMode,
   messages,
   onShowSnackbar,
+  compareMode,
+  onToggleCompareMode,
 }: ChatTopBarProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const settingsOpen = Boolean(anchorEl);
@@ -147,6 +152,26 @@ export function ChatTopBar({
       <Tooltip title="대화 복사">
         <IconButton onClick={handleCopyConversation} size="small">
           <ContentCopyIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip title="모델 비교 모드">
+        <IconButton
+          onClick={onToggleCompareMode}
+          size="small"
+          sx={{
+            color: compareMode ? "primary.main" : "text.secondary",
+            bgcolor: compareMode ? "primary.main" + "1a" : "transparent",
+            border: compareMode ? "1px solid" : "1px solid transparent",
+            borderColor: compareMode ? "primary.main" : "transparent",
+            borderRadius: 1.5,
+            transition: "all 0.2s ease",
+            "&:hover": {
+              bgcolor: compareMode ? "primary.main" + "26" : "action.hover",
+            },
+          }}
+        >
+          <CompareArrowsIcon fontSize="small" />
         </IconButton>
       </Tooltip>
 

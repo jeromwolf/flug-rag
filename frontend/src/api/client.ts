@@ -403,6 +403,19 @@ export const syncApi = {
   history: (limit = 20) => api.get("/sync/history", { params: { limit } }),
 };
 
+// === Bookmarks ===
+export const bookmarksApi = {
+  list: () => api.get("/bookmarks"),
+  add: (data: {
+    message_id: string;
+    session_id: string;
+    content: string;
+    role?: string;
+    note?: string;
+  }) => api.post("/bookmarks", data),
+  remove: (messageId: string) => api.delete(`/bookmarks/${messageId}`),
+};
+
 // === Folders ===
 export const foldersApi = {
   list: () => api.get("/folders"),

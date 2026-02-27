@@ -47,6 +47,12 @@ class Settings(BaseSettings):
     # Default LLM provider
     default_llm_provider: Literal["vllm", "ollama", "openai", "anthropic"] = "vllm"
 
+    # Dual Model Routing
+    model_routing_enabled: bool = True  # Enable dual model routing
+    light_llm_model: str = "qwen2.5:7b"   # Light model for simple queries (개발환경: 7b, 운영환경: 32b)
+    main_llm_model: str = "qwen2.5:14b"   # Main model for complex queries (개발환경: 14b, 운영환경: 72b)
+    # 운영환경에서는 LIGHT_LLM_MODEL=qwen2.5:32b, MAIN_LLM_MODEL=qwen2.5:72b
+
     # Embeddings
     embedding_model: str = "BAAI/bge-m3"
     embedding_dimension: int = 1024

@@ -13,7 +13,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Message } from "../../types";
 import { MessageBubble } from "./MessageBubble";
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { bookmarksApi } from "../../api/client";
 
 const SUGGESTION_CHIPS = [
   "문서 내용을 요약해 주세요",
@@ -54,6 +56,17 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+
+  const { data: bookmarksData } = useQuery({
+    queryKey: ["bookmarks"],
+    queryFn: () => bookmarksApi.list(),
+    staleTime: 30000,
+  });
+
+  const bookmarkedIds = useMemo<Set<string>>(() => {
+    const items: { message_id: string }[] = bookmarksData?.data?.bookmarks ?? [];
+    return new Set(items.map((b) => b.message_id));
+  }, [bookmarksData]);
 
   const scrollToBottom = useCallback(() => {
     if (scrollContainerRef.current) {
@@ -174,6 +187,7 @@ export function ChatMessageList({
           onEditUserMessage={onEditUserMessage}
           sessionId={currentSessionId}
           userRole={userRole}
+          isBookmarked={bookmarkedIds.has(msg.id)}
         />
       ))}
 

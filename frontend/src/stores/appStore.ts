@@ -24,6 +24,10 @@ interface AppState {
   // Theme
   darkMode: boolean;
   toggleDarkMode: () => void;
+
+  // Compare mode
+  compareMode: boolean;
+  toggleCompareMode: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -54,4 +58,7 @@ export const useAppStore = create<AppState>((set) => ({
     localStorage.setItem('flux_dark_mode', String(newMode));
     return { darkMode: newMode };
   }),
+
+  compareMode: false,
+  toggleCompareMode: () => set((state) => ({ compareMode: !state.compareMode })),
 }));

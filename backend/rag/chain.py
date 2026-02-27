@@ -304,6 +304,28 @@ class RAGChain:
         except Exception as e:
             logger.debug("Terminology expansion skipped: %s", e)
 
+        # Dual model routing (if enabled and no explicit model override)
+        selected_model_tier = None
+        if settings.model_routing_enabled and not model:
+            try:
+                from agent.router import QueryRouter, ModelTier
+                router = QueryRouter(llm=self.llm)
+                routing = await router.route(question)
+                selected_model_tier = routing.model_tier
+
+                # Select model based on tier
+                if routing.model_tier == ModelTier.LIGHT:
+                    model = settings.light_llm_model
+                else:
+                    model = settings.main_llm_model
+
+                logger.info(
+                    "Dual model routing: %s -> %s (%s)",
+                    routing.category.value, routing.model_tier.value, model,
+                )
+            except Exception as e:
+                logger.warning("Dual model routing failed, using default: %s", e)
+
         # Use override LLM if specified
         llm = self.llm
         temp_llm = None
@@ -371,6 +393,10 @@ class RAGChain:
                 response.metadata["agentic_routing"] = {
                     k: v for k, v in agentic_meta.items() if not k.startswith("_")
                 }
+
+            # Add model_tier info from dual model routing
+            if selected_model_tier is not None:
+                response.metadata["model_tier"] = selected_model_tier.value
 
             # Store in cache (TTL: 60s)
             if cache is not None:
@@ -675,8 +701,41 @@ class RAGChain:
             temp_llm = create_llm(provider=provider, model=model, temperature=temperature or settings.llm_temperature)
             llm = temp_llm
 
+        selected_model_tier = None
         try:
             yield {"event": "start", "data": {"message_id": message_id}}
+
+            # Dual model routing (if enabled and no explicit model override)
+            if settings.model_routing_enabled and not model:
+                try:
+                    from agent.router import QueryRouter, ModelTier
+                    router = QueryRouter(llm=self.llm)
+                    routing = await router.route(question)
+                    selected_model_tier = routing.model_tier
+
+                    # Select model based on tier
+                    if routing.model_tier == ModelTier.LIGHT:
+                        model = settings.light_llm_model
+                    else:
+                        model = settings.main_llm_model
+
+                    yield {"event": "routing", "data": {
+                        "category": routing.category.value,
+                        "model_tier": routing.model_tier.value,
+                        "model": model,
+                        "confidence": routing.confidence,
+                    }}
+                    logger.info(
+                        "Dual model routing: %s -> %s (%s)",
+                        routing.category.value, routing.model_tier.value, model,
+                    )
+                except Exception as e:
+                    logger.warning("Dual model routing failed, using default: %s", e)
+
+            # Apply model override after routing (rebuild temp_llm if model was resolved above)
+            if model and not temp_llm:
+                temp_llm = create_llm(provider=provider, model=model, temperature=temperature or settings.llm_temperature)
+                llm = temp_llm
 
             # Guardrails: input check
             try:
@@ -799,6 +858,8 @@ class RAGChain:
                     end_data["query_correction"] = correction_info
                 if terminology_info:
                     end_data["terminology_expansion"] = terminology_info
+                if selected_model_tier is not None:
+                    end_data["model_tier"] = selected_model_tier.value
                 yield {"event": "end", "data": end_data}
                 return
 
@@ -904,6 +965,8 @@ class RAGChain:
                 end_data["terminology_expansion"] = terminology_info
             if agentic_meta:
                 end_data["agentic_routing"] = agentic_meta
+            if selected_model_tier is not None:
+                end_data["model_tier"] = selected_model_tier.value
             yield {"event": "end", "data": end_data}
         finally:
             if temp_llm is not None:

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "../stores/appStore";
 import { useAuth } from "../contexts/AuthContext";
 import { contentApi } from "../api/client";
+import { CompareView } from "../components/chat/CompareView";
 
 // Hooks
 import { useSnackbar } from "../hooks/useSnackbar";
@@ -46,10 +47,15 @@ export default function ChatPage() {
     toggleSidebar,
     darkMode,
     toggleDarkMode,
+    compareMode,
+    toggleCompareMode,
   } = useAppStore();
 
   // Hooks
   const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
+
+  // Compare mode: track the latest question sent while compare is active
+  const [compareQuestion, setCompareQuestion] = useState("");
 
   // File attachments for ChatInputBar
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -114,9 +120,18 @@ export default function ChatPage() {
 
   // Clear files after send (files are display-only until backend supports upload)
   const handleSendWithClear = useCallback(() => {
-    handleSend();
+    if (compareMode) {
+      // In compare mode, capture question and trigger compare view
+      const text = inputValue.trim();
+      if (text) {
+        setCompareQuestion(text);
+        setInputValue("");
+      }
+    } else {
+      handleSend();
+    }
     setAttachedFiles([]);
-  }, [handleSend]);
+  }, [compareMode, handleSend, inputValue, setInputValue]);
 
   // Announcements
   const { data: announcementsData } = useQuery({
@@ -167,22 +182,32 @@ export default function ChatPage() {
           onToggleDarkMode={toggleDarkMode}
           messages={messages}
           onShowSnackbar={showSnackbar}
+          compareMode={compareMode}
+          onToggleCompareMode={toggleCompareMode}
         />
 
-        <ChatMessageList
-          messages={messages}
-          streamingContent={streamingContent}
-          isStreaming={isStreaming}
-          announcements={announcementsData}
-          onSampleClick={setInputValue}
-          onFeedback={handleFeedback}
-          onErrorReport={openErrorReport}
-          onEditAnswer={openEditDialog}
-          onEditUserMessage={handleEditUserMessage}
-          currentSessionId={currentSessionId}
-          userRole={userRole}
-          messagesEndRef={messagesEndRef}
-        />
+        {compareMode ? (
+          <CompareView
+            question={compareQuestion}
+            isActive={compareMode}
+            mainModel={selectedModel !== "default" ? selectedModel : undefined}
+          />
+        ) : (
+          <ChatMessageList
+            messages={messages}
+            streamingContent={streamingContent}
+            isStreaming={isStreaming}
+            announcements={announcementsData}
+            onSampleClick={setInputValue}
+            onFeedback={handleFeedback}
+            onErrorReport={openErrorReport}
+            onEditAnswer={openEditDialog}
+            onEditUserMessage={handleEditUserMessage}
+            currentSessionId={currentSessionId}
+            userRole={userRole}
+            messagesEndRef={messagesEndRef}
+          />
+        )}
 
         {/* TODO: attach files to chat request once backend /chat/stream supports multipart upload */}
         <ChatInputBar

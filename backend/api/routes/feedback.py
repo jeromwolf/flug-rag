@@ -26,11 +26,14 @@ FEEDBACK_FILE = settings.data_dir / "feedback.jsonl"
 async def submit_feedback(request: FeedbackRequest, current_user: User | None = Depends(get_current_user)):
     feedback_id = str(uuid.uuid4())
 
+    rating_label_map = {1: "accurate", 0: "partial", -1: "inaccurate"}
+
     entry = {
         "id": feedback_id,
         "message_id": request.message_id,
         "session_id": request.session_id,
         "rating": request.rating,
+        "rating_label": rating_label_map.get(request.rating, "unknown"),
         "comment": request.comment,
         "corrected_answer": request.corrected_answer,
         "created_at": datetime.now(timezone.utc).isoformat(),
