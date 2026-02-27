@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import uuid
 
 from fastapi import APIRouter, Depends
 from sse_starlette.sse import EventSourceResponse
@@ -92,7 +93,8 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
     # Create or get session
     session_id = request.session_id
     if not session_id:
-        session_id = await _get_memory().create_session(title=request.message[:50])
+        user_id = current_user.id if current_user else ""
+        session_id = await _get_memory().create_session(title=request.message[:50], user_id=user_id)
 
     # Save user message
     await _get_memory().add_message(session_id, "user", request.message)
@@ -152,7 +154,8 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
     """SSE streaming chat endpoint."""
     session_id = request.session_id
     if not session_id:
-        session_id = await _get_memory().create_session(title=request.message[:50])
+        user_id = current_user.id if current_user else ""
+        session_id = await _get_memory().create_session(title=request.message[:50], user_id=user_id)
 
     await _get_memory().add_message(session_id, "user", request.message)
     history = await _get_memory().get_history(session_id)
@@ -174,23 +177,44 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
     merged_filters = await _build_merged_filters(current_user, request.filters)
 
     async def event_generator():
+        # Send start event with session_id so the frontend can track the session
+        msg_id = str(uuid.uuid4())
+        yield {
+            "event": "start",
+            "data": json.dumps({"message_id": msg_id, "session_id": session_id}, ensure_ascii=False),
+        }
+
         full_content = ""
-        async for event in rag_chain.stream_query(
-            question=request.message,
-            mode=mode,
-            filters=merged_filters,
-            provider=request.provider,
-            model=request.model,
-            temperature=request.temperature,
-        ):
-            if event["event"] == "chunk":
-                full_content += event["data"].get("content", "")
+        try:
+            async for event in rag_chain.stream_query(
+                question=request.message,
+                mode=mode,
+                filters=merged_filters,
+                provider=request.provider,
+                model=request.model,
+                temperature=request.temperature,
+            ):
+                if event["event"] == "start":
+                    # Skip the rag_chain's own start event; we already sent one
+                    continue
+                if event["event"] == "chunk":
+                    full_content += event["data"].get("content", "")
+                yield {
+                    "event": event["event"],
+                    "data": json.dumps(event["data"], ensure_ascii=False),
+                }
+        except Exception as e:
+            logger.error("Streaming error: %s", e)
             yield {
-                "event": event["event"],
-                "data": json.dumps(event["data"], ensure_ascii=False),
+                "event": "error",
+                "data": json.dumps(
+                    {"message": "응답 생성 중 오류가 발생했습니다. 다시 시도해 주세요."},
+                    ensure_ascii=False,
+                ),
             }
 
-        # Save assistant message after streaming
-        await _get_memory().add_message(session_id, "assistant", full_content)
+        # Save assistant message after streaming (only if content was produced)
+        if full_content:
+            await _get_memory().add_message(session_id, "assistant", full_content)
 
     return EventSourceResponse(event_generator())

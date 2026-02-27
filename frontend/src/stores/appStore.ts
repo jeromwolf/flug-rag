@@ -37,7 +37,7 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedModel: (model) => set({ selectedModel: model }),
 
   temperature: parseFloat(
-    (typeof window !== "undefined" && localStorage.getItem("flux_temperature")) || "0.7"
+    (typeof window !== "undefined" && localStorage.getItem("flux_temperature")) || "0.2"
   ),
   setTemperature: (temp) =>
     set(() => {

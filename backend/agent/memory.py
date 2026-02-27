@@ -23,11 +23,16 @@ class ConversationMemory(AsyncSQLiteManager):
         await db.execute("""
             CREATE TABLE IF NOT EXISTS sessions (
                 id TEXT PRIMARY KEY,
+                user_id TEXT DEFAULT '',
                 title TEXT DEFAULT '',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 metadata TEXT DEFAULT '{}'
             )
+        """)
+        await db.execute("""
+            CREATE INDEX IF NOT EXISTS idx_sessions_user
+            ON sessions(user_id, updated_at)
         """)
         await db.execute("""
             CREATE TABLE IF NOT EXISTS messages (
@@ -46,15 +51,15 @@ class ConversationMemory(AsyncSQLiteManager):
         """)
         await db.commit()
 
-    async def create_session(self, title: str = "", metadata: dict | None = None) -> str:
+    async def create_session(self, title: str = "", metadata: dict | None = None, user_id: str = "") -> str:
         """Create a new conversation session. Returns session_id."""
         session_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
 
         async with self.get_connection() as db:
             await db.execute(
-                "INSERT INTO sessions (id, title, created_at, updated_at, metadata) VALUES (?, ?, ?, ?, ?)",
-                (session_id, title, now, now, json.dumps(metadata or {})),
+                "INSERT INTO sessions (id, user_id, title, created_at, updated_at, metadata) VALUES (?, ?, ?, ?, ?, ?)",
+                (session_id, user_id, title, now, now, json.dumps(metadata or {})),
             )
             await db.commit()
 
@@ -116,20 +121,33 @@ class ConversationMemory(AsyncSQLiteManager):
 
         return messages
 
-    async def get_sessions(self, limit: int = 50, offset: int = 0) -> list[dict]:
+    async def get_sessions(self, limit: int = 50, offset: int = 0, user_id: str = "") -> list[dict]:
         """Get recent sessions."""
         async with self.get_connection() as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                """SELECT s.id, s.title, s.created_at, s.updated_at, s.metadata,
-                          COUNT(m.id) as message_count
-                   FROM sessions s
-                   LEFT JOIN messages m ON m.session_id = s.id
-                   GROUP BY s.id
-                   ORDER BY s.updated_at DESC
-                   LIMIT ? OFFSET ?""",
-                (limit, offset),
-            )
+            if user_id:
+                cursor = await db.execute(
+                    """SELECT s.id, s.title, s.created_at, s.updated_at, s.metadata,
+                              COUNT(m.id) as message_count
+                       FROM sessions s
+                       LEFT JOIN messages m ON m.session_id = s.id
+                       WHERE s.user_id = ? OR s.user_id = ''
+                       GROUP BY s.id
+                       ORDER BY s.updated_at DESC
+                       LIMIT ? OFFSET ?""",
+                    (user_id, limit, offset),
+                )
+            else:
+                cursor = await db.execute(
+                    """SELECT s.id, s.title, s.created_at, s.updated_at, s.metadata,
+                              COUNT(m.id) as message_count
+                       FROM sessions s
+                       LEFT JOIN messages m ON m.session_id = s.id
+                       GROUP BY s.id
+                       ORDER BY s.updated_at DESC
+                       LIMIT ? OFFSET ?""",
+                    (limit, offset),
+                )
             rows = await cursor.fetchall()
 
         return [

@@ -477,7 +477,7 @@ function GuardrailsTab() {
   });
 
   const handleOpenCreate = () => {
-    setEditingRule({ name: "", rule_type: "keyword", pattern: "", action: "block", message: "", is_active: true });
+    setEditingRule({ name: "", rule_type: "input_keyword", pattern: "", action: "block", message: "", is_active: true });
     setDialogOpen(true);
   };
 
@@ -632,14 +632,14 @@ function GuardrailsTab() {
           />
           <Select
             fullWidth
-            value={editingRule?.rule_type ?? "keyword"}
+            value={editingRule?.rule_type ?? "input_keyword"}
             onChange={(e) => setEditingRule((r) => r ? { ...r, rule_type: e.target.value } : null)}
             sx={{ mt: 2 }}
           >
-            <MenuItem value="keyword">Keyword</MenuItem>
-            <MenuItem value="regex">Regex</MenuItem>
-            <MenuItem value="pii">PII</MenuItem>
-            <MenuItem value="prompt_injection">Prompt Injection</MenuItem>
+            <MenuItem value="input_keyword">입력 키워드 필터</MenuItem>
+            <MenuItem value="input_pattern">입력 정규식 필터</MenuItem>
+            <MenuItem value="output_keyword">출력 키워드 필터</MenuItem>
+            <MenuItem value="output_pattern">출력 정규식 필터</MenuItem>
           </Select>
           <TextField
             label="패턴"

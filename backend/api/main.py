@@ -100,6 +100,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Connection pool initialization failed: %s", e)
 
+    # 4. RAG warm-up: pre-initialize heavy components
+    try:
+        logger.info("Warming up RAG pipeline...")
+        from rag import RAGChain
+        _chain = RAGChain()
+        # Trigger embedding model + vectorstore + Kiwi tokenizer init
+        await _chain.retriever.retrieve("시스템 워밍업", top_k=1)
+        logger.info("RAG pipeline warm-up complete")
+    except Exception as e:
+        logger.warning("RAG warm-up failed (will lazy-init on first request): %s", e)
+
     yield
 
     # Shutdown

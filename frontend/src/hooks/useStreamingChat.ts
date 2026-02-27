@@ -70,6 +70,8 @@ export function useStreamingChat({
       }));
 
       setMessages(mapped);
+    }).catch(() => {
+      setMessages([]);
     });
   }, [currentSessionId]);
 
@@ -171,6 +173,9 @@ export function useStreamingChat({
                 case "end":
                   confidence = data.confidence_score ?? data.confidence ?? 0;
                   latencyMs = data.latency_ms ?? 0;
+                  break;
+                case "error":
+                  showSnackbar(data.message ?? "응답 생성 중 오류가 발생했습니다.", "error");
                   break;
               }
             } catch {

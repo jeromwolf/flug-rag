@@ -36,6 +36,11 @@ class RuleUpdateRequest(BaseModel):
     is_active: bool | None = None
 
 
+class GuardrailTestRequest(BaseModel):
+    test_input: str = Field(..., description="테스트 입력 텍스트")
+    rule_id: str | None = Field(None, description="테스트할 규칙 ID (선택)")
+
+
 @router.get("/admin/guardrails")
 async def list_guardrail_rules(
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
@@ -148,14 +153,14 @@ async def get_guardrail_logs(
 
 @router.post("/admin/guardrails/test")
 async def test_guardrail_input(
-    text: str,
+    request: GuardrailTestRequest,
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
 ):
     """입력 텍스트에 대해 Guardrail 테스트."""
     from rag.guardrails import get_guardrails_manager
 
     manager = await get_guardrails_manager()
-    result = await manager.check_input(text, user_id=current_user.id)
+    result = await manager.check_input(request.test_input, user_id=current_user.id)
     return {
         "passed": result.passed,
         "action": result.action,

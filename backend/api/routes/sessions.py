@@ -21,7 +21,8 @@ def _get_memory():
 
 @router.post("/sessions", response_model=SessionResponse)
 async def create_session(request: SessionCreate, current_user: User | None = Depends(get_current_user)):
-    session_id = await _get_memory().create_session(title=request.title)
+    user_id = current_user.id if current_user else ""
+    session_id = await _get_memory().create_session(title=request.title, user_id=user_id)
     session = await _get_memory().get_session(session_id)
     return SessionResponse(
         id=session["id"],
@@ -33,7 +34,8 @@ async def create_session(request: SessionCreate, current_user: User | None = Dep
 
 @router.get("/sessions", response_model=SessionListResponse)
 async def list_sessions(limit: int = 50, offset: int = 0, current_user: User | None = Depends(get_current_user)):
-    sessions = await _get_memory().get_sessions(limit=limit, offset=offset)
+    user_id = current_user.id if current_user else ""
+    sessions = await _get_memory().get_sessions(limit=limit, offset=offset, user_id=user_id)
     return SessionListResponse(
         sessions=[
             SessionResponse(
