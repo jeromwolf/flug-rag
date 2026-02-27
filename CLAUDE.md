@@ -112,13 +112,13 @@ flux-rag/
 │   ├── data/
 │   │   └── sample_dataset/한국가스공사법/  # 벤치마크 데이터
 │   └── tests/            # pytest + 벤치마크
-├── frontend/             # React + TypeScript + MUI
+├── frontend/             # React 19 + TypeScript 5.9 + MUI v7 + Vite 7
 │   └── src/
 │       ├── pages/        # Chat, Admin, Documents, Monitor, QualityDashboard, AgentBuilder
 │       ├── components/
-│       │   └── chat/     # ChatSidebar, ChatTopBar, MessageBubble, SourcesPanel 등 8개
+│       │   └── chat/     # ChatSidebar, ChatTopBar, MessageBubble, SourcesPanel 등 8개 (ChatGPT 스타일)
 │       ├── hooks/        # useStreamingChat, useSessions, useFeedback 등 5개
-│       └── stores/       # Zustand 상태 관리 (appStore)
+│       └── stores/       # Zustand 상태 관리 (appStore — session, model, temperature, darkMode)
 ├── k8s/                  # Kubernetes 배포
 └── scripts/              # 유틸리티 스크립트
 ```
@@ -349,6 +349,46 @@ asyncio.run(check())
 - 싱글톤 패턴 8종 통일 (일부 async, 일부 sync, 일부 module-level)
 - 프론트엔드 테스트 커버리지 0% → 최소 단위 테스트 추가 필요
 - DB 마이그레이션 시스템 부재 → Alembic 또는 자체 마이그레이션 도입 필요
+
+### 프론트엔드 UI 고도화 (2026-02 완료)
+
+ChatGPT/Claude.ai 수준의 모던 AI 챗봇 UI로 전면 리디자인. 11개 파일 수정.
+
+#### 테마 및 기반
+- **컬러 시스템**: primary `#10a37f` (ChatGPT 그린), secondary `#6e6e80`
+- **다크모드**: bg `#212121`/`#2f2f2f`, 라이트: `#ffffff`/`#f7f7f8`
+- **타이포**: Pretendard Variable 폰트, body1 0.9375rem/1.7
+- **글로벌 애니메이션**: fadeInUp keyframes, thin 스크롤바
+
+#### 사이드바 (항상 다크)
+- bg `#171717`, 텍스트 `#ececec`/`#8e8ea0`, 너비 260px
+- "Flux AI" 브랜딩 + AutoAwesome 아이콘
+
+#### 메시지 버블 → 아바타+텍스트 레이아웃
+- 중앙 정렬 maxWidth 768px, 사용자(보라 #5436DA)/AI(그린) 아바타
+- 코드 블록: 언어 헤더바 + 복사 버튼, JetBrains Mono
+- React.memo 적용, fadeInUp 애니메이션
+- hover 시 액션 버튼 노출 (opacity 0→1)
+
+#### 입력바
+- 중앙 정렬 라운드 border, react-dropzone 파일 첨부
+- ArrowUpward 원형 전송 버튼, 5000자 초과 시 카운터 표시
+
+#### 톱바
+- 미니멀: [Menu] ... [Model Selector] ... [Copy] [DarkMode] [Settings]
+- `adminApi.listModels()` API 연동 (폴백 하드코딩)
+- 대화 클립보드 복사 버튼
+
+#### 소스 패널
+- Accordion → 카드 그리드 (flex-wrap), 점수 Chip 컬러 코딩
+
+#### 신규 기능
+- **사용자 메시지 편집+재전송**: 해당 메시지 이후 삭제 → 입력창 복원
+- **파일 첨부 UI**: Chip 프리뷰 (백엔드 업로드 미지원, UI only)
+- **대화 복사**: 전체 대화 텍스트 클립보드 복사
+
+#### 수정 파일 (11개)
+`index.html`, `App.tsx`, `appStore.ts`, `ChatSidebar.tsx`, `ChatTopBar.tsx`, `ChatMessageList.tsx`, `MessageBubble.tsx`, `ChatInputBar.tsx`, `SourcesPanel.tsx`, `useStreamingChat.ts`, `ChatPage.tsx`
 
 ### 잔여 작업
 - **출장보고서 OCR 재인제스트**: 깨진 PDF 텍스트 수정 (Upstage Document Parse 적용)
