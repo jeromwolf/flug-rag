@@ -28,6 +28,7 @@ export function useStreamingChat({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const streamingContentRef = useRef("");
 
   // Load messages when session changes
   useEffect(() => {
@@ -92,6 +93,7 @@ export function useStreamingChat({
     setMessages((prev) => [...prev, userMsg]);
     setIsStreaming(true);
     setStreamingContent("");
+    streamingContentRef.current = "";
 
     const abortController = new AbortController();
     abortRef.current = abortController;
@@ -163,6 +165,7 @@ export function useStreamingChat({
                   break;
                 case "chunk":
                   content += data.content ?? "";
+                  streamingContentRef.current = content;
                   setStreamingContent(content);
                   break;
                 case "end":
@@ -196,13 +199,13 @@ export function useStreamingChat({
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        if (streamingContent) {
+        if (streamingContentRef.current) {
           setMessages((prev) => [
             ...prev,
             {
               id: crypto.randomUUID(),
               role: "assistant",
-              content: streamingContent + "\n\n_(생성 중단됨)_",
+              content: streamingContentRef.current + "\n\n_(생성 중단됨)_",
               createdAt: new Date().toISOString(),
             },
           ]);
@@ -222,7 +225,6 @@ export function useStreamingChat({
     responseMode,
     selectedModel,
     temperature,
-    streamingContent,
     setCurrentSessionId,
     queryClient,
     showSnackbar,
@@ -245,6 +247,17 @@ export function useStreamingChat({
     }
   };
 
+  const handleEditUserMessage = useCallback(
+    (messageId: string, content: string) => {
+      if (isStreaming) return;
+      const idx = messages.findIndex((m) => m.id === messageId);
+      if (idx === -1) return;
+      setMessages(messages.slice(0, idx));
+      setInputValue(content);
+    },
+    [messages, isStreaming]
+  );
+
   return {
     messages,
     inputValue,
@@ -256,5 +269,6 @@ export function useStreamingChat({
     handleStopGeneration,
     handleNewChat,
     handleKeyDown,
+    handleEditUserMessage,
   };
 }

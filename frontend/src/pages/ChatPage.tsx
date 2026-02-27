@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Box, Drawer, useMediaQuery, useTheme } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "../stores/appStore";
@@ -24,7 +24,7 @@ import {
   NotificationSnackbar,
 } from "../components/chat/ChatDialogs";
 
-const SIDEBAR_WIDTH = 280;
+const SIDEBAR_WIDTH = 260;
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -40,16 +40,27 @@ export default function ChatPage() {
     setResponseMode,
     selectedModel,
     setSelectedModel,
+    temperature,
+    setTemperature,
     sidebarOpen,
     toggleSidebar,
     darkMode,
     toggleDarkMode,
   } = useAppStore();
 
-  const [temperature, setTemperature] = useState(0.7);
-
   // Hooks
   const { snackbar, showSnackbar, closeSnackbar } = useSnackbar();
+
+  // File attachments for ChatInputBar
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+
+  const handleFilesAttached = (files: File[]) => {
+    setAttachedFiles((prev) => [...prev, ...files]);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const {
     sessions,
@@ -70,6 +81,7 @@ export default function ChatPage() {
     handleStopGeneration,
     handleNewChat,
     handleKeyDown,
+    handleEditUserMessage,
   } = useStreamingChat({
     currentSessionId,
     setCurrentSessionId,
@@ -100,6 +112,12 @@ export default function ChatPage() {
     saveGoldenData,
   } = useGoldenData(currentSessionId, messages, showSnackbar);
 
+  // Clear files after send (files are display-only until backend supports upload)
+  const handleSendWithClear = useCallback(() => {
+    handleSend();
+    setAttachedFiles([]);
+  }, [handleSend]);
+
   // Announcements
   const { data: announcementsData } = useQuery({
     queryKey: ["announcements"],
@@ -120,8 +138,8 @@ export default function ChatPage() {
           "& .MuiDrawer-paper": {
             width: SIDEBAR_WIDTH,
             boxSizing: "border-box",
-            borderRight: "1px solid",
-            borderColor: "divider",
+            border: "none",
+            bgcolor: "#171717",
           },
         }}
       >
@@ -145,9 +163,10 @@ export default function ChatPage() {
           onTemperatureChange={setTemperature}
           responseMode={responseMode}
           onModeChange={setResponseMode}
-          currentSessionId={currentSessionId}
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
+          messages={messages}
+          onShowSnackbar={showSnackbar}
         />
 
         <ChatMessageList
@@ -159,18 +178,23 @@ export default function ChatPage() {
           onFeedback={handleFeedback}
           onErrorReport={openErrorReport}
           onEditAnswer={openEditDialog}
+          onEditUserMessage={handleEditUserMessage}
           currentSessionId={currentSessionId}
           userRole={userRole}
           messagesEndRef={messagesEndRef}
         />
 
+        {/* TODO: attach files to chat request once backend /chat/stream supports multipart upload */}
         <ChatInputBar
           inputValue={inputValue}
           onInputChange={setInputValue}
-          onSend={handleSend}
+          onSend={handleSendWithClear}
           onStop={handleStopGeneration}
           onKeyDown={handleKeyDown}
           isStreaming={isStreaming}
+          attachedFiles={attachedFiles}
+          onFilesAttached={handleFilesAttached}
+          onRemoveFile={handleRemoveFile}
         />
       </Box>
 

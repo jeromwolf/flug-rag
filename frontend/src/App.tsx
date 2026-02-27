@@ -28,22 +28,58 @@ function AppContent() {
       createTheme({
         palette: {
           mode: darkMode ? "dark" : "light",
-          primary: { main: "#1976d2" },
-          secondary: { main: "#dc004e" },
+          primary: { main: "#10a37f" },
+          secondary: { main: "#6e6e80" },
           ...(darkMode
             ? {
                 background: {
-                  default: "#1a1a2e",
-                  paper: "#16213e",
+                  default: "#212121",
+                  paper: "#2f2f2f",
+                },
+                text: {
+                  primary: "#ececec",
+                  secondary: "#b4b4b4",
                 },
               }
-            : {}),
+            : {
+                background: {
+                  default: "#ffffff",
+                  paper: "#f7f7f8",
+                },
+                text: {
+                  primary: "#343541",
+                  secondary: "#6e6e80",
+                },
+              }),
         },
         typography: {
-          fontFamily: '"Pretendard", "Noto Sans KR", sans-serif',
+          fontFamily:
+            '"Pretendard Variable", "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif',
+          body1: { fontSize: "0.9375rem", lineHeight: 1.7 },
+          body2: { fontSize: "0.875rem", lineHeight: 1.6 },
         },
         shape: {
-          borderRadius: 8,
+          borderRadius: 12,
+        },
+        components: {
+          MuiCssBaseline: {
+            styleOverrides: `
+              @keyframes fadeInUp {
+                from { opacity: 0; transform: translateY(8px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              body {
+                scrollbar-width: thin;
+              }
+              body::-webkit-scrollbar {
+                width: 6px;
+              }
+              body::-webkit-scrollbar-thumb {
+                border-radius: 3px;
+                background-color: ${darkMode ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"};
+              }
+            `,
+          },
         },
       }),
     [darkMode]

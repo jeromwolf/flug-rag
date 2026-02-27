@@ -1,14 +1,6 @@
+import { useState } from "react";
+import { Box, Typography, Chip } from "@mui/material";
 import {
-  Box,
-  Typography,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  LinearProgress,
-  Chip,
-} from "@mui/material";
-import {
-  ExpandMore as ExpandMoreIcon,
   PictureAsPdf,
   Description,
   Article,
@@ -17,68 +9,90 @@ import {
 import type { Source } from "../../types";
 
 function getFileIcon(filename: string) {
-  const ext = filename.split('.').pop()?.toLowerCase();
+  const ext = filename.split(".").pop()?.toLowerCase();
+  const iconSx = { fontSize: 16 };
   switch (ext) {
-    case 'pdf': return <PictureAsPdf fontSize="small" color="error" />;
-    case 'hwp': return <Description fontSize="small" color="info" />;
-    case 'docx': case 'doc': return <Article fontSize="small" color="primary" />;
-    default: return <InsertDriveFile fontSize="small" color="action" />;
+    case "pdf":
+      return <PictureAsPdf sx={{ ...iconSx, color: "#e53935" }} />;
+    case "hwp":
+      return <Description sx={{ ...iconSx, color: "#1565c0" }} />;
+    case "docx":
+    case "doc":
+      return <Article sx={{ ...iconSx, color: "#1976d2" }} />;
+    default:
+      return <InsertDriveFile sx={{ ...iconSx, color: "#757575" }} />;
   }
 }
 
 export function SourcesPanel({ sources }: { sources: Source[] }) {
-  if (sources.length === 0) return null;
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
+  if (!sources || sources.length === 0) return null;
+
   return (
-    <Accordion
-      disableGutters
-      sx={{ mt: 1, "&:before": { display: "none" }, boxShadow: "none", bgcolor: "transparent" }}
-    >
-      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 32, px: 0 }}>
-        <Chip
-          label={`참고 문서 ${sources.length}건`}
-          size="small"
-          variant="outlined"
-          sx={{ fontSize: '0.75rem' }}
-        />
-      </AccordionSummary>
-      <AccordionDetails sx={{ p: 0 }}>
+    <Box sx={{ mt: 1.5 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={{ mb: 1, display: "block" }}
+      >
+        참고 문서 {sources.length}건
+      </Typography>
+      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
         {sources.map((src, idx) => (
           <Box
             key={src.chunkId || idx}
+            onClick={() =>
+              setExpandedIdx(expandedIdx === idx ? null : idx)
+            }
             sx={{
+              flex: "1 1 200px",
+              maxWidth: 280,
               p: 1.5,
-              borderRadius: 1,
-              bgcolor: "action.hover",
-              mb: 0.5,
+              borderRadius: 2,
+              cursor: "pointer",
+              border: "1px solid",
+              borderColor: "divider",
+              transition: "all 0.2s",
+              "&:hover": {
+                borderColor: "text.secondary",
+                bgcolor: "action.hover",
+              },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
               {getFileIcon(src.filename)}
-              <Typography variant="subtitle2" sx={{ fontSize: '0.8rem' }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontSize: "0.78rem", flex: 1 }}
+                noWrap
+              >
                 {src.filename}
-                {src.page != null && ` (p.${src.page})`}
+                {src.page ? ` (p.${src.page})` : ""}
               </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-              <LinearProgress
-                variant="determinate"
-                value={Math.round(src.score * 100)}
-                sx={{ flex: 1, height: 4, borderRadius: 2 }}
+              <Chip
+                label={`${Math.round(src.score * 100)}%`}
+                size="small"
+                color={
+                  src.score > 0.8
+                    ? "success"
+                    : src.score > 0.5
+                    ? "warning"
+                    : "default"
+                }
+                sx={{ height: 20, fontSize: "0.7rem" }}
               />
-              <Typography variant="caption" color="text.secondary" sx={{ minWidth: 32 }}>
-                {Math.round(src.score * 100)}%
-              </Typography>
             </Box>
-            {src.content && (
+            {expandedIdx === idx && src.content && (
               <Typography
                 variant="body2"
                 sx={{
-                  whiteSpace: "pre-wrap",
-                  maxHeight: 80,
-                  overflow: "hidden",
+                  mt: 1,
                   fontSize: "0.78rem",
                   color: "text.secondary",
-                  lineHeight: 1.4,
+                  lineHeight: 1.5,
+                  whiteSpace: "pre-wrap",
+                  animation: "fadeInUp 0.2s ease-out",
                 }}
               >
                 {src.content}
@@ -86,7 +100,7 @@ export function SourcesPanel({ sources }: { sources: Source[] }) {
             )}
           </Box>
         ))}
-      </AccordionDetails>
-    </Accordion>
+      </Box>
+    </Box>
   );
 }

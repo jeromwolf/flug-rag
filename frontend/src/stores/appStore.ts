@@ -13,6 +13,10 @@ interface AppState {
   selectedModel: string;
   setSelectedModel: (model: string) => void;
 
+  // Temperature
+  temperature: number;
+  setTemperature: (temp: number) => void;
+
   // Sidebar
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -31,6 +35,15 @@ export const useAppStore = create<AppState>((set) => ({
 
   selectedModel: "default",
   setSelectedModel: (model) => set({ selectedModel: model }),
+
+  temperature: parseFloat(
+    (typeof window !== "undefined" && localStorage.getItem("flux_temperature")) || "0.7"
+  ),
+  setTemperature: (temp) =>
+    set(() => {
+      localStorage.setItem("flux_temperature", String(temp));
+      return { temperature: temp };
+    }),
 
   sidebarOpen: true,
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),

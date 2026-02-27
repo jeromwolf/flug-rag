@@ -20,7 +20,7 @@ import {
   Monitor as MonitorIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
-  SmartToy as BotIcon,
+  AutoAwesome as AutoAwesomeIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -41,7 +41,7 @@ interface ChatSidebarProps {
   onDeleteSession: (id: string) => void;
 }
 
-const SIDEBAR_WIDTH = 280;
+const SIDEBAR_WIDTH = 260;
 
 export function ChatSidebar({
   sessionGroups,
@@ -71,29 +71,35 @@ export function ChatSidebar({
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "background.default",
+        bgcolor: "#171717",
+        color: "#ececec",
       }}
     >
       {/* Logo */}
       <Box sx={{ p: 2, pb: 1, display: "flex", alignItems: "center", gap: 1 }}>
-        <BotIcon color="primary" />
-        <Typography variant="h6" fontWeight={700}>
-          Flux RAG
+        <AutoAwesomeIcon sx={{ color: "#10a37f", fontSize: 22 }} />
+        <Typography variant="h6" fontWeight={700} sx={{ color: "#ececec" }}>
+          Flux AI
         </Typography>
       </Box>
 
       {/* New chat button */}
       <Box sx={{ px: 2, pb: 1.5 }}>
         <Button
-          variant="contained"
+          variant="outlined"
           fullWidth
           startIcon={<AddIcon />}
           onClick={onNewChat}
           sx={{
             borderRadius: 2,
             textTransform: "none",
-            boxShadow: 1,
             py: 1,
+            color: "#ececec",
+            borderColor: "rgba(255,255,255,0.2)",
+            "&:hover": {
+              borderColor: "rgba(255,255,255,0.4)",
+              bgcolor: "rgba(255,255,255,0.05)",
+            },
           }}
         >
           새 대화
@@ -112,7 +118,7 @@ export function ChatSidebar({
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon fontSize="small" sx={{ color: "text.secondary" }} />
+                  <SearchIcon fontSize="small" sx={{ color: "#8e8ea0" }} />
                 </InputAdornment>
               ),
             },
@@ -120,14 +126,21 @@ export function ChatSidebar({
           sx={{
             "& .MuiOutlinedInput-root": {
               borderRadius: 2,
-              bgcolor: "action.hover",
+              bgcolor: "rgba(255,255,255,0.05)",
+              color: "#ececec",
               "& fieldset": { border: "none" },
+              "&:hover fieldset": { border: "none" },
+              "&.Mui-focused fieldset": { border: "none" },
+            },
+            "& input::placeholder": {
+              color: "#8e8ea0",
+              opacity: 1,
             },
           }}
         />
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.1)" }} />
 
       {/* Session list */}
       <Box sx={{ flex: 1, overflow: "auto", px: 1, py: 1 }}>
@@ -135,8 +148,16 @@ export function ChatSidebar({
           <Box key={group.label} sx={{ mb: 1 }}>
             <Typography
               variant="caption"
-              color="text.secondary"
-              sx={{ px: 1, fontWeight: 600, fontSize: "0.7rem", textTransform: "uppercase" }}
+              sx={{
+                px: 1,
+                fontWeight: 600,
+                fontSize: "0.65rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: "#8e8ea0",
+                display: "block",
+                mb: 0.5,
+              }}
             >
               {group.label}
             </Typography>
@@ -150,14 +171,19 @@ export function ChatSidebar({
                     borderRadius: 1.5,
                     mb: 0.25,
                     py: 0.75,
+                    color: "#ececec",
+                    "&:hover": {
+                      bgcolor: "rgba(255,255,255,0.1)",
+                    },
                     "&:hover .delete-btn": { opacity: 1 },
                     "&.Mui-selected": {
-                      bgcolor: "primary.main",
-                      color: "primary.contrastText",
-                      "&:hover": { bgcolor: "primary.dark" },
+                      bgcolor: "rgba(255,255,255,0.15)",
+                      color: "#ececec",
+                      "&:hover": {
+                        bgcolor: "rgba(255,255,255,0.2)",
+                      },
                       "& .MuiListItemText-secondary": {
-                        color: "primary.contrastText",
-                        opacity: 0.7,
+                        color: "#8e8ea0",
                       },
                     },
                   }}
@@ -169,10 +195,12 @@ export function ChatSidebar({
                       noWrap: true,
                       variant: "body2",
                       fontWeight: s.id === currentSessionId ? 600 : 400,
+                      sx: { color: "#ececec" },
                     }}
                     secondaryTypographyProps={{
                       variant: "caption",
                       noWrap: true,
+                      sx: { color: "#8e8ea0" },
                     }}
                   />
                   <Tooltip title="삭제">
@@ -186,7 +214,8 @@ export function ChatSidebar({
                       sx={{
                         opacity: 0,
                         transition: "opacity 0.2s",
-                        color: "inherit",
+                        color: "#8e8ea0",
+                        "&:hover": { color: "#ececec" },
                       }}
                     >
                       <DeleteIcon fontSize="small" />
@@ -200,15 +229,14 @@ export function ChatSidebar({
         {(sessionsEmpty || (searchQuery && filteredGroups.length === 0)) && (
           <Typography
             variant="body2"
-            color="text.secondary"
-            sx={{ p: 2, textAlign: "center" }}
+            sx={{ p: 2, textAlign: "center", color: "#8e8ea0" }}
           >
             {searchQuery ? "검색 결과가 없습니다" : "대화 내역이 없습니다"}
           </Typography>
         )}
       </Box>
 
-      <Divider />
+      <Divider sx={{ borderColor: "rgba(255,255,255,0.1)" }} />
 
       {/* Bottom nav */}
       <List dense sx={{ py: 0.5 }}>
@@ -222,9 +250,26 @@ export function ChatSidebar({
             key={item.path}
             selected={location.pathname === item.path}
             onClick={() => navigate(item.path)}
-            sx={{ borderRadius: 1, mx: 1, py: 0.5 }}
+            sx={{
+              borderRadius: 1,
+              mx: 1,
+              py: 0.5,
+              color: "#ececec",
+              "&:hover": {
+                bgcolor: "rgba(255,255,255,0.1)",
+              },
+              "&.Mui-selected": {
+                bgcolor: "rgba(255,255,255,0.15)",
+                color: "#ececec",
+                "&:hover": {
+                  bgcolor: "rgba(255,255,255,0.2)",
+                },
+              },
+            }}
           >
-            <ListItemIcon sx={{ minWidth: 32 }}>{item.icon}</ListItemIcon>
+            <ListItemIcon sx={{ minWidth: 32, color: "inherit" }}>
+              {item.icon}
+            </ListItemIcon>
             <ListItemText
               primary={item.label}
               primaryTypographyProps={{ variant: "body2", fontSize: "0.85rem" }}
