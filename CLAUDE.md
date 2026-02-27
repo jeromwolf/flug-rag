@@ -390,6 +390,17 @@ ChatGPT/Claude.ai 수준의 모던 AI 챗봇 UI로 전면 리디자인. 11개 �
 #### 수정 파일 (11개)
 `index.html`, `App.tsx`, `appStore.ts`, `ChatSidebar.tsx`, `ChatTopBar.tsx`, `ChatMessageList.tsx`, `MessageBubble.tsx`, `ChatInputBar.tsx`, `SourcesPanel.tsx`, `useStreamingChat.ts`, `ChatPage.tsx`
 
+### 데모 시연 P0/P1 이슈 수정 (2026-02 완료)
+
+총 7건의 데모 치명적 이슈 수정. 8개 파일.
+
+- **SSE session_id 반환**: `chat.py` — start 이벤트에 session_id 포함, 멀티턴 대화 정상 작동
+- **SSE 에러 핸들링**: `chat.py` + `useStreamingChat.ts` — try/except + error 이벤트 프론트 처리
+- **Temperature 기본값**: `appStore.ts` — 0.7→0.2 (벤치마크 튜닝값)
+- **가드레일 API 정합성**: `guardrails.py` + `AdminPage.tsx` — test body/query 불일치 + rule_type enum 매칭
+- **RAG 워밍업**: `api/main.py` — 서버 시작 시 RAGChain 사전 초기화 (cold start 30~60초 해소)
+- **세션 user_id 필터링**: `memory.py` + `sessions.py` + `chat.py` — 다중 접속 시 프라이버시 보호
+
 ### 잔여 작업
 - **출장보고서 OCR 재인제스트**: 깨진 PDF 텍스트 수정 (Upstage Document Parse 적용)
 - **운영 배포 준비**: vLLM 서빙, K8s 매니페스트, Redis 캐시
