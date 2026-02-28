@@ -8,6 +8,7 @@ import json
 import logging
 from dataclasses import dataclass
 
+from config.settings import settings
 from core.llm import BaseLLM, create_llm
 from rag.prompt import PromptManager
 
@@ -90,7 +91,7 @@ class SelfRAGEvaluator:
         try:
             response = await self.llm.generate(
                 prompt=prompt,
-                temperature=0.1,  # Low temperature for consistent grading
+                temperature=settings.self_rag_grading_temperature,
                 max_tokens=512,
             )
 
@@ -186,7 +187,7 @@ class SelfRAGEvaluator:
             response = await llm.generate(
                 prompt=user_prompt,
                 system=strict_system,
-                temperature=max(0.1, (temperature or 0.7) * 0.5),  # Reduce temperature
+                temperature=max(0.1, (temperature or settings.llm_temperature) * 0.5),
                 max_tokens=max_tokens,
             )
 

@@ -6,7 +6,10 @@ import logging
 import re
 import time
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import AsyncIterator
+
+import yaml
 
 from core.llm import BaseLLM, create_llm
 from rag.prompt import PromptManager
@@ -23,6 +26,23 @@ _RE_SOURCE_TAG = re.compile(r'\[출[처처][^\]]*\]')
 _RE_CJK_LEAKAGE = re.compile(r'[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]+[^\n]*$', re.MULTILINE)
 _RE_WHITESPACE = re.compile(r'[\s\-\n•·]')
 _RE_CHINESE = re.compile(r'[\u4e00-\u9fff]')
+
+
+_source_filters_cache: dict | None = None
+
+
+def _load_source_filters() -> dict:
+    """Load source filter keywords from YAML (cached after first load)."""
+    global _source_filters_cache
+    if _source_filters_cache is None:
+        yaml_path = Path(__file__).parent.parent / "prompts" / "source_filters.yaml"
+        if yaml_path.exists():
+            with open(yaml_path, "r", encoding="utf-8") as f:
+                _source_filters_cache = yaml.safe_load(f)
+        else:
+            logger.warning("source_filters.yaml not found at %s; keyword routing disabled", yaml_path)
+            _source_filters_cache = {}
+    return _source_filters_cache
 
 
 @dataclass
@@ -53,8 +73,9 @@ class RAGChain:
 
     @staticmethod
     def _auto_detect_filters(question: str, filters: dict | None) -> dict | None:
-        """Auto-detect source_type filter from question keywords.
+        """Auto-detect source_type filter based on question keywords.
 
+        Keywords are loaded from prompts/source_filters.yaml for easy maintenance.
         Returns enhanced filters dict if a specific source is detected,
         otherwise returns the original filters unchanged.
         """
@@ -62,88 +83,16 @@ class RAGChain:
             return filters  # User already specified, don't override
 
         q = question.lower()
+        config = _load_source_filters()
+        source_types = config.get("source_types", {})
 
-        # Law/statute detection patterns
-        law_keywords = [
-            "한국가스공사법", "가스공사법", "시행령", "시행규칙",
-            "법 제", "법률 제", "조문", "부칙",
-        ]
-
-        # Internal regulation detection patterns
-        rule_keywords = [
-            "내부규정", "규정에", "사규", "지침에",
-            "인사규정", "감사규정", "보수규정", "여비규정",
-            "복무규정", "퇴직금", "경조금", "당직",
-            "출자회사", "정관",
-            # 개별 규정/부서 키워드
-            "감사실", "교육훈련", "채용", "연봉", "상벌",
-            "행동강령", "갈등관리", "문서규정", "정보공개",
-            "복리후생", "성희롱", "계약업무", "징계",
-            "포상", "낙찰", "입찰", "피교육자",
-        ]
-
-        # Brochure/promotional material detection
-        brochure_keywords = [
-            "홍보물", "홍보자료", "브로셔", "인쇄물",
-            "20년사", "사사", "회사소개",
-            # 홍보물 특화 주제
-            "수소충전소", "미세먼지", "LNG 차량", "수소전기차",
-            "수소 특허", "시련기", "해외 사업",
-        ]
-
-        # Travel report detection
-        travel_keywords = [
-            "출장", "국외출장", "출장보고", "해외출장",
-            "방문기관", "출장결과", "출장기간",
-            # 출장보고서 지역명
-            "멕시코", "파나마", "베트남", "요르단", "호주",
-            "쿠웨이트", "오만", "UAE",
-            # 출장 특화 용어
-            "O&M", "Training", "교육강사", "Overhaul",
-        ]
-
-        # ALIO public disclosure detection
-        alio_keywords = [
-            "ALIO", "alio", "공시", "알리오",
-            "경영공시", "재무제표", "감사보고서",
-            "유동자산", "부채", "자본금",
-        ]
-
-        detected_source = None
-
-        for kw in law_keywords:
-            if kw in q:
-                detected_source = "법률"
-                break
-
-        if detected_source is None:
-            for kw in rule_keywords:
-                if kw in q:
-                    detected_source = "내부규정"
-                    break
-
-        if detected_source is None:
-            for kw in brochure_keywords:
-                if kw in q:
-                    detected_source = "홍보물"
-                    break
-
-        if detected_source is None:
-            for kw in travel_keywords:
-                if kw in q:
-                    detected_source = "출장보고서"
-                    break
-
-        if detected_source is None:
-            for kw in alio_keywords:
-                if kw in q:
-                    detected_source = "ALIO공시"
-                    break
-
-        if detected_source:
-            new_filters = dict(filters) if filters else {}
-            new_filters["source_type"] = detected_source
-            return new_filters
+        for source_name, source_config in source_types.items():
+            keywords = source_config.get("keywords", [])
+            for kw in keywords:
+                if kw.lower() in q:
+                    new_filters = dict(filters) if filters else {}
+                    new_filters["source_type"] = source_name
+                    return new_filters
 
         return filters
 
@@ -151,31 +100,14 @@ class RAGChain:
     def _detect_multi_hop(question: str) -> bool:
         """Detect multi-hop questions that need cross-regulation retrieval.
 
+        Keywords are loaded from prompts/source_filters.yaml.
         Multi-hop questions reference multiple regulations or ask about
         relationships/processes spanning different rule sets.  Activating
         multi-query retrieval significantly improves recall for these.
         """
         q = question.lower()
-        multi_hop_keywords = [
-            # Explicit cross-regulation markers
-            "연계", "연결되", "관계가 있", "관계는",
-            "연관", "연동", "상호", "함께 적용",
-            # Process / procedure spanning multiple regulations
-            "프로세스를", "프로세스는", "절차를", "절차는",
-            "과정을", "과정은", "단계를", "단계는",
-            # Multiple regulation references
-            "규정과", "규정 간", "규정들", "규정에서",
-            "각각", "양쪽", "모두 적용",
-            # Comparison / contrast
-            "차이점", "비교", "어떻게 다른",
-            # Questions referencing multiple specific regulations
-            "어떤 규정들", "관련 규정",
-            # Combined topic keywords (e.g. "감사실 + 상벌")
-            "동시에", "겸하여", "병행",
-            # Cross-document reasoning markers
-            "공통 목표", "공통점", "종합하면", "연계하면",
-            "두 자료", "두 문서", "두 보고서",
-        ]
+        config = _load_source_filters()
+        multi_hop_keywords = config.get("multi_hop_keywords", [])
         return any(kw in q for kw in multi_hop_keywords)
 
     @staticmethod

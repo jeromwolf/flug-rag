@@ -252,7 +252,7 @@ async def evaluate_question(
     q: dict,
     rag_chain,
     evaluator: AnswerEvaluator,
-    temperature: float = 0.7,
+    temperature: float | None = None,
 ) -> dict:
     """Evaluate a single question with timing breakdown.
 

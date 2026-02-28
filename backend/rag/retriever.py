@@ -265,7 +265,7 @@ class HybridRetriever:
         if self._reranker is None:
             try:
                 from sentence_transformers import CrossEncoder
-                self._reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
+                self._reranker = CrossEncoder(settings.reranker_model)
             except ImportError:
                 return None
         return self._reranker

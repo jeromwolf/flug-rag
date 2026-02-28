@@ -181,7 +181,7 @@ class PromptManager:
 
         if examples:
             user_parts.append("참고 예시:")
-            for ex in examples[:8]:  # Max 8 examples (cover all categories: factual + negative + inference + multi_hop)
+            for ex in examples[:settings.few_shot_max_examples]:
                 user_parts.append(f"질문: {ex['question']}\n답변: {ex['answer']}")
             user_parts.append("")
 
