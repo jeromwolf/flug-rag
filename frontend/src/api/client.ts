@@ -133,6 +133,11 @@ export const authApi = {
   getAdminAccessRequests: () => api.get("/auth/admin/access-requests"),
   reviewAccessRequest: (id: string, data: { decision: string; comment?: string }) =>
     api.put(`/auth/admin/access-requests/${id}`, data),
+  createUser: (data: { username: string; password: string; email?: string; full_name?: string; department?: string; role?: string }) =>
+    api.post("/auth/users", data),
+  toggleUserActive: (userId: string, isActive: boolean) =>
+    api.patch(`/auth/users/${userId}/active`, { is_active: isActive }),
+  deleteUser: (userId: string) => api.delete(`/auth/users/${userId}`),
 };
 
 // === Chat ===
@@ -193,6 +198,7 @@ export const adminApi = {
     api.post("/admin/prompts/versions", data),
   rollbackPrompt: (name: string, version: number) =>
     api.post(`/admin/prompts/rollback/${name}/${version}`),
+  getSystemMetrics: () => api.get("/admin/system-metrics"),
 };
 
 // === Feedback ===
@@ -212,6 +218,7 @@ export const feedbackApi = {
   }) => api.post("/feedback/error-report", data),
   list: (limit = 50) => api.get("/feedback", { params: { limit } }),
   stats: () => api.get("/feedback/stats"),
+  analytics: () => api.get("/feedback/analytics"),
 };
 
 // === MCP ===

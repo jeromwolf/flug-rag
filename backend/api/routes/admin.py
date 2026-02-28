@@ -83,6 +83,42 @@ async def get_system_info(
     return result
 
 
+@router.get("/admin/system-metrics")
+async def get_system_metrics(
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """실시간 시스템 메트릭 (CPU, 메모리, 디스크)."""
+    from monitoring.alerting import get_alert_manager
+
+    manager = get_alert_manager()
+    metrics = await manager.collect_system_metrics()
+
+    # Add extra memory detail if psutil available
+    try:
+        import psutil
+        mem = psutil.virtual_memory()
+        metrics["memory_total_gb"] = round(mem.total / (1024**3), 1)
+        metrics["memory_used_gb"] = round(mem.used / (1024**3), 1)
+        metrics["memory_available_gb"] = round(mem.available / (1024**3), 1)
+
+        # CPU count
+        metrics["cpu_count"] = psutil.cpu_count()
+    except ImportError:
+        pass
+
+    # Disk detail
+    import shutil
+    try:
+        disk = shutil.disk_usage("/")
+        metrics["disk_total_gb"] = round(disk.total / (1024**3), 1)
+        metrics["disk_used_gb"] = round(disk.used / (1024**3), 1)
+        metrics["disk_free_gb"] = round(disk.free / (1024**3), 1)
+    except Exception:
+        pass
+
+    return {"metrics": metrics}
+
+
 @router.get("/admin/providers", response_model=list[LLMProviderInfo])
 async def get_providers(
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],

@@ -144,3 +144,78 @@ async def list_error_reports(
     reports.reverse()
     total = len(reports)
     return {"reports": reports[:limit], "total": total}
+
+
+@router.get("/feedback/analytics")
+async def get_feedback_analytics(
+    current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER])),
+):
+    """피드백 분석 데이터 — 일별 트렌드, 평가 분포, 오류 유형 분류."""
+    from collections import defaultdict
+
+    # Read feedback data
+    daily_ratings = defaultdict(lambda: {"positive": 0, "negative": 0, "neutral": 0, "total": 0})
+
+    if FEEDBACK_FILE.exists():
+        with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entry = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+
+                date_str = entry.get("created_at", "")[:10]  # YYYY-MM-DD
+                if not date_str:
+                    continue
+
+                daily_ratings[date_str]["total"] += 1
+                if entry["rating"] == 1:
+                    daily_ratings[date_str]["positive"] += 1
+                elif entry["rating"] == -1:
+                    daily_ratings[date_str]["negative"] += 1
+                else:
+                    daily_ratings[date_str]["neutral"] += 1
+
+    # Read error reports
+    error_types = defaultdict(int)
+    error_reports_path = Path(settings.data_dir) / "error_reports.jsonl"
+    total_errors = 0
+
+    if error_reports_path.exists():
+        with open(error_reports_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    report = json.loads(line)
+                    error_types[report.get("error_type", "other")] += 1
+                    total_errors += 1
+                except json.JSONDecodeError:
+                    continue
+
+    # Sort daily data by date
+    sorted_daily = sorted(daily_ratings.items(), key=lambda x: x[0])
+    daily_trend = [{"date": d, **counts} for d, counts in sorted_daily]
+
+    # Error type labels
+    error_type_labels = {
+        "incorrect_answer": "부정확한 답변",
+        "hallucination": "환각 (Hallucination)",
+        "offensive": "부적절한 내용",
+        "outdated": "오래된 정보",
+        "other": "기타",
+    }
+    error_breakdown = [
+        {"type": k, "label": error_type_labels.get(k, k), "count": v}
+        for k, v in error_types.items()
+    ]
+
+    return {
+        "daily_trend": daily_trend[-30:],  # Last 30 days
+        "error_breakdown": error_breakdown,
+        "total_errors": total_errors,
+    }

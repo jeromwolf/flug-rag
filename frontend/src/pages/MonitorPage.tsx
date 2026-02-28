@@ -47,6 +47,79 @@ import Layout from "../components/Layout";
 
 const PIE_COLORS = ["#4caf50", "#f44336", "#9e9e9e"];
 
+// ── Section: System Metrics (Real-time) ──
+function SystemMetricsSection() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["system-metrics"],
+    queryFn: () => adminApi.getSystemMetrics(),
+    refetchInterval: 10000, // 10 second auto refresh
+  });
+
+  if (isLoading) return <CircularProgress />;
+
+  const metrics = data?.data?.metrics;
+  if (!metrics) return null;
+
+  const items = [
+    {
+      label: "CPU",
+      value: metrics.cpu ?? 0,
+      detail: `${metrics.cpu_count ?? "-"} cores`,
+      color: metrics.cpu > 80 ? "#f44336" : metrics.cpu > 50 ? "#ff9800" : "#4caf50",
+    },
+    {
+      label: "메모리",
+      value: metrics.memory ?? 0,
+      detail: `${metrics.memory_used_gb ?? 0}/${metrics.memory_total_gb ?? 0} GB`,
+      color: metrics.memory > 80 ? "#f44336" : metrics.memory > 60 ? "#ff9800" : "#4caf50",
+    },
+    {
+      label: "디스크",
+      value: metrics.disk ?? 0,
+      detail: `${metrics.disk_used_gb ?? 0}/${metrics.disk_total_gb ?? 0} GB`,
+      color: metrics.disk > 85 ? "#f44336" : metrics.disk > 70 ? "#ff9800" : "#4caf50",
+    },
+  ];
+
+  return (
+    <Card variant="outlined" sx={{ mb: 3 }}>
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+          시스템 리소스
+        </Typography>
+        <Grid container spacing={3}>
+          {items.map((item) => (
+            <Grid key={item.label} size={{ xs: 12, sm: 4 }}>
+              <Box sx={{ textAlign: "center" }}>
+                <Box sx={{ position: "relative", display: "inline-flex" }}>
+                  <CircularProgress
+                    variant="determinate"
+                    value={item.value}
+                    size={80}
+                    thickness={6}
+                    sx={{ color: item.color }}
+                  />
+                  <Box sx={{ position: "absolute", top: 0, left: 0, bottom: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                      {item.value.toFixed(0)}%
+                    </Typography>
+                  </Box>
+                </Box>
+                <Typography variant="subtitle2" sx={{ mt: 1, fontWeight: 600 }}>
+                  {item.label}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {item.detail}
+                </Typography>
+              </Box>
+            </Grid>
+          ))}
+        </Grid>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Section: Key Metrics ──
 function KeyMetricsSection() {
   const { data: statsData, isLoading: statsLoading } = useQuery({
@@ -548,6 +621,88 @@ function QueryLogSection() {
   );
 }
 
+// ── Section: Feedback Analytics ──
+function FeedbackAnalyticsSection() {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["feedback-analytics"],
+    queryFn: () => feedbackApi.analytics(),
+  });
+
+  if (isLoading) return <CircularProgress />;
+  if (error) return <Alert severity="error">피드백 분석 데이터를 불러올 수 없습니다.</Alert>;
+
+  const analytics = data?.data;
+  const dailyTrend = analytics?.daily_trend ?? [];
+  const errorBreakdown = analytics?.error_breakdown ?? [];
+  const totalErrors = analytics?.total_errors ?? 0;
+
+  const ERROR_COLORS: Record<string, string> = {
+    incorrect_answer: "#f44336",
+    hallucination: "#ff9800",
+    offensive: "#9c27b0",
+    outdated: "#2196f3",
+    other: "#9e9e9e",
+  };
+
+  return (
+    <>
+      {/* Daily Trend Chart */}
+      <Card variant="outlined" sx={{ mb: 3 }}>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            일별 피드백 추이 (최근 30일)
+          </Typography>
+          {dailyTrend.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={dailyTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis />
+                <RechartsTooltip />
+                <Legend />
+                <Bar dataKey="positive" name="긍정" fill="#4caf50" stackId="a" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="neutral" name="보통" fill="#9e9e9e" stackId="a" />
+                <Bar dataKey="negative" name="부정" fill="#f44336" stackId="a" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <Box sx={{ height: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Typography color="text.secondary">피드백 데이터가 없습니다.</Typography>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Error Reports Breakdown */}
+      <Card variant="outlined">
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+            오류 신고 유형 분류 (총 {totalErrors}건)
+          </Typography>
+          {errorBreakdown.length > 0 ? (
+            <Grid container spacing={2}>
+              {errorBreakdown.map((e: { type: string; label: string; count: number }) => (
+                <Grid key={e.type} size={{ xs: 6, sm: 4, md: 2.4 }}>
+                  <Card variant="outlined" sx={{ textAlign: "center", p: 2 }}>
+                    <Typography variant="h4" sx={{ fontWeight: 700, color: ERROR_COLORS[e.type] ?? "#9e9e9e" }}>
+                      {e.count}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {e.label}
+                    </Typography>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Typography color="text.secondary">오류 신고가 없습니다.</Typography>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
 // ── Main: MonitorPage ──
 export default function MonitorPage() {
   const [tab, setTab] = useState(0);
@@ -559,11 +714,15 @@ export default function MonitorPage() {
           <Tab label="개요" />
           <Tab label="사용 통계" />
           <Tab label="로그" />
+          <Tab label="피드백 분석" />
         </Tabs>
       </Box>
 
       {tab === 0 && (
         <>
+          {/* NEW: System Metrics at top */}
+          <SystemMetricsSection />
+
           {/* Section 1: Key Metrics */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="h6" sx={{ mb: 1.5, fontWeight: 600 }}>
@@ -612,6 +771,10 @@ export default function MonitorPage() {
 
       {tab === 2 && (
         <QueryLogSection />
+      )}
+
+      {tab === 3 && (
+        <FeedbackAnalyticsSection />
       )}
     </Layout>
   );

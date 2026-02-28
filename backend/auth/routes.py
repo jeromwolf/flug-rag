@@ -399,6 +399,117 @@ async def update_user_role(
     return {"status": "updated", "user": _user_to_response(updated).model_dump()}
 
 
+class CreateUserRequest(BaseModel):
+    username: str = Field(..., min_length=2)
+    password: str = Field(..., min_length=8)
+    email: str = ""
+    full_name: str = ""
+    department: str = ""
+    role: str = "user"
+
+
+@router.post("/auth/users")
+async def create_user(
+    body: CreateUserRequest,
+    request: Request,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """Create a new user (admin only)."""
+    # Validate role
+    try:
+        new_role = Role(body.role)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid role: {body.role}")
+
+    user_store = await get_user_store()
+    # Check if username already exists
+    existing = await user_store.get_by_username(body.username)
+    if existing:
+        raise HTTPException(status_code=409, detail="Username already exists")
+
+    import uuid
+    new_user = User(
+        id=str(uuid.uuid4()),
+        username=body.username,
+        email=body.email,
+        full_name=body.full_name,
+        department=body.department,
+        role=new_role,
+    )
+    await user_store.create_user(new_user, password=body.password)
+
+    audit_logger.log_event(
+        user_id=current_user.id,
+        username=current_user.username,
+        action=AuditAction.ROLE_CHANGE,
+        resource="/api/auth/users",
+        details=f"Created user {body.username} with role {body.role}",
+        ip_address=_get_client_ip(request),
+    )
+
+    return {"status": "created", "user": _user_to_response(new_user).model_dump()}
+
+
+class ActiveToggleRequest(BaseModel):
+    is_active: bool
+
+
+@router.patch("/auth/users/{user_id}/active")
+async def toggle_user_active(
+    user_id: str,
+    body: ActiveToggleRequest,
+    request: Request,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """Toggle a user's active status (admin only)."""
+    user_store = await get_user_store()
+    updated = await user_store.set_active(user_id, body.is_active)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    audit_logger.log_event(
+        user_id=current_user.id,
+        username=current_user.username,
+        action=AuditAction.ROLE_CHANGE,
+        resource=f"/api/auth/users/{user_id}/active",
+        details=f"Set user active={body.is_active}",
+        ip_address=_get_client_ip(request),
+    )
+
+    return {"status": "updated", "user": _user_to_response(updated).model_dump()}
+
+
+@router.delete("/auth/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    request: Request,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """Delete a user (admin only)."""
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+
+    user_store = await get_user_store()
+    user = await user_store.get_by_id(user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    async with user_store.get_connection() as db:
+        await db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        await db.commit()
+
+    audit_logger.log_event(
+        user_id=current_user.id,
+        username=current_user.username,
+        action=AuditAction.ROLE_CHANGE,
+        resource=f"/api/auth/users/{user_id}",
+        details=f"Deleted user {user.username}",
+        ip_address=_get_client_ip(request),
+    )
+
+    return {"status": "deleted", "user_id": user_id}
+
+
 @router.get("/auth/audit")
 async def get_audit_logs(
     limit: int = Query(default=100, ge=1, le=1000),

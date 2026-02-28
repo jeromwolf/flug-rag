@@ -53,7 +53,8 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import SecurityIcon from "@mui/icons-material/Security";
 import MemoryIcon from "@mui/icons-material/Memory";
-import { adminApi, mcpApi, workflowsApi, guardrailsApi } from "../api/client";
+import PersonIcon from "@mui/icons-material/Person";
+import { adminApi, mcpApi, workflowsApi, guardrailsApi, authApi } from "../api/client";
 import Layout from "../components/Layout";
 import CustomToolBuilder from "../components/CustomToolBuilder";
 import ContentManager from "../components/ContentManager";
@@ -67,6 +68,270 @@ interface TabPanelProps {
 function TabPanel({ children, value, index }: TabPanelProps) {
   if (value !== index) return null;
   return <Box sx={{ py: 3 }}>{children}</Box>;
+}
+
+// ── Tab: User Management ──
+function UserManagementTab() {
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+  const [formData, setFormData] = useState({
+    username: "",
+    password: "",
+    email: "",
+    full_name: "",
+    department: "",
+    role: "user",
+  });
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["auth-users"],
+    queryFn: () => authApi.listUsers(),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (user: { username: string; password: string; email?: string; full_name?: string; department?: string; role?: string }) =>
+      authApi.createUser(user),
+    onSuccess: () => {
+      setSnack({ open: true, message: "사용자가 추가되었습니다.", severity: "success" });
+      queryClient.invalidateQueries({ queryKey: ["auth-users"] });
+      setDialogOpen(false);
+    },
+    onError: () => {
+      setSnack({ open: true, message: "사용자 추가에 실패했습니다.", severity: "error" });
+    },
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ userId, isActive }: { userId: string; isActive: boolean }) =>
+      authApi.toggleUserActive(userId, isActive),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auth-users"] });
+    },
+    onError: () => {
+      setSnack({ open: true, message: "상태 변경에 실패했습니다.", severity: "error" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => authApi.deleteUser(userId),
+    onSuccess: () => {
+      setSnack({ open: true, message: "사용자가 삭제되었습니다.", severity: "success" });
+      queryClient.invalidateQueries({ queryKey: ["auth-users"] });
+      setDeleteConfirmId(null);
+    },
+    onError: () => {
+      setSnack({ open: true, message: "사용자 삭제에 실패했습니다.", severity: "error" });
+    },
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: ({ userId, role }: { userId: string; role: string }) =>
+      authApi.updateUserRole(userId, role),
+    onSuccess: () => {
+      setSnack({ open: true, message: "역할이 변경되었습니다.", severity: "success" });
+      queryClient.invalidateQueries({ queryKey: ["auth-users"] });
+    },
+    onError: () => {
+      setSnack({ open: true, message: "역할 변경에 실패했습니다.", severity: "error" });
+    },
+  });
+
+  const handleOpenCreate = () => {
+    setFormData({ username: "", password: "", email: "", full_name: "", department: "", role: "user" });
+    setDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    createMutation.mutate({
+      username: formData.username,
+      password: formData.password,
+      email: formData.email || undefined,
+      full_name: formData.full_name || undefined,
+      department: formData.department || undefined,
+      role: formData.role,
+    });
+  };
+
+  if (isLoading) return <CircularProgress />;
+  if (error) return <Alert severity="error">사용자 목록을 불러올 수 없습니다.</Alert>;
+
+  const users: Array<{
+    id: string;
+    username: string;
+    full_name?: string;
+    email?: string;
+    department?: string;
+    role: string;
+    is_active: boolean;
+  }> = data?.data?.users ?? data?.data ?? [];
+
+  return (
+    <>
+      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
+          사용자 추가
+        </Button>
+      </Box>
+
+      <TableContainer component={Paper} variant="outlined">
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>사용자명</TableCell>
+              <TableCell>이름</TableCell>
+              <TableCell>이메일</TableCell>
+              <TableCell>부서</TableCell>
+              <TableCell>역할</TableCell>
+              <TableCell align="center">상태</TableCell>
+              <TableCell align="center">액션</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {users.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell sx={{ fontWeight: 500 }}>{user.username}</TableCell>
+                <TableCell>{user.full_name ?? "-"}</TableCell>
+                <TableCell>{user.email ?? "-"}</TableCell>
+                <TableCell>{user.department ?? "-"}</TableCell>
+                <TableCell>
+                  <Select
+                    size="small"
+                    value={user.role}
+                    onChange={(e) => updateRoleMutation.mutate({ userId: user.id, role: e.target.value })}
+                    sx={{ minWidth: 100, fontSize: 13 }}
+                  >
+                    <MenuItem value="admin">admin</MenuItem>
+                    <MenuItem value="manager">manager</MenuItem>
+                    <MenuItem value="user">user</MenuItem>
+                    <MenuItem value="viewer">viewer</MenuItem>
+                  </Select>
+                </TableCell>
+                <TableCell align="center">
+                  <Switch
+                    size="small"
+                    checked={user.is_active}
+                    onChange={(e) => toggleActiveMutation.mutate({ userId: user.id, isActive: e.target.checked })}
+                  />
+                </TableCell>
+                <TableCell align="center">
+                  <IconButton size="small" color="error" onClick={() => setDeleteConfirmId(user.id)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+            {users.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} align="center">
+                  <Typography color="text.secondary">등록된 사용자가 없습니다.</Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Create User Dialog */}
+      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>사용자 추가</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="사용자명"
+            fullWidth
+            margin="normal"
+            required
+            value={formData.username}
+            onChange={(e) => setFormData((f) => ({ ...f, username: e.target.value }))}
+          />
+          <TextField
+            label="비밀번호"
+            type="password"
+            fullWidth
+            margin="normal"
+            required
+            value={formData.password}
+            onChange={(e) => setFormData((f) => ({ ...f, password: e.target.value }))}
+          />
+          <TextField
+            label="이메일"
+            fullWidth
+            margin="normal"
+            value={formData.email}
+            onChange={(e) => setFormData((f) => ({ ...f, email: e.target.value }))}
+          />
+          <TextField
+            label="이름"
+            fullWidth
+            margin="normal"
+            value={formData.full_name}
+            onChange={(e) => setFormData((f) => ({ ...f, full_name: e.target.value }))}
+          />
+          <TextField
+            label="부서"
+            fullWidth
+            margin="normal"
+            value={formData.department}
+            onChange={(e) => setFormData((f) => ({ ...f, department: e.target.value }))}
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>역할</InputLabel>
+            <Select
+              value={formData.role}
+              label="역할"
+              onChange={(e) => setFormData((f) => ({ ...f, role: e.target.value }))}
+            >
+              <MenuItem value="admin">admin</MenuItem>
+              <MenuItem value="manager">manager</MenuItem>
+              <MenuItem value="user">user</MenuItem>
+              <MenuItem value="viewer">viewer</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDialogOpen(false)}>취소</Button>
+          <Button
+            variant="contained"
+            onClick={handleCreate}
+            disabled={createMutation.isPending || !formData.username || !formData.password}
+          >
+            추가
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={deleteConfirmId !== null} onClose={() => setDeleteConfirmId(null)}>
+        <DialogTitle>사용자 삭제</DialogTitle>
+        <DialogContent>
+          <Typography>이 사용자를 삭제하시겠습니까?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmId(null)}>취소</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}
+            disabled={deleteMutation.isPending}
+          >
+            삭제
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={3000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        message={snack.message}
+      />
+    </>
+  );
 }
 
 // ── Tab: System Info ──
@@ -1094,6 +1359,7 @@ export default function AdminPage() {
         onChange={(_, v: number) => setTabIndex(v)}
         sx={{ borderBottom: 1, borderColor: "divider", mb: 1 }}
       >
+        <Tab label="사용자 관리" icon={<PersonIcon />} iconPosition="start" />
         <Tab label="시스템 정보" />
         <Tab label="LLM 프로바이더" />
         <Tab label="모델 관리" icon={<MemoryIcon />} iconPosition="start" />
@@ -1106,30 +1372,33 @@ export default function AdminPage() {
       </Tabs>
 
       <TabPanel value={tabIndex} index={0}>
-        <SystemInfoTab />
+        <UserManagementTab />
       </TabPanel>
       <TabPanel value={tabIndex} index={1}>
-        <ProvidersTab />
+        <SystemInfoTab />
       </TabPanel>
       <TabPanel value={tabIndex} index={2}>
-        <ModelsTab />
+        <ProvidersTab />
       </TabPanel>
       <TabPanel value={tabIndex} index={3}>
-        <GuardrailsTab />
+        <ModelsTab />
       </TabPanel>
       <TabPanel value={tabIndex} index={4}>
-        <PromptsTab />
+        <GuardrailsTab />
       </TabPanel>
       <TabPanel value={tabIndex} index={5}>
-        <McpToolsTab />
+        <PromptsTab />
       </TabPanel>
       <TabPanel value={tabIndex} index={6}>
-        <CustomToolBuilder />
+        <McpToolsTab />
       </TabPanel>
       <TabPanel value={tabIndex} index={7}>
-        <WorkflowsTab />
+        <CustomToolBuilder />
       </TabPanel>
       <TabPanel value={tabIndex} index={8}>
+        <WorkflowsTab />
+      </TabPanel>
+      <TabPanel value={tabIndex} index={9}>
         <ContentManager />
       </TabPanel>
     </Layout>
