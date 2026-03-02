@@ -835,7 +835,7 @@ class RAGChain:
             chunk_scores = [r.score for r in results]
             confidence = self.quality.calculate_confidence(chunk_scores)
 
-            # Emit sources
+            # Emit sources (include content for frontend expand)
             for r in results:
                 yield {
                     "event": "source",
@@ -844,6 +844,7 @@ class RAGChain:
                         "filename": r.metadata.get("filename", ""),
                         "page": r.metadata.get("page_number"),
                         "score": round(r.score, 3),
+                        "content": r.content[:500] if r.content else "",
                     },
                 }
 
@@ -864,8 +865,23 @@ class RAGChain:
                 yield {"event": "chunk", "data": {"content": warning + "\n\n"}}
 
             # Stream LLM response with post-stream guardrails
+            # Buffer initial tokens to strip "답변:" / "A:" prefix
             accumulated = []
+            prefix_stripped = False
+            prefix_buffer = ""
             async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
+                if not prefix_stripped:
+                    prefix_buffer += token
+                    # Wait until we have enough chars to check for prefix
+                    if len(prefix_buffer) < 5:
+                        continue
+                    # Strip common prefixes
+                    stripped = _RE_A_PREFIX.sub('', prefix_buffer.lstrip())
+                    prefix_stripped = True
+                    if stripped:
+                        accumulated.append(stripped)
+                        yield {"event": "chunk", "data": {"content": stripped}}
+                    continue
                 accumulated.append(token)
                 yield {"event": "chunk", "data": {"content": token}}
 

@@ -143,7 +143,23 @@ export function ChatSidebar({
       <Divider sx={{ borderColor: "rgba(255,255,255,0.1)" }} />
 
       {/* Session list */}
-      <Box sx={{ flex: 1, overflow: "auto", px: 1, py: 1 }}>
+      <Box
+        sx={{
+          flex: 1,
+          overflow: "auto",
+          px: 1,
+          py: 1,
+          "&::-webkit-scrollbar": { width: 6 },
+          "&::-webkit-scrollbar-track": { bgcolor: "transparent" },
+          "&::-webkit-scrollbar-thumb": {
+            bgcolor: "rgba(255,255,255,0.15)",
+            borderRadius: 3,
+            "&:hover": { bgcolor: "rgba(255,255,255,0.25)" },
+          },
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(255,255,255,0.15) transparent",
+        }}
+      >
         {filteredGroups.map((group) => (
           <Box key={group.label} sx={{ mb: 1 }}>
             <Typography

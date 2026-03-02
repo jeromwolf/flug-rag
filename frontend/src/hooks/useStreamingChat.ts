@@ -29,9 +29,14 @@ export function useStreamingChat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const streamingContentRef = useRef("");
+  const skipNextReloadRef = useRef(false);
 
-  // Load messages when session changes
+  // Load messages when session changes (skip if we just set it from streaming)
   useEffect(() => {
+    if (skipNextReloadRef.current) {
+      skipNextReloadRef.current = false;
+      return;
+    }
     if (!currentSessionId) {
       setMessages([]);
       return;
@@ -133,54 +138,98 @@ export function useStreamingChat({
       let confidence = 0;
       let latencyMs = 0;
 
+      // SSE parser: accumulate data lines per event, dispatch on blank line
+      let dataLines: string[] = [];
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      function handleSSEEvent(eventName: string, data: any) {
+        switch (eventName) {
+          case "start":
+            messageId = data.message_id ?? "";
+            if (data.session_id) newSessionId = data.session_id;
+            break;
+          case "source":
+            sources.push({
+              chunkId: data.chunk_id ?? "",
+              filename: data.filename ?? "",
+              page: data.page,
+              content: data.content ?? "",
+              score: data.score ?? 0,
+            });
+            break;
+          case "chunk":
+            content += data.content ?? "";
+            streamingContentRef.current = content;
+            setStreamingContent(content);
+            break;
+          case "end":
+            confidence = data.confidence_score ?? data.confidence ?? 0;
+            latencyMs = data.latency_ms ?? 0;
+            break;
+          case "error":
+            showSnackbar(data.message ?? "응답 생성 중 오류가 발생했습니다.", "error");
+            break;
+        }
+      }
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
+        // Normalize CRLF → LF (sse-starlette uses \r\n)
+        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
 
         for (const line of lines) {
           if (line.startsWith("event:")) {
+            // Dispatch any pending data before switching event
+            if (dataLines.length > 0) {
+              const pendingRaw = dataLines.join("\n").trim();
+              dataLines = [];
+              if (pendingRaw) {
+                try {
+                  const pendingData = JSON.parse(pendingRaw);
+                  handleSSEEvent(currentEvent, pendingData);
+                } catch {
+                  // ignore
+                }
+              }
+            }
             currentEvent = line.slice(6).trim();
             continue;
           }
           if (line.startsWith("data:")) {
-            const raw = line.slice(5).trim();
+            dataLines.push(line.slice(5));
+            continue;
+          }
+          if (line.startsWith(":")) {
+            continue;
+          }
+          // Blank line = end of SSE event
+          if (line === "" && dataLines.length > 0) {
+            const raw = dataLines.join("\n").trim();
+            dataLines = [];
             if (!raw) continue;
             try {
               const data = JSON.parse(raw);
-              switch (currentEvent) {
-                case "start":
-                  messageId = data.message_id ?? "";
-                  if (data.session_id) newSessionId = data.session_id;
-                  break;
-                case "source":
-                  sources.push({
-                    chunkId: data.chunk_id ?? "",
-                    filename: data.filename ?? "",
-                    page: data.page,
-                    content: data.content ?? "",
-                    score: data.score ?? 0,
-                  });
-                  break;
-                case "chunk":
-                  content += data.content ?? "";
-                  streamingContentRef.current = content;
-                  setStreamingContent(content);
-                  break;
-                case "end":
-                  confidence = data.confidence_score ?? data.confidence ?? 0;
-                  latencyMs = data.latency_ms ?? 0;
-                  break;
-                case "error":
-                  showSnackbar(data.message ?? "응답 생성 중 오류가 발생했습니다.", "error");
-                  break;
-              }
+              handleSSEEvent(currentEvent, data);
             } catch {
-              // ignore malformed JSON lines
+              // ignore malformed JSON
             }
+          }
+        }
+      }
+
+      // Flush remaining data
+      if (dataLines.length > 0) {
+        const raw = dataLines.join("\n").trim();
+        if (raw) {
+          try {
+            const data = JSON.parse(raw);
+            handleSSEEvent(currentEvent, data);
+          } catch {
+            // ignore
           }
         }
       }
@@ -199,6 +248,7 @@ export function useStreamingChat({
       setStreamingContent("");
 
       if (newSessionId && newSessionId !== currentSessionId) {
+        skipNextReloadRef.current = true;
         setCurrentSessionId(newSessionId);
       }
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
