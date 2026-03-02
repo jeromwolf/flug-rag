@@ -180,9 +180,13 @@ log_info "Python packages installed."
 python3 -c "import fastapi; print(f'FastAPI {fastapi.__version__}')"
 
 # =============================================================================
-# [5] Install & Start Ollama
+# [5] Install & Start Ollama (models stored on persistent /workspace volume)
 # =============================================================================
 log_step "5/$TOTAL_STEPS" "Installing Ollama..."
+
+# Store models on /workspace so they survive Pod stop/start
+export OLLAMA_MODELS="/workspace/ollama_models"
+mkdir -p "$OLLAMA_MODELS"
 
 if ! command -v ollama &> /dev/null; then
     curl -fsSL https://ollama.com/install.sh | sh
@@ -191,7 +195,7 @@ fi
 # Start Ollama (kill existing first)
 pkill -f "ollama serve" 2>/dev/null || true
 sleep 1
-ollama serve &>/dev/null &
+OLLAMA_MODELS="$OLLAMA_MODELS" ollama serve &>/dev/null &
 sleep 3
 
 # Verify Ollama is running
@@ -203,13 +207,23 @@ for i in $(seq 1 10); do
     sleep 2
 done
 
-# Pull models
-log_info "Pulling $OLLAMA_MODEL (this may take a while)..."
-ollama pull "$OLLAMA_MODEL"
+# Pull models (skip if already downloaded on /workspace)
+EXISTING_MODELS=$(ollama list 2>/dev/null | grep -c "$OLLAMA_MODEL" || echo "0")
+if [ "$EXISTING_MODELS" -eq 0 ]; then
+    log_info "Pulling $OLLAMA_MODEL (this may take a while)..."
+    ollama pull "$OLLAMA_MODEL"
+else
+    log_info "$OLLAMA_MODEL already downloaded (persistent volume). Skipping."
+fi
 
 if [ "$LIGHT_MODEL" != "$OLLAMA_MODEL" ]; then
-    log_info "Pulling $LIGHT_MODEL..."
-    ollama pull "$LIGHT_MODEL"
+    EXISTING_LIGHT=$(ollama list 2>/dev/null | grep -c "$LIGHT_MODEL" || echo "0")
+    if [ "$EXISTING_LIGHT" -eq 0 ]; then
+        log_info "Pulling $LIGHT_MODEL..."
+        ollama pull "$LIGHT_MODEL"
+    else
+        log_info "$LIGHT_MODEL already downloaded. Skipping."
+    fi
 fi
 
 echo ""
@@ -404,6 +418,9 @@ server {
 }
 NGINXEOF
 
+# Save nginx config to persistent volume for restart recovery
+cp /etc/nginx/sites-available/flux-rag "$PROJECT_DIR/scripts/nginx-flux-rag.conf"
+
 # Enable site
 ln -sf /etc/nginx/sites-available/flux-rag /etc/nginx/sites-enabled/flux-rag
 rm -f /etc/nginx/sites-enabled/default 2>/dev/null
@@ -421,29 +438,69 @@ nginx -t 2>/dev/null && {
 # =============================================================================
 cat > "$PROJECT_DIR/start.sh" << 'STARTEOF'
 #!/bin/bash
+# =============================================================================
 # Start all flux-rag services
+# Works for both fresh setup AND Pod restart after stop
+# =============================================================================
 
-echo "Starting flux-rag services..."
+echo ""
+echo "============================================"
+echo "  flux-rag Service Startup"
+echo "============================================"
+echo ""
 
-# 1. Ollama
-if ! pgrep -x "ollama" > /dev/null; then
-    echo "[1/4] Starting Ollama..."
-    ollama serve &>/dev/null &
-    sleep 3
-else
-    echo "[1/4] Ollama already running."
+# --- [0] Reinstall system packages if needed (after Pod stop/start) ---
+if ! command -v nginx &> /dev/null || ! command -v redis-server &> /dev/null; then
+    echo "[0/5] Reinstalling system packages (Pod was restarted)..."
+    apt-get update -qq
+    apt-get install -y -qq nginx redis-server curl 2>/dev/null || true
+    echo "  System packages restored."
 fi
 
-# 2. Redis
+if ! command -v ollama &> /dev/null; then
+    echo "[0/5] Reinstalling Ollama binary..."
+    curl -fsSL https://ollama.com/install.sh | sh
+    echo "  Ollama binary restored."
+fi
+
+# Restore nginx config if missing
+if [ ! -f /etc/nginx/sites-available/flux-rag ]; then
+    echo "[0/5] Restoring nginx config..."
+    cp /workspace/flux-rag/scripts/nginx-flux-rag.conf /etc/nginx/sites-available/flux-rag 2>/dev/null || true
+    ln -sf /etc/nginx/sites-available/flux-rag /etc/nginx/sites-enabled/flux-rag
+    rm -f /etc/nginx/sites-enabled/default 2>/dev/null
+fi
+
+# --- [1] Ollama (models on persistent /workspace) ---
+export OLLAMA_MODELS="/workspace/ollama_models"
+if ! pgrep -x "ollama" > /dev/null; then
+    echo "[1/5] Starting Ollama..."
+    OLLAMA_MODELS="$OLLAMA_MODELS" ollama serve &>/dev/null &
+    sleep 3
+    # Verify
+    for i in $(seq 1 10); do
+        if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+            break
+        fi
+        sleep 2
+    done
+else
+    echo "[1/5] Ollama already running."
+fi
+
+# Show available models
+echo "  Models: $(ollama list 2>/dev/null | tail -n +2 | awk '{print $1}' | tr '\n' ', ')"
+
+# --- [2] Redis ---
 if ! redis-cli ping &>/dev/null; then
-    echo "[2/4] Starting Redis..."
+    echo "[2/5] Starting Redis..."
     redis-server --daemonize yes --port 6379
 else
-    echo "[2/4] Redis already running."
+    echo "[2/5] Redis already running."
 fi
 
-# 3. Backend
-echo "[3/4] Starting backend..."
+# --- [3] Backend ---
+echo "[3/5] Starting backend..."
 cd /workspace/flux-rag/backend
 source .venv/bin/activate
 pkill -f "uvicorn api.main" 2>/dev/null || true
@@ -451,27 +508,31 @@ sleep 1
 nohup uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2 > /workspace/flux-rag/backend.log 2>&1 &
 echo "  Backend PID: $! (log: /workspace/flux-rag/backend.log)"
 
-# 4. Nginx (frontend)
-echo "[4/4] Starting nginx..."
-nginx -s reload 2>/dev/null || nginx 2>/dev/null
+# --- [4] Nginx (frontend) ---
+echo "[4/5] Starting nginx..."
+nginx -t 2>/dev/null && {
+    nginx -s reload 2>/dev/null || nginx 2>/dev/null
+} || {
+    echo "  WARNING: nginx config issue, trying direct start..."
+    nginx 2>/dev/null || true
+}
 
-# Wait for backend warmup
-echo ""
-echo "Waiting for backend warmup (RAG chain init)..."
-for i in $(seq 1 60); do
+# --- [5] Wait for backend warmup ---
+echo "[5/5] Waiting for backend warmup (RAG chain init)..."
+for i in $(seq 1 90); do
     if curl -s http://localhost:8000/health | grep -q "ok\|healthy" 2>/dev/null; then
-        echo "Backend ready!"
+        echo "  Backend ready! (${i}s)"
         break
     fi
-    if [ $i -eq 60 ]; then
-        echo "WARNING: Backend not responding after 60s. Check backend.log"
+    if [ $i -eq 90 ]; then
+        echo "  WARNING: Backend not responding after 90s. Check: tail -50 /workspace/flux-rag/backend.log"
     fi
     sleep 2
 done
 
 echo ""
 echo "============================================"
-echo "  Services Running:"
+echo "  All Services Running!"
 echo "============================================"
 echo "  Backend API:  http://localhost:8000"
 echo "  Frontend:     http://localhost:3000"
@@ -479,6 +540,9 @@ echo "  API Docs:     http://localhost:8000/docs"
 echo ""
 echo "  RunPod Access:"
 echo "    Dashboard > Pod > Connect > HTTP Port 3000"
+echo ""
+echo "  Test:"
+echo "    bash /workspace/flux-rag/scripts/runpod_test.sh"
 echo "============================================"
 STARTEOF
 chmod +x "$PROJECT_DIR/start.sh"
