@@ -3,64 +3,143 @@
 # RunPod GPU Pod Setup Script for flux-rag
 # =============================================================================
 # Usage:
-#   1. SSH into your RunPod Pod
-#   2. Copy this script or clone the repo
+#   1. Create RunPod Pod (A40 48GB recommended)
+#   2. SSH into your RunPod Pod
 #   3. Run: bash scripts/runpod_setup.sh
+#
+# Or one-liner from scratch:
+#   git clone https://github.com/jeromwolf/flug-rag.git /workspace/flux-rag && \
+#   bash /workspace/flux-rag/scripts/runpod_setup.sh
 # =============================================================================
 
 set -e
 
-echo "============================================"
-echo "  flux-rag RunPod Setup"
-echo "============================================"
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# --- System info ---
+log_info()  { echo -e "${GREEN}[INFO]${NC} $1"; }
+log_warn()  { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+log_step()  { echo -e "\n${CYAN}[$1]${NC} $2"; }
+
+PROJECT_DIR="/workspace/flux-rag"
+TOTAL_STEPS=10
+
 echo ""
-echo "[1/8] System Info"
-echo "---"
+echo "============================================"
+echo "  flux-rag RunPod Full Setup"
+echo "  Backend + Frontend + LLM"
+echo "============================================"
+echo ""
+
+# =============================================================================
+# [1] System Info & GPU Detection
+# =============================================================================
+log_step "1/$TOTAL_STEPS" "System Info & GPU Detection"
+
 uname -a
-nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null || echo "WARNING: No GPU detected"
 echo "RAM: $(free -h | grep Mem | awk '{print $2}')"
-echo "Disk: $(df -h / | tail -1 | awk '{print $4}') free"
-PYTHON_VERSION=$(python3 --version 2>&1)
-echo "Python: $PYTHON_VERSION"
-echo ""
+echo "Disk: $(df -h /workspace | tail -1 | awk '{print $4}') free"
 
-# --- Install system dependencies ---
-echo "[2/8] Installing system dependencies..."
-apt-get update -qq && apt-get install -y -qq \
+# GPU detection and model selection
+GPU_NAME="none"
+GPU_VRAM_MB=0
+if command -v nvidia-smi &> /dev/null; then
+    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 || echo "none")
+    GPU_VRAM_MB=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 || echo "0")
+fi
+
+echo "GPU: $GPU_NAME (${GPU_VRAM_MB}MB VRAM)"
+
+# Auto-select model based on VRAM
+if [ "$GPU_VRAM_MB" -ge 45000 ]; then
+    # 48GB+ (A40, A6000, A100) → 32b fits well, 72b is tight
+    OLLAMA_MODEL="qwen2.5:32b"
+    LIGHT_MODEL="qwen2.5:14b"
+    log_info "GPU >= 48GB: Using qwen2.5:32b (main) + qwen2.5:14b (light)"
+elif [ "$GPU_VRAM_MB" -ge 22000 ]; then
+    # 24GB (3090, 4090, A10G) → 14b
+    OLLAMA_MODEL="qwen2.5:14b"
+    LIGHT_MODEL="qwen2.5:7b"
+    log_info "GPU >= 24GB: Using qwen2.5:14b (main) + qwen2.5:7b (light)"
+elif [ "$GPU_VRAM_MB" -ge 10000 ]; then
+    # 16GB (T4, A10) → 7b
+    OLLAMA_MODEL="qwen2.5:7b"
+    LIGHT_MODEL="qwen2.5:3b"
+    log_info "GPU >= 16GB: Using qwen2.5:7b"
+else
+    OLLAMA_MODEL="qwen2.5:7b"
+    LIGHT_MODEL="qwen2.5:3b"
+    log_warn "Low/No GPU: Using qwen2.5:7b (CPU mode - slow)"
+fi
+
+# Allow override
+if [ -n "$FLUX_MODEL" ]; then
+    OLLAMA_MODEL="$FLUX_MODEL"
+    log_info "Model override: $OLLAMA_MODEL"
+fi
+if [ -n "$FLUX_LIGHT_MODEL" ]; then
+    LIGHT_MODEL="$FLUX_LIGHT_MODEL"
+    log_info "Light model override: $LIGHT_MODEL"
+fi
+
+echo ""
+echo "  Main model:  $OLLAMA_MODEL"
+echo "  Light model: $LIGHT_MODEL"
+
+# =============================================================================
+# [2] System Dependencies
+# =============================================================================
+log_step "2/$TOTAL_STEPS" "Installing system dependencies..."
+
+apt-get update -qq
+apt-get install -y -qq \
     git curl wget build-essential zstd \
     python3-venv python3-pip python3-dev \
-    redis-server \
+    redis-server nginx \
     2>/dev/null || true
 
-# --- Clone or update repo ---
-echo ""
-echo "[3/8] Setting up project..."
-PROJECT_DIR="/workspace/flux-rag"
+# Node.js (for frontend)
+if ! command -v node &> /dev/null; then
+    log_info "Installing Node.js 20 LTS..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>/dev/null
+    apt-get install -y -qq nodejs 2>/dev/null || true
+fi
+echo "Node.js: $(node --version 2>/dev/null || echo 'not installed')"
+echo "npm: $(npm --version 2>/dev/null || echo 'not installed')"
+
+# =============================================================================
+# [3] Clone or Update Repository
+# =============================================================================
+log_step "3/$TOTAL_STEPS" "Setting up project..."
 
 if [ -d "$PROJECT_DIR/.git" ]; then
-    echo "Project exists, pulling latest..."
+    log_info "Project exists, pulling latest..."
     cd "$PROJECT_DIR"
     git pull origin main || true
 else
-    echo "Cloning repository..."
-    git clone https://github.com/jeromwolf/flug-rag.git "$PROJECT_DIR" 2>/dev/null || true
+    log_info "Cloning repository..."
+    git clone https://github.com/jeromwolf/flug-rag.git "$PROJECT_DIR"
+    cd "$PROJECT_DIR"
 fi
+
+# =============================================================================
+# [4] Python Environment
+# =============================================================================
+log_step "4/$TOTAL_STEPS" "Setting up Python environment..."
 
 cd "$PROJECT_DIR/backend"
 
-# --- Python virtual environment ---
-echo ""
-echo "[4/8] Setting up Python environment..."
 if [ ! -d ".venv" ]; then
     python3 -m venv .venv
 fi
 source .venv/bin/activate
 pip install --upgrade pip setuptools wheel -q
 
-# Install dependencies via pip (skip poetry to avoid version constraint issues)
-echo "Installing Python dependencies via pip..."
+log_info "Installing Python dependencies..."
 pip install -q \
     "fastapi>=0.115.0" \
     "uvicorn[standard]>=0.34.0" \
@@ -95,57 +174,82 @@ pip install -q \
     "redis>=5.0.0" \
     "rouge-score>=0.1.2" \
     "kiwipiepy" \
-    2>&1 | tail -3
+    2>&1 | tail -5
 
-echo "Python packages installed."
+log_info "Python packages installed."
 python3 -c "import fastapi; print(f'FastAPI {fastapi.__version__}')"
 
-# --- Install Ollama ---
-echo ""
-echo "[5/8] Installing Ollama..."
+# =============================================================================
+# [5] Install & Start Ollama
+# =============================================================================
+log_step "5/$TOTAL_STEPS" "Installing Ollama..."
+
 if ! command -v ollama &> /dev/null; then
     curl -fsSL https://ollama.com/install.sh | sh
 fi
 
-# Start Ollama in background
-echo "Starting Ollama server..."
+# Start Ollama (kill existing first)
+pkill -f "ollama serve" 2>/dev/null || true
+sleep 1
 ollama serve &>/dev/null &
 sleep 3
 
-# Pull models
-echo "Pulling qwen2.5:14b (this may take a while)..."
-ollama pull qwen2.5:14b
+# Verify Ollama is running
+for i in $(seq 1 10); do
+    if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+        log_info "Ollama is running."
+        break
+    fi
+    sleep 2
+done
 
-echo "Model list:"
+# Pull models
+log_info "Pulling $OLLAMA_MODEL (this may take a while)..."
+ollama pull "$OLLAMA_MODEL"
+
+if [ "$LIGHT_MODEL" != "$OLLAMA_MODEL" ]; then
+    log_info "Pulling $LIGHT_MODEL..."
+    ollama pull "$LIGHT_MODEL"
+fi
+
+echo ""
+echo "Installed models:"
 ollama list
 
-# --- Redis ---
-echo ""
-echo "[6/8] Starting Redis..."
-redis-server --daemonize yes --port 6379 2>/dev/null || true
-redis-cli ping || echo "WARNING: Redis not available"
+# =============================================================================
+# [6] Redis
+# =============================================================================
+log_step "6/$TOTAL_STEPS" "Starting Redis..."
 
-# --- Environment configuration ---
-echo ""
-echo "[7/8] Configuring environment..."
+redis-server --daemonize yes --port 6379 2>/dev/null || true
+redis-cli ping 2>/dev/null && log_info "Redis OK" || log_warn "Redis not available"
+
+# =============================================================================
+# [7] Environment Configuration
+# =============================================================================
+log_step "7/$TOTAL_STEPS" "Configuring environment..."
+
 ENV_FILE="$PROJECT_DIR/backend/.env"
 
-if [ ! -f "$ENV_FILE" ]; then
-cat > "$ENV_FILE" << 'ENVEOF'
-# ========== RunPod Production Config ==========
+# Always regenerate .env with detected model
+cat > "$ENV_FILE" << ENVEOF
+# ========== RunPod Config (auto-generated) ==========
+# GPU: $GPU_NAME (${GPU_VRAM_MB}MB)
+# Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
 # LLM
 DEFAULT_LLM_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=qwen2.5:14b
+OLLAMA_MODEL=$OLLAMA_MODEL
+OLLAMA_LIGHT_MODEL=$LIGHT_MODEL
 
 # Vector DB
 CHROMA_PERSIST_DIR=./data/chroma_db
 CHROMA_COLLECTION_NAME=knowledge_base
 
-# Auth
+# Auth (disabled for demo)
 AUTH_ENABLED=false
-JWT_SECRET_KEY=change-me-in-production-jwt-secret
+JWT_SECRET_KEY=runpod-demo-jwt-secret-$(date +%s)
 
 # Cache (Redis)
 CACHE_ENABLED=true
@@ -182,47 +286,244 @@ SELF_RAG_ENABLED=false
 AGENTIC_RAG_ENABLED=false
 QUERY_EXPANSION_ENABLED=false
 
-# OCR (set your key)
+# OCR
 UPSTAGE_API_KEY=
 OCR_PROVIDER=cloud
 
 # Monitoring
 PROMETHEUS_ENABLED=false
 ENVEOF
-    echo "Created .env file. Edit it to set API keys."
-else
-    echo ".env already exists, skipping."
-fi
 
-# --- Create data directories ---
-echo ""
-echo "[8/8] Creating data directories..."
+log_info "Created .env with model=$OLLAMA_MODEL"
+
+# =============================================================================
+# [8] Data Directories
+# =============================================================================
+log_step "8/$TOTAL_STEPS" "Setting up data directories..."
+
 mkdir -p "$PROJECT_DIR/backend/data/uploads"
 mkdir -p "$PROJECT_DIR/backend/data/chroma_db"
 
-# --- Verify installation ---
+# Check if data was uploaded
+CHROMA_FILES=$(find "$PROJECT_DIR/backend/data/chroma_db" -type f 2>/dev/null | wc -l)
+UPLOAD_FILES=$(find "$PROJECT_DIR/backend/data/uploads" -type f 2>/dev/null | wc -l)
+
+if [ "$CHROMA_FILES" -gt 0 ]; then
+    log_info "ChromaDB data found: $CHROMA_FILES files"
+else
+    log_warn "ChromaDB data NOT found! Upload data before starting."
+    log_warn "From local machine: scp flux-rag-data.tar.gz root@<POD_IP>:/workspace/"
+    log_warn "Then run: cd /workspace && tar xzf flux-rag-data.tar.gz"
+fi
+
+if [ "$UPLOAD_FILES" -gt 0 ]; then
+    log_info "Upload data found: $UPLOAD_FILES files"
+fi
+
+# =============================================================================
+# [9] Frontend Build
+# =============================================================================
+log_step "9/$TOTAL_STEPS" "Building frontend..."
+
+cd "$PROJECT_DIR/frontend"
+
+if [ ! -d "node_modules" ]; then
+    log_info "Installing npm dependencies..."
+    npm install --legacy-peer-deps 2>&1 | tail -3
+fi
+
+log_info "Building production bundle..."
+npm run build 2>&1 | tail -5
+
+if [ -d "dist" ]; then
+    log_info "Frontend build successful: $(du -sh dist | awk '{print $1}')"
+else
+    log_error "Frontend build failed!"
+fi
+
+# =============================================================================
+# [10] Nginx Configuration (Frontend serving + API proxy)
+# =============================================================================
+log_step "10/$TOTAL_STEPS" "Configuring nginx..."
+
+cat > /etc/nginx/sites-available/flux-rag << 'NGINXEOF'
+server {
+    listen 3000;
+    server_name _;
+
+    # Gzip
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/javascript application/json application/javascript image/svg+xml;
+
+    # Frontend static files
+    root /workspace/flux-rag/frontend/dist;
+    index index.html;
+
+    # Static assets caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # API proxy → backend
+    location /api {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # SSE streaming support
+        proxy_set_header Connection '';
+        proxy_buffering off;
+        proxy_cache off;
+        chunked_transfer_encoding off;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+
+    # Health check proxy
+    location /health {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+    }
+
+    # SPA routing
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+}
+NGINXEOF
+
+# Enable site
+ln -sf /etc/nginx/sites-available/flux-rag /etc/nginx/sites-enabled/flux-rag
+rm -f /etc/nginx/sites-enabled/default 2>/dev/null
+
+# Test and reload nginx
+nginx -t 2>/dev/null && {
+    systemctl restart nginx 2>/dev/null || nginx -s reload 2>/dev/null || nginx 2>/dev/null
+    log_info "Nginx configured on port 3000"
+} || {
+    log_warn "Nginx config test failed, will need manual fix"
+}
+
+# =============================================================================
+# Startup helper script
+# =============================================================================
+cat > "$PROJECT_DIR/start.sh" << 'STARTEOF'
+#!/bin/bash
+# Start all flux-rag services
+
+echo "Starting flux-rag services..."
+
+# 1. Ollama
+if ! pgrep -x "ollama" > /dev/null; then
+    echo "[1/4] Starting Ollama..."
+    ollama serve &>/dev/null &
+    sleep 3
+else
+    echo "[1/4] Ollama already running."
+fi
+
+# 2. Redis
+if ! redis-cli ping &>/dev/null; then
+    echo "[2/4] Starting Redis..."
+    redis-server --daemonize yes --port 6379
+else
+    echo "[2/4] Redis already running."
+fi
+
+# 3. Backend
+echo "[3/4] Starting backend..."
+cd /workspace/flux-rag/backend
+source .venv/bin/activate
+pkill -f "uvicorn api.main" 2>/dev/null || true
+sleep 1
+nohup uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 2 > /workspace/flux-rag/backend.log 2>&1 &
+echo "  Backend PID: $! (log: /workspace/flux-rag/backend.log)"
+
+# 4. Nginx (frontend)
+echo "[4/4] Starting nginx..."
+nginx -s reload 2>/dev/null || nginx 2>/dev/null
+
+# Wait for backend warmup
+echo ""
+echo "Waiting for backend warmup (RAG chain init)..."
+for i in $(seq 1 60); do
+    if curl -s http://localhost:8000/health | grep -q "ok\|healthy" 2>/dev/null; then
+        echo "Backend ready!"
+        break
+    fi
+    if [ $i -eq 60 ]; then
+        echo "WARNING: Backend not responding after 60s. Check backend.log"
+    fi
+    sleep 2
+done
+
 echo ""
 echo "============================================"
-echo "  Setup Complete! Verification:"
+echo "  Services Running:"
+echo "============================================"
+echo "  Backend API:  http://localhost:8000"
+echo "  Frontend:     http://localhost:3000"
+echo "  API Docs:     http://localhost:8000/docs"
+echo ""
+echo "  RunPod Access:"
+echo "    Dashboard > Pod > Connect > HTTP Port 3000"
+echo "============================================"
+STARTEOF
+chmod +x "$PROJECT_DIR/start.sh"
+
+# =============================================================================
+# Final Summary
+# =============================================================================
+echo ""
+echo "============================================"
+echo "  Setup Complete!"
 echo "============================================"
 echo ""
-echo "Python:  $(python3 --version)"
-echo "Ollama:  $(ollama --version 2>/dev/null || echo 'not found')"
-echo "Redis:   $(redis-cli ping 2>/dev/null || echo 'not running')"
-echo "GPU:     $(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo 'none')"
+echo "  Python:   $(python3 --version)"
+echo "  Node.js:  $(node --version 2>/dev/null || echo 'N/A')"
+echo "  Ollama:   $(ollama --version 2>/dev/null || echo 'N/A')"
+echo "  Redis:    $(redis-cli ping 2>/dev/null || echo 'not running')"
+echo "  GPU:      $GPU_NAME (${GPU_VRAM_MB}MB)"
+echo "  Model:    $OLLAMA_MODEL (main) / $LIGHT_MODEL (light)"
 echo ""
 echo "============================================"
 echo "  Next Steps:"
 echo "============================================"
 echo ""
-echo "  1. Upload your data to: $PROJECT_DIR/backend/data/uploads/"
-echo "  2. Edit .env if needed:  nano $PROJECT_DIR/backend/.env"
-echo "  3. Start the server:"
-echo "     cd $PROJECT_DIR/backend"
-echo "     source .venv/bin/activate"
-echo "     uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4"
+
+if [ "$CHROMA_FILES" -eq 0 ]; then
+    echo "  1. UPLOAD DATA (required!):"
+    echo "     From local machine:"
+    echo "       bash scripts/pack_data.sh"
+    echo "       scp flux-rag-data.tar.gz root@<POD_IP>:/workspace/"
+    echo ""
+    echo "     On RunPod:"
+    echo "       cd /workspace && tar xzf flux-rag-data.tar.gz"
+    echo ""
+    echo "  2. Start services:"
+    echo "       bash /workspace/flux-rag/start.sh"
+else
+    echo "  Data already uploaded! Start services:"
+    echo "       bash /workspace/flux-rag/start.sh"
+fi
+
 echo ""
-echo "  4. Access from outside RunPod:"
-echo "     - RunPod dashboard > Pod > Connect > HTTP Port 8000"
+echo "  Access:"
+echo "    RunPod Dashboard > Pod > Connect > HTTP Port 3000"
+echo ""
+echo "  Test:"
+echo "    bash /workspace/flux-rag/scripts/runpod_test.sh"
 echo ""
 echo "============================================"
