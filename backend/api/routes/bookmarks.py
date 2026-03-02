@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from auth.dependencies import get_current_user_optional
+from auth.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ class BookmarkCreate(BaseModel):
 @router.post("/bookmarks")
 async def add_bookmark(
     req: BookmarkCreate,
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_current_user),
 ):
     user_id = current_user.id if current_user else "anonymous"
     bookmarks = _load_bookmarks()
@@ -66,7 +66,7 @@ async def add_bookmark(
 
 
 @router.get("/bookmarks")
-async def list_bookmarks(current_user=Depends(get_current_user_optional)):
+async def list_bookmarks(current_user=Depends(get_current_user)):
     user_id = current_user.id if current_user else "anonymous"
     bookmarks = _load_bookmarks()
     user_bookmarks = [b for b in bookmarks if b["user_id"] == user_id]
@@ -80,7 +80,7 @@ async def list_bookmarks(current_user=Depends(get_current_user_optional)):
 @router.delete("/bookmarks/{message_id}")
 async def remove_bookmark(
     message_id: str,
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_current_user),
 ):
     user_id = current_user.id if current_user else "anonymous"
     bookmarks = _load_bookmarks()
