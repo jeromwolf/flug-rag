@@ -113,6 +113,22 @@ class MinIOStorage:
             logger.warning("MinIO delete failed for %s: %s", object_name, e)
             return False
 
+    async def list_objects(self, prefix: str = "") -> list[dict]:
+        """List objects in the default bucket."""
+        loop = asyncio.get_event_loop()
+        objects = await loop.run_in_executor(
+            None,
+            lambda: list(self.client.list_objects(self.default_bucket, prefix=prefix)),
+        )
+        return [
+            {
+                "name": obj.object_name,
+                "size": obj.size,
+                "last_modified": str(obj.last_modified) if obj.last_modified else None,
+            }
+            for obj in objects
+        ]
+
     async def file_exists(
         self,
         object_name: str,

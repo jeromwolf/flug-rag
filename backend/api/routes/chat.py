@@ -19,6 +19,23 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def _extract_tool_content(tool_name: str, result_data) -> str:
+    """Extract displayable text from ToolResult.data for any tool."""
+    if result_data is None:
+        return ""
+    if isinstance(result_data, str):
+        return result_data
+    if isinstance(result_data, dict):
+        for key in ("draft", "material", "report"):
+            if key in result_data:
+                return result_data[key]
+        if "result" in result_data and "expression" in result_data:
+            return f"계산 결과: {result_data['expression']} = {result_data['result']}"
+        import json as _json
+        return _json.dumps(result_data, ensure_ascii=False, indent=2)
+    return str(result_data)
+
 # Shared instances with thread-safe initialization
 _memory = None
 _router = None
@@ -110,6 +127,7 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
     from agent.tool_selector import select_tool
 
     tool_selection = select_tool(request.message) if request.mode != "direct" else None
+    routing = None
 
     if tool_selection:
         mode = "tool"
@@ -134,11 +152,7 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
         result = await registry.execute(tool_selection.tool_name, **tool_selection.arguments)
 
         if result.success:
-            content_key = next(
-                (k for k in ("draft", "material") if k in (result.data or {})),
-                None,
-            )
-            content = result.data.get(content_key, str(result.data)) if content_key else str(result.data)
+            content = _extract_tool_content(tool_selection.tool_name, result.data)
         else:
             content = result.error or "도구 실행 중 오류가 발생했습니다."
 
@@ -151,6 +165,32 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
             confidence_level="high" if result.success else "low",
             session_id=session_id,
             metadata={"tool_used": tool_selection.tool_name, **(result.metadata or {})},
+        )
+
+    # Agent pipeline for complex / tool-required queries
+    if routing and routing.category.value in ("complex_task", "tool_required"):
+        from agent.planner import TaskPlanner
+        from agent.executor import PlanExecutor
+
+        planner = TaskPlanner(llm=rag_chain.llm)
+        plan = await planner.plan(request.message)
+        executor = PlanExecutor(rag_chain=rag_chain)
+        content = await executor.execute(
+            plan,
+            filters=merged_filters,
+            provider=request.provider,
+            model=request.model,
+            temperature=request.temperature,
+        )
+        msg_id = await _get_memory().add_message(session_id, "assistant", content)
+        return ChatResponse(
+            message_id=msg_id,
+            content=content,
+            sources=[],
+            confidence=0.8,
+            confidence_level="high",
+            session_id=session_id,
+            metadata={"agent_pipeline": True, "plan_steps": len(plan.steps)},
         )
 
     # Generate response (RAG / direct)
@@ -201,6 +241,7 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
     from agent.tool_selector import select_tool
 
     tool_selection = select_tool(request.message) if request.mode != "direct" else None
+    routing = None
 
     if tool_selection:
         mode = "tool"
@@ -227,7 +268,33 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
 
         full_content = ""
         try:
-            if mode == "tool":
+            if routing and routing.category.value in ("complex_task", "tool_required"):
+                # ── Agent pipeline: plan → execute steps → stream final ──
+                from agent.planner import TaskPlanner
+                from agent.executor import PlanExecutor
+
+                planner = TaskPlanner(llm=rag_chain.llm)
+                plan = await planner.plan(request.message)
+                executor = PlanExecutor(rag_chain=rag_chain)
+                async for evt in executor.stream_execute(
+                    plan,
+                    filters=merged_filters,
+                    provider=request.provider,
+                    model=request.model,
+                    temperature=request.temperature,
+                ):
+                    event_type = evt.get("event", "")
+                    event_data = evt.get("data", {})
+                    if event_type == "start":
+                        # Skip executor's start event; we already sent one
+                        continue
+                    if event_type == "chunk":
+                        full_content += event_data.get("content", "")
+                    yield {
+                        "event": event_type,
+                        "data": json.dumps(event_data, ensure_ascii=False),
+                    }
+            elif mode == "tool":
                 # ── MCP tool execution with chunked streaming ──
                 from agent.mcp.registry import get_registry
 
@@ -235,6 +302,10 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
                 tool_label = {
                     "report_draft": "보고서 초안",
                     "training_material": "교육자료",
+                    "regulation_review": "규정 검토",
+                    "safety_checklist": "안전 체크리스트",
+                    "calculator": "수식 계산",
+                    "data_analyzer": "데이터 분석",
                 }.get(tool_selection.tool_name, tool_selection.tool_name)
 
                 yield {
@@ -253,15 +324,7 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
                 )
 
                 if result.success:
-                    content_key = next(
-                        (k for k in ("draft", "material") if k in (result.data or {})),
-                        None,
-                    )
-                    full_content = (
-                        result.data.get(content_key, str(result.data))
-                        if content_key
-                        else str(result.data)
-                    )
+                    full_content = _extract_tool_content(tool_selection.tool_name, result.data)
 
                     # Stream in chunks for smooth UX
                     for i in range(0, len(full_content), 80):

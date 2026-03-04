@@ -12,6 +12,7 @@ from typing import AsyncIterator
 import yaml
 
 from core.llm import BaseLLM, create_llm
+from core.llm.factory import get_default_llm
 from rag.prompt import PromptManager
 from rag.quality import QualityController
 from rag.retriever import HybridRetriever, RetrievalResult
@@ -67,7 +68,7 @@ class RAGChain:
         quality: QualityController | None = None,
     ):
         self.retriever = retriever or HybridRetriever()
-        self.llm = llm or create_llm()
+        self.llm = llm or get_default_llm()
         self.prompt_manager = prompt_manager or PromptManager()
         self.quality = quality or QualityController()
 

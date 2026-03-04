@@ -99,6 +99,11 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 2048  # Optimized via parametric grid search
     llm_temperature: float = 0.3  # Benchmark-optimized
 
+    # LLM Failover
+    llm_failover_enabled: bool = False
+    llm_fallback_provider: str = "ollama"
+    llm_fallback_model: str = ""
+
     # RAG - Query expansion
     query_expansion_enabled: bool = False  # HyDE (Hypothetical Document Embeddings)
 
@@ -181,6 +186,12 @@ class Settings(BaseSettings):
 
     # Monitoring
     prometheus_enabled: bool = False  # Disabled by default
+
+    # Guardrails - LLM filter
+    guardrail_llm_enabled: bool = False
+    guardrail_llm_provider: str = ""
+    guardrail_llm_model: str = ""
+    guardrail_llm_timeout: float = 5.0
 
     # Batch Inference
     batch_inference_enabled: bool = False

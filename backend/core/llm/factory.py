@@ -78,8 +78,16 @@ def create_llm(
 
 
 def get_default_llm() -> BaseLLM:
-    """Get the default LLM based on settings."""
-    return create_llm()
+    """Get default LLM instance, with failover if enabled."""
+    primary = create_llm()
+    if settings.llm_failover_enabled and settings.llm_fallback_provider:
+        from .failover import FailoverLLM
+        fallback = create_llm(
+            provider=settings.llm_fallback_provider,
+            model=settings.llm_fallback_model or None,
+        )
+        return FailoverLLM(primary=primary, fallback=fallback)
+    return primary
 
 
 def list_providers() -> List[str]:

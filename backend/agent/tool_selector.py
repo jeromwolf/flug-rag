@@ -73,6 +73,35 @@ _TRAINING_TRIGGERS = [
 
 _PERIOD_RE = re.compile(r"(\d{4}년[\s]*(?:\d{1,2}월)?[\s]*(?:\d분기)?)")
 
+# ── Regulation review ───────────────────────────────────────────────
+_REGULATION_TRIGGERS = [
+    "규정 검토", "규정검토", "규정 위반", "규정과 대조",
+    "준수 여부", "규정 확인", "법규 검토", "내부규정 검토",
+]
+
+# ── Safety checklist ────────────────────────────────────────────────
+_SAFETY_TRIGGERS = [
+    "안전 체크리스트", "안전체크리스트", "점검 체크리스트",
+    "점검표 만들", "점검표 생성", "안전 점검표", "안전점검표",
+    "체크리스트 만들", "체크리스트 생성",
+]
+
+_EQUIPMENT_MAP = {
+    "배관": "배관", "정압기": "정압기", "저장탱크": "저장탱크", "공급설비": "공급설비",
+}
+
+# ── Calculator ──────────────────────────────────────────────────────
+_CALC_TRIGGERS = [
+    "계산해", "계산해줘", "계산 해줘", "얼마야",
+    "수식 계산", "값을 구해",
+]
+
+# ── Data analyzer ───────────────────────────────────────────────────
+_DATA_TRIGGERS = [
+    "데이터 분석", "데이터분석", "통계 분석", "통계분석",
+    "평균 구해", "분포 분석",
+]
+
 
 # ── Public API ─────────────────────────────────────────────────────
 def select_tool(message: str) -> ToolSelection | None:
@@ -87,6 +116,18 @@ def select_tool(message: str) -> ToolSelection | None:
 
     if any(kw in msg for kw in _TRAINING_TRIGGERS):
         return _select_training(msg)
+
+    if any(kw in msg for kw in _REGULATION_TRIGGERS):
+        return _select_regulation(msg)
+
+    if any(kw in msg for kw in _SAFETY_TRIGGERS):
+        return _select_safety(msg)
+
+    if any(kw in msg for kw in _CALC_TRIGGERS):
+        return _select_calculator(msg)
+
+    if any(kw in msg for kw in _DATA_TRIGGERS):
+        return _select_data_analyzer(msg)
 
     return None
 
@@ -128,4 +169,50 @@ def _select_training(msg: str) -> ToolSelection:
         tool_name="training_material",
         arguments={"topic": msg, "level": level, "format": fmt},
         confidence=0.8,
+    )
+
+
+def _select_regulation(msg: str) -> ToolSelection:
+    category = "전체"
+    cat_map = {"안전": "안전관리", "시설": "시설기준", "운영": "운영규정"}
+    for kw, cat in cat_map.items():
+        if kw in msg:
+            category = cat
+            break
+    return ToolSelection(
+        tool_name="regulation_review",
+        arguments={"document_text": msg, "regulation_category": category, "review_depth": "standard"},
+        confidence=0.8,
+    )
+
+
+def _select_safety(msg: str) -> ToolSelection:
+    equipment = "일반"
+    for kw, eq in _EQUIPMENT_MAP.items():
+        if kw in msg:
+            equipment = eq
+            break
+    return ToolSelection(
+        tool_name="safety_checklist",
+        arguments={"equipment_type": equipment, "output_format": "markdown"},
+        confidence=0.8,
+    )
+
+
+def _select_calculator(msg: str) -> ToolSelection:
+    expr_re = re.compile(r'[\d\.\+\-\*\/\(\)\s\^%]+')
+    m = expr_re.search(msg)
+    expression = m.group(0).strip() if m else msg
+    return ToolSelection(
+        tool_name="calculator",
+        arguments={"expression": expression},
+        confidence=0.75,
+    )
+
+
+def _select_data_analyzer(msg: str) -> ToolSelection:
+    return ToolSelection(
+        tool_name="data_analyzer",
+        arguments={"data": [], "analysis_type": "statistics"},
+        confidence=0.7,
     )
