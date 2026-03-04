@@ -146,7 +146,7 @@ class RAGChain:
         if len(content_chars) < 10:
             return False
         chinese_chars = len(_RE_CHINESE.findall(stripped))
-        if chinese_chars > 0 and chinese_chars / max(len(stripped), 1) > 0.3:
+        if chinese_chars > 0 and chinese_chars / max(len(stripped), 1) > 0.05:
             return False
         return True
 
@@ -911,10 +911,9 @@ class RAGChain:
                 model_hint=model_name,
             )
 
-            # Safety warning first
+            # Safety warning as separate event (don't pollute the answer content)
             if self.quality.should_add_safety_warning(confidence):
-                warning = self.quality.get_safety_message(confidence)
-                yield {"event": "chunk", "data": {"content": warning + "\n\n"}}
+                yield {"event": "confidence_warning", "data": {"message": "검색 신뢰도가 낮습니다. 답변의 정확성을 확인해주세요.", "confidence": round(confidence, 3)}}
 
             # Stream LLM response with post-stream guardrails
             # Buffer initial tokens to strip "답변:" / "A:" prefix

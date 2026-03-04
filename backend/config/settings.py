@@ -89,7 +89,7 @@ class Settings(BaseSettings):
     bm25_weight: float = 0.3
     vector_weight: float = 0.7
     confidence_high: float = 0.8
-    confidence_low: float = 0.5
+    confidence_low: float = 0.3
 
     # RAG - Score filtering
     retrieval_score_threshold: float = 0.0  # minimum retrieval score (0 = no filtering)
