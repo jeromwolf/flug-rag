@@ -18,6 +18,7 @@ httpx = "^0.28.0"
 # Embeddings & Vector
 sentence-transformers = "^3.4.0"
 chromadb = "^0.6.0"
+pymilvus = {extras = ["milvus_lite"], version = ">=2.5.0"}
 # Document Processing
 pymupdf = "^1.25.0"
 pyhwp = ">=0.1b15"

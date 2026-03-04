@@ -45,9 +45,9 @@ export default function LoginPage() {
     try {
       await login(username, password);
       if (rememberMe) {
-        localStorage.setItem("flux_remember_user", username);
+        localStorage.setItem("app_remember_user", username);
       } else {
-        localStorage.removeItem("flux_remember_user");
+        localStorage.removeItem("app_remember_user");
       }
       navigate("/chat", { replace: true });
     } catch (err: unknown) {
@@ -66,7 +66,7 @@ export default function LoginPage() {
 
   // Restore remembered username
   useState(() => {
-    const remembered = localStorage.getItem("flux_remember_user");
+    const remembered = localStorage.getItem("app_remember_user");
     if (remembered) {
       setUsername(remembered);
       setRememberMe(true);
@@ -113,7 +113,7 @@ export default function LoginPage() {
               <BotIcon sx={{ fontSize: 36 }} />
             </Box>
             <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
-              Flux RAG
+              KOGAS AI
             </Typography>
             <Typography variant="body2" color="text.secondary">
               한국가스기술공사 생성형 AI 플랫폼

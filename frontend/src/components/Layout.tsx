@@ -87,7 +87,7 @@ export default function Layout({ children, title, noPadding }: LayoutProps) {
             <>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                  Flux RAG
+                  KOGAS AI
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   한국가스기술공사

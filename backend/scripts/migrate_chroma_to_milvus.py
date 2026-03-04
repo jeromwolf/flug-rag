@@ -2,7 +2,18 @@
 """Migration script from ChromaDB to Milvus vector store.
 
 Usage:
-    python scripts/migrate_chroma_to_milvus.py [--chroma-dir ./data/chroma_db] [--milvus-host localhost] [--milvus-port 19530]
+    # Using URI (Milvus Lite or Standalone):
+    python scripts/migrate_chroma_to_milvus.py --milvus-uri ./data/milvus.db
+    python scripts/migrate_chroma_to_milvus.py --milvus-uri http://localhost:19530
+
+    # Legacy host/port (backward compat, constructs http://host:port):
+    python scripts/migrate_chroma_to_milvus.py --milvus-host localhost --milvus-port 19530
+
+    # Full example:
+    python scripts/migrate_chroma_to_milvus.py \\
+        --chroma-dir ./data/chroma_db \\
+        --milvus-uri ./data/milvus.db \\
+        --milvus-collection knowledge_base
 """
 
 import argparse
@@ -23,8 +34,7 @@ from core.vectorstore.milvus import MilvusStore
 async def migrate_chroma_to_milvus(
     chroma_dir: str,
     chroma_collection: str,
-    milvus_host: str,
-    milvus_port: int,
+    milvus_uri: str,
     milvus_collection: str,
     batch_size: int = 100,
 ) -> None:
@@ -33,14 +43,13 @@ async def migrate_chroma_to_milvus(
     Args:
         chroma_dir: ChromaDB persist directory
         chroma_collection: ChromaDB collection name
-        milvus_host: Milvus server host
-        milvus_port: Milvus server port
+        milvus_uri: Milvus URI (file path for Lite, http://host:port for Standalone)
         milvus_collection: Milvus collection name
         batch_size: Number of documents to migrate per batch
     """
-    print(f"Starting migration from ChromaDB to Milvus...")
+    print("Starting migration from ChromaDB to Milvus...")
     print(f"  ChromaDB: {chroma_dir} / {chroma_collection}")
-    print(f"  Milvus: {milvus_host}:{milvus_port} / {milvus_collection}")
+    print(f"  Milvus: {milvus_uri} / {milvus_collection}")
 
     # Connect to ChromaDB
     chroma_client = chromadb.PersistentClient(
@@ -71,18 +80,19 @@ async def migrate_chroma_to_milvus(
         print("No documents to migrate. Exiting.")
         return
 
-    # Create Milvus store
+    # Create Milvus store with new URI-based constructor
     print("\nInitializing Milvus store...")
     try:
         milvus_store = MilvusStore(
-            host=milvus_host,
-            port=milvus_port,
+            uri=milvus_uri,
+            token=settings.milvus_store_token,
             collection_name=milvus_collection,
             dimension=settings.embedding_dimension,
+            metric_type=settings.milvus_metric_type,
         )
     except Exception as e:
         print(f"Error connecting to Milvus: {e}")
-        print("Make sure Milvus server is running.")
+        print("Make sure Milvus server is running (or the Lite file path is writable).")
         sys.exit(1)
 
     # Clear existing data in Milvus (optional, uncomment if needed)
@@ -98,8 +108,11 @@ async def migrate_chroma_to_milvus(
         batch_ids = all_data["ids"][i:batch_end]
         batch_docs = all_data["documents"][i:batch_end]
         batch_embeddings = all_data["embeddings"][i:batch_end]
-        batch_metadatas = all_data["metadatas"][i:batch_end] if all_data["metadatas"] else None
+        batch_metadatas = all_data["metadatas"][i:batch_end] if all_data["metadatas"] else [{}] * len(batch_ids)
 
+        # Extract source_type per document for proper routing inside MilvusStore.add()
+        # MilvusStore.add() handles source_type internally, but we pass full metadata so
+        # it can extract it itself. No pre-extraction needed on the caller side.
         try:
             await milvus_store.add(
                 ids=batch_ids,
@@ -110,7 +123,7 @@ async def migrate_chroma_to_milvus(
             migrated_count += len(batch_ids)
             print(f"  Progress: {migrated_count}/{total_docs} documents migrated")
         except Exception as e:
-            print(f"Error migrating batch {i//batch_size + 1}: {e}")
+            print(f"Error migrating batch {i // batch_size + 1}: {e}")
             print(f"  Failed at document index {i}")
             sys.exit(1)
 
@@ -121,10 +134,10 @@ async def migrate_chroma_to_milvus(
     print(f"  Milvus count: {milvus_count}")
 
     if milvus_count >= total_docs:
-        print("\n✓ Migration completed successfully!")
+        print("\nMigration completed successfully!")
         print(f"  Total documents migrated: {migrated_count}")
     else:
-        print(f"\n✗ Migration incomplete: expected {total_docs}, got {milvus_count}")
+        print(f"\nMigration incomplete: expected {total_docs}, got {milvus_count}")
         sys.exit(1)
 
     # Display collection info
@@ -149,16 +162,26 @@ def main():
         default=settings.chroma_collection_name,
         help=f"ChromaDB collection name (default: {settings.chroma_collection_name})",
     )
+    # New: URI-based connection (preferred)
+    parser.add_argument(
+        "--milvus-uri",
+        default=None,
+        help=(
+            f"Milvus URI — file path for Lite (e.g. ./data/milvus.db) or "
+            f"http://host:port for Standalone (default: {settings.milvus_store_uri})"
+        ),
+    )
+    # Legacy: host/port for backward compatibility
     parser.add_argument(
         "--milvus-host",
         default=settings.milvus_host,
-        help=f"Milvus server host (default: {settings.milvus_host})",
+        help=f"Milvus server host — used only when --milvus-uri is not set (default: {settings.milvus_host})",
     )
     parser.add_argument(
         "--milvus-port",
         type=int,
         default=settings.milvus_port,
-        help=f"Milvus server port (default: {settings.milvus_port})",
+        help=f"Milvus server port — used only when --milvus-uri is not set (default: {settings.milvus_port})",
     )
     parser.add_argument(
         "--milvus-collection",
@@ -174,13 +197,23 @@ def main():
 
     args = parser.parse_args()
 
-    # Run migration
+    # Resolve the effective Milvus URI:
+    #   1. --milvus-uri provided  → use it directly
+    #   2. --milvus-host/port provided but not --milvus-uri → construct http://host:port
+    #   3. Neither provided → fall back to settings.milvus_store_uri
+    if args.milvus_uri is not None:
+        effective_uri = args.milvus_uri
+    elif args.milvus_host != settings.milvus_host or args.milvus_port != settings.milvus_port:
+        # User passed explicit host/port on the command line
+        effective_uri = f"http://{args.milvus_host}:{args.milvus_port}"
+    else:
+        effective_uri = settings.milvus_store_uri
+
     asyncio.run(
         migrate_chroma_to_milvus(
             chroma_dir=args.chroma_dir,
             chroma_collection=args.chroma_collection,
-            milvus_host=args.milvus_host,
-            milvus_port=args.milvus_port,
+            milvus_uri=effective_uri,
             milvus_collection=args.milvus_collection,
             batch_size=args.batch_size,
         )

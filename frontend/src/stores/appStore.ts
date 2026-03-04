@@ -41,21 +41,21 @@ export const useAppStore = create<AppState>((set) => ({
   setSelectedModel: (model) => set({ selectedModel: model }),
 
   temperature: parseFloat(
-    (typeof window !== "undefined" && localStorage.getItem("flux_temperature")) || "0.2"
+    (typeof window !== "undefined" && localStorage.getItem("app_temperature")) || "0.2"
   ),
   setTemperature: (temp) =>
     set(() => {
-      localStorage.setItem("flux_temperature", String(temp));
+      localStorage.setItem("app_temperature", String(temp));
       return { temperature: temp };
     }),
 
   sidebarOpen: true,
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
 
-  darkMode: typeof window !== 'undefined' && localStorage.getItem('flux_dark_mode') === 'true',
+  darkMode: typeof window !== 'undefined' && localStorage.getItem('app_dark_mode') === 'true',
   toggleDarkMode: () => set((state) => {
     const newMode = !state.darkMode;
-    localStorage.setItem('flux_dark_mode', String(newMode));
+    localStorage.setItem('app_dark_mode', String(newMode));
     return { darkMode: newMode };
   }),
 

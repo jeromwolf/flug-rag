@@ -86,7 +86,7 @@ export function ChatTopBar({
     const text = messages
       .filter((m) => m.role !== "system")
       .map((m) => {
-        const label = m.role === "user" ? "사용자" : "Flux AI";
+        const label = m.role === "user" ? "사용자" : "KOGAS AI";
         return `${label}: ${m.content}`;
       })
       .join("\n\n");

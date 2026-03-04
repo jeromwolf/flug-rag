@@ -126,6 +126,15 @@ class Token(BaseModel):
 
 _DEFAULT_USERS: list[dict] = [
     {
+        "id": "evaluator-001",
+        "username": "evaluator",
+        "email": "evaluator@demo.local",
+        "full_name": "평가위원",
+        "department": "평가단",
+        "role": Role.ADMIN,
+        "is_active": True,
+    },
+    {
         "id": "admin-001",
         "username": "admin",
         "email": "admin@kogas-tech.co.kr",

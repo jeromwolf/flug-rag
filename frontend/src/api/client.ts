@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -13,8 +13,8 @@ const api = axios.create({
 // Auth interceptors
 // ---------------------------------------------------------------------------
 
-const ACCESS_TOKEN_KEY = "flux_access_token";
-const REFRESH_TOKEN_KEY = "flux_refresh_token";
+const ACCESS_TOKEN_KEY = "app_access_token";
+const REFRESH_TOKEN_KEY = "app_refresh_token";
 
 // Request interceptor: attach Bearer token
 api.interceptors.request.use(
@@ -96,7 +96,7 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
         localStorage.removeItem(ACCESS_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
-        localStorage.removeItem("flux_user");
+        localStorage.removeItem("app_user");
         window.location.href = "/login";
         return Promise.reject(refreshError);
       } finally {

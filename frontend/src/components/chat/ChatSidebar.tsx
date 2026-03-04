@@ -79,7 +79,7 @@ export function ChatSidebar({
       <Box sx={{ p: 2, pb: 1, display: "flex", alignItems: "center", gap: 1 }}>
         <AutoAwesomeIcon sx={{ color: "#10a37f", fontSize: 22 }} />
         <Typography variant="h6" fontWeight={700} sx={{ color: "#ececec" }}>
-          Flux AI
+          KOGAS AI
         </Typography>
       </Box>
 

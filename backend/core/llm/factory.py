@@ -43,7 +43,7 @@ def create_llm(
     provider: Optional[str] = None,
     model: Optional[str] = None,
     temperature: float | None = None,
-    max_tokens: int = 2048,
+    max_tokens: int | None = None,
     **kwargs,
 ) -> BaseLLM:
     """Create an LLM instance.
@@ -71,7 +71,7 @@ def create_llm(
     if model:
         config["model"] = model
     config["temperature"] = temperature if temperature is not None else settings.llm_temperature
-    config["max_tokens"] = max_tokens
+    config["max_tokens"] = max_tokens if max_tokens is not None else settings.llm_max_tokens
     config.update(kwargs)
 
     return _PROVIDERS[provider](**config)

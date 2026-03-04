@@ -114,6 +114,6 @@ export type ConfidenceLevel = "high" | "medium" | "low";
 
 export function getConfidenceLevel(score: number): ConfidenceLevel {
   if (score >= 0.8) return "high";
-  if (score >= 0.5) return "medium";
+  if (score >= 0.3) return "medium";
   return "low";
 }

@@ -133,7 +133,7 @@ export function ChatMessageList({
               variant="h4"
               sx={{ fontWeight: 700, mb: 1 }}
             >
-              Flux AI
+              KOGAS AI
             </Typography>
             <Typography variant="body1" color="text.secondary">
               무엇이든 물어보세요
@@ -225,7 +225,7 @@ export function ChatMessageList({
                 variant="subtitle2"
                 sx={{ fontWeight: 600, mb: 0.5 }}
               >
-                Flux AI
+                KOGAS AI
               </Typography>
               <Box
                 sx={{
@@ -276,7 +276,7 @@ export function ChatMessageList({
                 variant="subtitle2"
                 sx={{ fontWeight: 600, mb: 0.75 }}
               >
-                Flux AI
+                KOGAS AI
               </Typography>
               <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
                 {[0, 1, 2].map((i) => (

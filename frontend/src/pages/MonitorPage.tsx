@@ -344,7 +344,7 @@ function SystemHealthSection() {
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
           <CheckCircleIcon sx={{ color: "#4caf50", fontSize: 28 }} />
           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-            {health?.app_name ?? "Flux RAG"}
+            {health?.app_name ?? "KOGAS AI"}
           </Typography>
           <Chip label="정상" color="success" size="small" />
         </Box>
@@ -507,7 +507,7 @@ function ExcelExportSection() {
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement("a");
       a.href = url;
-      a.download = `flux-rag-stats-${period}.xlsx`;
+      a.download = `ai-qa-stats-${period}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
     } catch {

@@ -234,7 +234,7 @@ export default function DocumentsPage() {
       <Box sx={{ p: 2, display: "flex", alignItems: "center", gap: 1 }}>
         <DescriptionIcon color="primary" />
         <Typography variant="h6" fontWeight={700}>
-          Flux RAG
+          KOGAS AI
         </Typography>
       </Box>
 

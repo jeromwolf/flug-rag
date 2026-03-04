@@ -102,13 +102,27 @@ source_types:
       - "알리오"
       - "경영공시"
       - "재무제표"
+      - "재무상태표"
       - "감사보고서"
       - "유동자산"
       - "부채"
       - "자본금"
+      - "수의계약"
+      - "법인세"
+      - "퇴직급여"
+      - "손익계산서"
+      - "이익잉여금"
+      - "영업이익"
+      - "당기순이익"
+      - "매출액"
+      - "계약현황"
 
 # Multi-hop question detection keywords
 # Triggers multi-query retrieval for cross-document reasoning
+# CAUTION: Keep this list tight — multi-query adds 3x LLM calls + 3x retrieval.
+# Only include keywords that genuinely indicate cross-regulation/cross-document queries.
+# Removed: "규정에서", "규정들", "규정과", "절차를/는", "과정을/는", "단계를/는",
+#          "각각", "동시에", "겸하여", "병행", "프로세스를/는" (too broad, triggers on single-reg queries)
 multi_hop_keywords:
   - "연계"
   - "연결되"
@@ -118,19 +132,7 @@ multi_hop_keywords:
   - "연동"
   - "상호"
   - "함께 적용"
-  - "프로세스를"
-  - "프로세스는"
-  - "절차를"
-  - "절차는"
-  - "과정을"
-  - "과정은"
-  - "단계를"
-  - "단계는"
-  - "규정과"
   - "규정 간"
-  - "규정들"
-  - "규정에서"
-  - "각각"
   - "양쪽"
   - "모두 적용"
   - "차이점"
@@ -138,10 +140,6 @@ multi_hop_keywords:
   - "어떻게 다른"
   - "어떤 규정들"
   - "관련 규정"
-  - "동시에"
-  - "겸하여"
-  - "병행"
-  - "공통 목표"
   - "공통점"
   - "종합하면"
   - "연계하면"

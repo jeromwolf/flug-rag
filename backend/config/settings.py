@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     database_backend: str = "sqlite"  # "sqlite" or "postgres"
 
     # LLM - vLLM (primary)
-    vllm_base_url: str = "http://localhost:8000/v1"
-    vllm_model: str = "Qwen/Qwen2.5-7B-Instruct"
+    vllm_base_url: str = "http://localhost:8002/v1"
+    vllm_model: str = "Qwen/Qwen2.5-32B-Instruct-AWQ"
     vllm_api_key: str = "token-placeholder"
 
     # LLM - Ollama (dev/test)
@@ -49,9 +49,11 @@ class Settings(BaseSettings):
 
     # Dual Model Routing
     model_routing_enabled: bool = True  # Enable dual model routing
-    light_llm_model: str = "qwen2.5:7b"   # Light model for simple queries (개발환경: 7b, 운영환경: 32b)
-    main_llm_model: str = "qwen2.5:14b"   # Main model for complex queries (개발환경: 14b, 운영환경: 72b)
-    # 운영환경에서는 LIGHT_LLM_MODEL=qwen2.5:32b, MAIN_LLM_MODEL=qwen2.5:72b
+    light_llm_model: str = "Qwen/Qwen2.5-14B-Instruct-AWQ"   # Light model for simple queries
+    main_llm_model: str = "Qwen/Qwen2.5-32B-Instruct-AWQ"    # Main model for complex queries
+    # vLLM dual endpoint (each model runs on separate vLLM instance)
+    vllm_main_base_url: str = "http://localhost:8002/v1"    # vLLM instance for main model
+    vllm_light_base_url: str = "http://localhost:8003/v1"   # vLLM instance for light model
 
     # Embeddings
     embedding_model: str = "BAAI/bge-m3"
@@ -67,8 +69,15 @@ class Settings(BaseSettings):
     milvus_index_type: str = "IVF_FLAT"
     milvus_metric_type: str = "COSINE"
 
+    # Vector DB - Common
+    vectorstore_type: str = "chroma"  # "chroma", "milvus_lite", "milvus"
+
+    # Vector DB - Milvus (Lite & Standalone unified)
+    milvus_store_uri: str = "./data/milvus.db"  # Lite: file path, Standalone: "http://host:19530"
+    milvus_store_token: str = ""  # For Standalone/Cloud authentication
+
     # RAG - Chunking
-    chunk_strategy: str = "recursive"  # "recursive" or "semantic"
+    chunk_strategy: str = "adaptive"  # "adaptive", "recursive", "semantic", "table", "hierarchical", "iso"
     chunk_size: int = 800
     chunk_overlap: int = 80
     semantic_breakpoint_threshold: float = 0.5  # for semantic chunking: similarity drop threshold
@@ -103,7 +112,7 @@ class Settings(BaseSettings):
     # RAG - Advanced techniques
     multi_query_enabled: bool = False  # Multi-query retrieval (multiple perspectives)
     multi_query_count: int = 3  # Number of alternative queries to generate
-    self_rag_enabled: bool = False  # Self-RAG (self-reflective RAG with hallucination check)
+    self_rag_enabled: bool = True  # Self-RAG (self-reflective RAG with hallucination check)
     self_rag_max_retries: int = 1  # Max retries if answer is not grounded
     agentic_rag_enabled: bool = False  # Agentic RAG (dynamic strategy routing)
 

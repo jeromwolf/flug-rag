@@ -1,109 +1,73 @@
-"""Milvus vector store implementation."""
+"""Milvus vector store implementation using MilvusClient API.
+
+Supports both Milvus Lite (embedded, local file) and Milvus Standalone (server).
+- Lite: MilvusClient(uri="./data/milvus.db")
+- Standalone: MilvusClient(uri="http://localhost:19530", token="...")
+"""
 
 import asyncio
 import json
+import logging
 from typing import Any
 
-from pymilvus import (
-    Collection,
-    CollectionSchema,
-    DataType,
-    FieldSchema,
-    MilvusClient,
-    connections,
-    utility,
-)
+from pymilvus import MilvusClient, DataType, CollectionSchema, FieldSchema
 
 from .base import BaseVectorStore, SearchResult
 
+logger = logging.getLogger(__name__)
+
 
 class MilvusStore(BaseVectorStore):
-    """Milvus distributed vector store for production."""
+    """Milvus vector store supporting Lite (embedded) and Standalone modes."""
 
     def __init__(
         self,
-        host: str = "localhost",
-        port: int = 19530,
+        uri: str = "./data/milvus.db",
+        token: str = "",
         collection_name: str = "knowledge_base",
         dimension: int = 1024,
-        index_type: str = "IVF_FLAT",
         metric_type: str = "COSINE",
-        nlist: int = 128,
     ):
-        self.host = host
-        self.port = port
+        self.uri = uri
         self.collection_name = collection_name
         self.dimension = dimension
-        self.index_type = index_type
         self.metric_type = metric_type
-        self.nlist = nlist
 
-        # Connect to Milvus
-        connections.connect(
-            alias="default",
-            host=host,
-            port=port,
-        )
+        # Connect using MilvusClient (works for both Lite and Standalone)
+        self.client = MilvusClient(uri=uri, token=token) if token else MilvusClient(uri=uri)
 
         # Create collection if not exists
         self._ensure_collection()
 
     def _ensure_collection(self) -> None:
         """Create collection with schema if it doesn't exist."""
-        if utility.has_collection(self.collection_name):
-            self._collection = Collection(self.collection_name)
-            self._collection.load()
-        else:
-            # Define schema
-            fields = [
-                FieldSchema(
-                    name="id",
-                    dtype=DataType.VARCHAR,
-                    is_primary=True,
-                    auto_id=False,
-                    max_length=256,
-                ),
-                FieldSchema(
-                    name="content",
-                    dtype=DataType.VARCHAR,
-                    max_length=65535,
-                ),
-                FieldSchema(
-                    name="embedding",
-                    dtype=DataType.FLOAT_VECTOR,
-                    dim=self.dimension,
-                ),
-                FieldSchema(
-                    name="metadata_json",
-                    dtype=DataType.VARCHAR,
-                    max_length=65535,
-                ),
-            ]
+        if self.client.has_collection(self.collection_name):
+            return
 
-            schema = CollectionSchema(
-                fields=fields,
-                description=f"flux-rag {self.collection_name}",
-            )
+        # Define schema with source_type as first-class filterable field
+        schema = CollectionSchema(fields=[
+            FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=256),
+            FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
+            FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=self.dimension),
+            FieldSchema(name="source_type", dtype=DataType.VARCHAR, max_length=64),
+            FieldSchema(name="metadata_json", dtype=DataType.VARCHAR, max_length=65535),
+        ])
 
-            # Create collection
-            self._collection = Collection(
-                name=self.collection_name,
-                schema=schema,
-            )
+        # Create index params
+        index_params = self.client.prepare_index_params()
+        index_params.add_index(
+            field_name="embedding",
+            index_type="AUTOINDEX",
+            metric_type=self.metric_type,
+        )
 
-            # Create index on embedding field
-            index_params = {
-                "index_type": self.index_type,
-                "metric_type": self.metric_type,
-                "params": {"nlist": self.nlist},
-            }
-            self._collection.create_index(
-                field_name="embedding",
-                index_params=index_params,
-            )
-
-            # Load collection to memory
-            self._collection.load()
+        # Create collection
+        self.client.create_collection(
+            collection_name=self.collection_name,
+            schema=schema,
+            index_params=index_params,
+        )
+        logger.info("Created Milvus collection: %s (dim=%d)", self.collection_name, self.dimension)
 
     async def add(
         self,
@@ -116,25 +80,24 @@ class MilvusStore(BaseVectorStore):
         if not metadatas:
             metadatas = [{} for _ in ids]
 
-        # Serialize metadata to JSON strings
-        metadata_jsons = [json.dumps(meta) for meta in metadatas]
+        # Build data list
+        data = []
+        for i in range(len(ids)):
+            meta = metadatas[i] if metadatas else {}
+            source_type = meta.pop("source_type", "") if meta else ""
+            data.append({
+                "id": ids[i],
+                "content": texts[i],
+                "embedding": embeddings[i],
+                "source_type": str(source_type) if source_type else "",
+                "metadata_json": json.dumps(meta, ensure_ascii=False),
+            })
 
-        # Prepare data for insertion
-        entities = [
-            ids,
-            texts,
-            embeddings,
-            metadata_jsons,
-        ]
-
-        # Insert data (sync operation, run in thread)
         await asyncio.to_thread(
-            self._collection.insert,
-            entities,
+            self.client.insert,
+            collection_name=self.collection_name,
+            data=data,
         )
-
-        # Flush to persist data
-        await asyncio.to_thread(self._collection.flush)
 
     async def search(
         self,
@@ -142,36 +105,34 @@ class MilvusStore(BaseVectorStore):
         top_k: int = 10,
         filters: dict | None = None,
     ) -> list[SearchResult]:
-        """Search by cosine similarity."""
-        search_params = {
-            "metric_type": self.metric_type,
-            "params": {"nprobe": 10},
-        }
+        """Search by vector similarity."""
+        filter_expr = self._build_filter_expr(filters) if filters else ""
 
-        # Build filter expression
-        expr = self._build_filter_expr(filters) if filters else None
-
-        # Perform search (sync operation, run in thread)
         results = await asyncio.to_thread(
-            self._collection.search,
+            self.client.search,
+            collection_name=self.collection_name,
             data=[query_embedding],
-            anns_field="embedding",
-            param=search_params,
             limit=top_k,
-            expr=expr,
-            output_fields=["id", "content", "metadata_json"],
+            output_fields=["id", "content", "source_type", "metadata_json"],
+            filter=filter_expr,
         )
 
         search_results = []
         if results and len(results) > 0:
             for hit in results[0]:
-                # Milvus returns similarity score directly for COSINE
+                entity = hit.get("entity", {})
+                metadata = json.loads(entity.get("metadata_json", "{}"))
+                # Restore source_type into metadata for compatibility
+                st = entity.get("source_type", "")
+                if st:
+                    metadata["source_type"] = st
+
                 search_results.append(
                     SearchResult(
-                        id=hit.entity.get("id"),
-                        content=hit.entity.get("content"),
-                        score=hit.score,
-                        metadata=json.loads(hit.entity.get("metadata_json", "{}")),
+                        id=entity.get("id", hit.get("id", "")),
+                        content=entity.get("content", ""),
+                        score=hit.get("distance", 0.0),
+                        metadata=metadata,
                     )
                 )
 
@@ -179,69 +140,120 @@ class MilvusStore(BaseVectorStore):
 
     async def delete(self, ids: list[str]) -> None:
         """Delete documents by IDs."""
-        expr = f"id in {ids}"
-        await asyncio.to_thread(self._collection.delete, expr)
-        await asyncio.to_thread(self._collection.flush)
+        await asyncio.to_thread(
+            self.client.delete,
+            collection_name=self.collection_name,
+            ids=ids,
+        )
 
     async def get(self, ids: list[str]) -> list[dict]:
         """Get documents by IDs."""
-        expr = f"id in {ids}"
         results = await asyncio.to_thread(
-            self._collection.query,
-            expr=expr,
-            output_fields=["id", "content", "metadata_json"],
+            self.client.get,
+            collection_name=self.collection_name,
+            ids=ids,
+            output_fields=["id", "content", "source_type", "metadata_json"],
         )
 
         items = []
         for result in results:
+            metadata = json.loads(result.get("metadata_json", "{}"))
+            st = result.get("source_type", "")
+            if st:
+                metadata["source_type"] = st
             items.append({
                 "id": result.get("id"),
                 "content": result.get("content"),
-                "metadata": json.loads(result.get("metadata_json", "{}")),
+                "metadata": metadata,
             })
         return items
 
     async def count(self) -> int:
         """Get total document count."""
-        return await asyncio.to_thread(self._collection.num_entities)
+        result = await asyncio.to_thread(
+            self.client.query,
+            collection_name=self.collection_name,
+            filter="",
+            output_fields=["count(*)"],
+        )
+        if result and len(result) > 0:
+            return result[0].get("count(*)", 0)
+        return 0
 
     async def clear(self) -> None:
         """Clear all documents in collection."""
-        # Drop and recreate collection
-        await asyncio.to_thread(utility.drop_collection, self.collection_name)
+        await asyncio.to_thread(self.client.drop_collection, collection_name=self.collection_name)
         await asyncio.to_thread(self._ensure_collection)
 
-    def _build_filter_expr(self, filters: dict) -> str | None:
+    async def get_all_documents(self) -> list[dict]:
+        """Get all documents for BM25 index building."""
+        items = []
+        # Use iterator for large collections
+        batch_size = 1000
+        offset = 0
+
+        while True:
+            batch = await asyncio.to_thread(
+                self.client.query,
+                collection_name=self.collection_name,
+                filter="",
+                output_fields=["id", "content", "source_type", "metadata_json"],
+                limit=batch_size,
+                offset=offset,
+            )
+
+            if not batch:
+                break
+
+            for doc in batch:
+                metadata = json.loads(doc.get("metadata_json", "{}"))
+                st = doc.get("source_type", "")
+                if st:
+                    metadata["source_type"] = st
+                items.append({
+                    "id": doc.get("id"),
+                    "content": doc.get("content"),
+                    "metadata": metadata,
+                })
+
+            if len(batch) < batch_size:
+                break
+            offset += batch_size
+
+        return items
+
+    def _build_filter_expr(self, filters: dict) -> str:
         """Build Milvus filter expression from dict.
 
-        Note: Filters on metadata fields require the metadata_json field
-        to be parsed. For production, consider adding dedicated fields
-        for commonly filtered metadata keys.
+        source_type is a first-class field and can be filtered directly.
+        Other metadata keys stored in metadata_json cannot be filtered.
         """
+        if not filters:
+            return ""
+
         conditions = []
         for key, value in filters.items():
-            if value is not None:
+            if value is None:
+                continue
+            # source_type is a first-class field
+            if key == "source_type":
                 if isinstance(value, list):
-                    # For list values, use 'in' operator
-                    value_str = str(value).replace("'", '"')
-                    conditions.append(f'{key} in {value_str}')
-                elif isinstance(value, str):
-                    conditions.append(f'{key} == "{value}"')
+                    escaped = [v.replace('"', '\\"') for v in value]
+                    val_str = ", ".join(f'"{v}"' for v in escaped)
+                    conditions.append(f"source_type in [{val_str}]")
                 else:
-                    conditions.append(f'{key} == {value}')
+                    escaped = str(value).replace('"', '\\"')
+                    conditions.append(f'source_type == "{escaped}"')
 
-        if not conditions:
-            return None
-        if len(conditions) == 1:
-            return conditions[0]
-        return " and ".join(conditions)
+        return " and ".join(conditions) if conditions else ""
 
     def get_collection_info(self) -> dict:
         """Get collection metadata and stats."""
+        info = self.client.get_collection_stats(self.collection_name)
         return {
             "name": self.collection_name,
-            "count": self._collection.num_entities,
+            "count": info.get("row_count", 0),
             "dimension": self.dimension,
-            "index_type": self.index_type,
             "metric_type": self.metric_type,
+            "uri": self.uri,
         }

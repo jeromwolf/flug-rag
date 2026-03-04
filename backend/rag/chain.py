@@ -76,8 +76,8 @@ class RAGChain:
         """Auto-detect source_type filter based on question keywords.
 
         Keywords are loaded from prompts/source_filters.yaml for easy maintenance.
-        Returns enhanced filters dict if a specific source is detected,
-        otherwise returns the original filters unchanged.
+        Uses score-based matching: the source_type with the most keyword hits wins.
+        This prevents conflicts where a query matches keywords from multiple sources.
         """
         if filters and filters.get("source_type"):
             return filters  # User already specified, don't override
@@ -86,13 +86,19 @@ class RAGChain:
         config = _load_source_filters()
         source_types = config.get("source_types", {})
 
+        best_source = None
+        best_score = 0
         for source_name, source_config in source_types.items():
             keywords = source_config.get("keywords", [])
-            for kw in keywords:
-                if kw.lower() in q:
-                    new_filters = dict(filters) if filters else {}
-                    new_filters["source_type"] = source_name
-                    return new_filters
+            score = sum(1 for kw in keywords if kw.lower() in q)
+            if score > best_score:
+                best_score = score
+                best_source = source_name
+
+        if best_source:
+            new_filters = dict(filters) if filters else {}
+            new_filters["source_type"] = best_source
+            return new_filters
 
         return filters
 
@@ -238,6 +244,7 @@ class RAGChain:
 
         # Dual model routing (if enabled and no explicit model override)
         selected_model_tier = None
+        routing_kwargs: dict = {}
         if settings.model_routing_enabled and not model:
             try:
                 from agent.router import QueryRouter, ModelTier
@@ -248,8 +255,12 @@ class RAGChain:
                 # Select model based on tier
                 if routing.model_tier == ModelTier.LIGHT:
                     model = settings.light_llm_model
+                    if settings.default_llm_provider == "vllm":
+                        routing_kwargs["base_url"] = settings.vllm_light_base_url
                 else:
                     model = settings.main_llm_model
+                    if settings.default_llm_provider == "vllm":
+                        routing_kwargs["base_url"] = settings.vllm_main_base_url
 
                 logger.info(
                     "Dual model routing: %s -> %s (%s)",
@@ -262,7 +273,7 @@ class RAGChain:
         llm = self.llm
         temp_llm = None
         if provider or model:
-            temp_llm = create_llm(provider=provider, model=model, temperature=temperature or settings.llm_temperature)
+            temp_llm = create_llm(provider=provider, model=model, temperature=temperature or settings.llm_temperature, **routing_kwargs)
             llm = temp_llm
 
         try:
@@ -626,6 +637,32 @@ class RAGChain:
         start_time = time.time()
         message_id = str(uuid.uuid4())
 
+        # Check stream cache for identical queries (TTL: 120s)
+        stream_cache_key = self._make_cache_key(question, mode, filters, provider, model)
+        stream_cache = None
+        try:
+            from core.cache import get_cache
+            stream_cache = await get_cache()
+            cached = await stream_cache.get(stream_cache_key)
+            if cached is not None:
+                logger.debug("Stream cache hit for query: %s", question[:50])
+                yield {"event": "start", "data": {"message_id": message_id}}
+                # Replay cached sources
+                for src in cached.get("sources", []):
+                    yield {"event": "source", "data": src}
+                # Replay cached content as single chunk
+                if cached.get("content"):
+                    yield {"event": "chunk", "data": {"content": cached["content"]}}
+                # Replay end event with updated latency
+                latency_ms = int((time.time() - start_time) * 1000)
+                end_data = cached.get("end_data", {})
+                end_data["latency_ms"] = latency_ms
+                end_data["cached"] = True
+                yield {"event": "end", "data": end_data}
+                return
+        except Exception:
+            stream_cache = None
+
         # Use override LLM if specified
         llm = self.llm
         temp_llm = None
@@ -634,6 +671,7 @@ class RAGChain:
             llm = temp_llm
 
         selected_model_tier = None
+        routing_kwargs: dict = {}
         try:
             yield {"event": "start", "data": {"message_id": message_id}}
 
@@ -648,8 +686,12 @@ class RAGChain:
                     # Select model based on tier
                     if routing.model_tier == ModelTier.LIGHT:
                         model = settings.light_llm_model
+                        if settings.default_llm_provider == "vllm":
+                            routing_kwargs["base_url"] = settings.vllm_light_base_url
                     else:
                         model = settings.main_llm_model
+                        if settings.default_llm_provider == "vllm":
+                            routing_kwargs["base_url"] = settings.vllm_main_base_url
 
                     yield {"event": "routing", "data": {
                         "category": routing.category.value,
@@ -666,31 +708,25 @@ class RAGChain:
 
             # Apply model override after routing (rebuild temp_llm if model was resolved above)
             if model and not temp_llm:
-                temp_llm = create_llm(provider=provider, model=model, temperature=temperature or settings.llm_temperature)
+                temp_llm = create_llm(provider=provider, model=model, temperature=temperature or settings.llm_temperature, **routing_kwargs)
                 llm = temp_llm
 
-            # Guardrails: input check
-            try:
-                from .guardrails import get_guardrails_manager
-                guard = await get_guardrails_manager()
-                guard_result = await guard.check_input(question, user_id=user_id)
-                if not guard_result.passed and guard_result.action == "block":
-                    yield {
-                        "event": "chunk",
-                        "data": {"content": guard_result.message or "입력이 필터링되었습니다."},
-                    }
-                    yield {
-                        "event": "end",
-                        "data": {
-                            "blocked_by": "guardrails",
-                            "triggered_rules": guard_result.triggered_rules,
-                        },
-                    }
-                    return
-            except Exception as e:
-                logger.debug("Guardrails input check skipped: %s", e)
+            # --- Pre-retrieval: guardrails + query preprocessing (parallel) ---
+            # Guardrails runs concurrently with query correction + terminology
+            import asyncio as _asyncio
 
-            # Query correction (SFR-006)
+            async def _check_guardrails():
+                try:
+                    from .guardrails import get_guardrails_manager
+                    guard = await get_guardrails_manager()
+                    return await guard.check_input(question, user_id=user_id)
+                except Exception as e:
+                    logger.debug("Guardrails input check skipped: %s", e)
+                    return None
+
+            guard_task = _asyncio.create_task(_check_guardrails())
+
+            # Query correction (sync, ~0.1ms)
             correction_info = None
             try:
                 from .query_corrector import get_query_corrector
@@ -707,7 +743,7 @@ class RAGChain:
             except Exception as e:
                 logger.debug("Stream: Query correction skipped: %s", e)
 
-            # Terminology expansion for search
+            # Terminology expansion (sync, ~0.1ms, depends on corrected query)
             terminology_info = None
             search_query = question
             try:
@@ -723,6 +759,22 @@ class RAGChain:
                     logger.info("Stream: Query expanded with terminology: %d terms matched", len(expansion.matched_terms))
             except Exception as e:
                 logger.debug("Stream: Terminology expansion skipped: %s", e)
+
+            # Await guardrails result
+            guard_result = await guard_task
+            if guard_result and not guard_result.passed and guard_result.action == "block":
+                yield {
+                    "event": "chunk",
+                    "data": {"content": guard_result.message or "입력이 필터링되었습니다."},
+                }
+                yield {
+                    "event": "end",
+                    "data": {
+                        "blocked_by": "guardrails",
+                        "triggered_rules": guard_result.triggered_rules,
+                    },
+                }
+                return
 
             # Agentic RAG routing
             agentic_meta = None
@@ -898,6 +950,41 @@ class RAGChain:
             except Exception as e:
                 logger.debug("Streaming guardrails output check skipped: %s", e)
 
+            # Self-RAG: post-stream grounding check
+            self_rag_meta = None
+            if settings.self_rag_enabled and full_response and not guardrail_triggered:
+                try:
+                    from .self_rag import SelfRAGEvaluator
+                    context_str = "\n\n".join(c["content"] for c in context_chunks)
+                    self_rag = SelfRAGEvaluator(
+                        llm=llm,
+                        max_retries=0,  # No retry in streaming — grade only
+                    )
+                    grade = await self_rag.grade_answer(question, full_response, context_str)
+                    self_rag_meta = {
+                        "self_rag_enabled": True,
+                        "grounded": grade.grounded,
+                        "hallucination": grade.hallucination,
+                        "relevance": grade.relevance,
+                        "confidence": grade.confidence,
+                        "passed": grade.passed,
+                    }
+                    if not grade.passed:
+                        yield {
+                            "event": "self_rag_warning",
+                            "data": {
+                                "message": "근거 검증에서 주의가 필요한 답변입니다. 원문을 직접 확인해주세요.",
+                                "grounded": grade.grounded,
+                                "hallucination": grade.hallucination,
+                            },
+                        }
+                    logger.info(
+                        "Stream Self-RAG: grounded=%s, hallucination=%s, passed=%s",
+                        grade.grounded, grade.hallucination, grade.passed,
+                    )
+                except Exception as e:
+                    logger.warning("Stream Self-RAG grading failed: %s", e)
+
             latency_ms = int((time.time() - start_time) * 1000)
             end_data = {
                 "confidence_score": round(confidence, 3),
@@ -915,6 +1002,30 @@ class RAGChain:
                 end_data["agentic_routing"] = agentic_meta
             if selected_model_tier is not None:
                 end_data["model_tier"] = selected_model_tier.value
+            if self_rag_meta:
+                end_data["self_rag"] = self_rag_meta
+
+            # Store in cache for future identical queries (TTL: 120s)
+            if stream_cache is not None and not guardrail_triggered:
+                try:
+                    source_data = [
+                        {
+                            "chunk_id": r.id,
+                            "filename": r.metadata.get("filename", ""),
+                            "page": r.metadata.get("page_number"),
+                            "score": round(r.score, 3),
+                            "content": r.content[:500] if r.content else "",
+                        }
+                        for r in results
+                    ]
+                    await stream_cache.set(stream_cache_key, {
+                        "content": full_response,
+                        "sources": source_data,
+                        "end_data": end_data,
+                    }, ttl=120)
+                except Exception:
+                    pass
+
             yield {"event": "end", "data": end_data}
         finally:
             if temp_llm is not None:

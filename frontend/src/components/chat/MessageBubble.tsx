@@ -244,7 +244,7 @@ export const MessageBubble = memo(function MessageBubble({
             variant="subtitle2"
             sx={{ fontWeight: 600, mb: 0.5, lineHeight: 1.4 }}
           >
-            {isUser ? "사용자" : "Flux AI"}
+            {isUser ? "사용자" : "KOGAS AI"}
           </Typography>
 
           {/* Message content */}
@@ -343,8 +343,8 @@ export const MessageBubble = memo(function MessageBubble({
                 )}
               </Box>
 
-              {/* Sources */}
-              {msg.sources && msg.sources.length > 0 && (
+              {/* Sources — hide when confidence is very low */}
+              {msg.sources && msg.sources.length > 0 && (msg.confidenceScore == null || msg.confidenceScore >= 0.3) && (
                 <SourcesPanel sources={msg.sources} />
               )}
 

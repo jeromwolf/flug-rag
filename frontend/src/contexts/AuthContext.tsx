@@ -73,9 +73,9 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 // Token helpers
 // ---------------------------------------------------------------------------
 
-const ACCESS_TOKEN_KEY = "flux_access_token";
-const REFRESH_TOKEN_KEY = "flux_refresh_token";
-const USER_KEY = "flux_user";
+const ACCESS_TOKEN_KEY = "app_access_token";
+const REFRESH_TOKEN_KEY = "app_refresh_token";
+const USER_KEY = "app_user";
 
 function getStoredTokens() {
   return {
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Check whether auth is enabled by hitting the health endpoint
   // The health endpoint is at the server root, not under /api
   useEffect(() => {
-    const baseUrl = (api.defaults.baseURL || "http://localhost:8000/api").replace(/\/api\/?$/, "");
+    const baseUrl = (api.defaults.baseURL || "/api").replace(/\/api\/?$/, "");
     fetch(`${baseUrl}/health`)
       .then((r) => r.json())
       .catch(() => ({ auth_enabled: true }))

@@ -1162,7 +1162,7 @@ function AgentBuilderCanvas() {
       })),
     };
 
-    localStorage.setItem("flux-rag-workflow", JSON.stringify(workflow));
+    localStorage.setItem("app-workflow", JSON.stringify(workflow));
     showSnackbar("워크플로우가 저장되었습니다.", "success");
   }, [nodes, edges, workflowName, workflowDescription, showSnackbar]);
 

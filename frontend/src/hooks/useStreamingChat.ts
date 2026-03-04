@@ -166,6 +166,12 @@ export function useStreamingChat({
             confidence = data.confidence_score ?? data.confidence ?? 0;
             latencyMs = data.latency_ms ?? 0;
             break;
+          case "self_rag_warning":
+            showSnackbar(data.message ?? "근거 검증 주의: 원문을 확인해주세요.", "info");
+            break;
+          case "guardrail_warning":
+            showSnackbar(data.message ?? "안전 필터가 적용되었습니다.", "info");
+            break;
           case "error":
             showSnackbar(data.message ?? "응답 생성 중 오류가 발생했습니다.", "error");
             break;

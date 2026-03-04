@@ -25,6 +25,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Default password map  (username -> plain-text password for demo)
 # ---------------------------------------------------------------------------
 _DEFAULT_PASSWORDS: dict[str, str] = {
+    "evaluator": "Eval@2026!",
     "admin": "admin123",
     "manager": "manager123",
     "user": "user123",
@@ -97,7 +98,7 @@ class UserStore(AsyncSQLiteManager):
                         hashed,
                         user.created_at.isoformat(),
                         None,
-                        1,  # must_change_password = True for default users
+                        0 if user.username == "evaluator" else 1,  # must_change_password
                     ),
                 )
             await db.commit()
