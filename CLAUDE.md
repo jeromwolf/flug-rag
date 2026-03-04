@@ -440,15 +440,33 @@ ChromaDB → Milvus Lite(임베디드) 전환. 5개 파일 수정. 39,739 청크
 - **source_type 스코어 기반 매칭**: `rag/chain.py` — 첫 번째 매칭 → 최다 키워드 히트 소스 선택 (충돌 방지)
 - **스트림 캐시**: `rag/chain.py` — `stream_query()`에 동일 쿼리 캐시 (TTL 120s) 추가
 - **병렬 전처리**: `rag/chain.py` — `stream_query()` 가드레일 체크를 비동기 태스크로 분리, 쿼리 전처리와 병렬 실행
+- **RunPod 정확도 튜닝**: 28.3% → **80.0%** (96/120)
+  - Safety fallback을 별도 SSE 이벤트로 분리 (기존: 답변에 삽입 → 정확도 저하)
+  - `confidence_low` 0.5 → 0.3 (과도한 safety fallback 17건 해소)
+  - Chinese text validation 임계값 30% → 5% (Qwen 중국어 누출 차단)
+  - RunPod .env 최적화: CONTEXT_MAX_CHUNKS=5, LLM_MAX_TOKENS=512, RERANK_TOP_N=5, FEW_SHOT_MAX_EXAMPLES=2
+  - 카테고리별 정확도: factual 85.4%, inference 88.9%, multi_hop 60%, negative 72.7%
+
+#### RunPod 벤치마크 (Qwen2.5-32B-Instruct-AWQ, A40 GPU)
+
+| 데이터셋 | 문항 수 | 성공률 | 평균 응답시간 |
+|---------|--------|--------|-------------|
+| 내부규정 | 60 | 76.7% (46/60) | ~8s |
+| ALIO 공시 | 20 | 80.0% (16/20) | ~12s |
+| 인쇄홍보물 | 20 | 85.0% (17/20) | ~10s |
+| 국외출장 | 20 | 85.0% (17/20) | ~15s |
+| **전체** | **120** | **80.0% (96/120)** | **12.9s** |
+
+잔여 실패 24건: wrong_no_regulation 7건(프롬프트 개선 필요), miss 14건(multi_hop 매치 어려움), false_positive 1건, 기타 2건
 
 #### 진행 중
 - **LLM 페일오버 로직**: 메인 모델 장애 시 보조 모델 자동 전환
 
-#### 잔여 작업
+#### 잔여 작업 (3/11 데모 전)
+- 보고서 초안 생성 chat flow 연결 (시나리오 #03 데모)
 - MCP Agent 데모 시나리오 검증
 - 가드레일 LLM 기반 필터 추가
-- 골든 데이터셋 정확도 개선
-- LLM 페일오버 로직
+- 골든 데이터셋 추가 정확도 개선 (multi_hop 60% → 목표 80%)
 
 ### 잔여 작업 (장기)
 - **출장보고서 OCR 재인제스트**: 깨진 PDF 텍스트 수정 (Upstage Document Parse 적용)
