@@ -106,7 +106,14 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
     rag_chain = await _get_rag_chain()
     query_router = await _get_router()
 
-    if request.mode == "auto":
+    # Tool selection (keyword-based, before LLM routing)
+    from agent.tool_selector import select_tool
+
+    tool_selection = select_tool(request.message) if request.mode != "direct" else None
+
+    if tool_selection:
+        mode = "tool"
+    elif request.mode == "auto":
         routing = await query_router.route(request.message, history)
         mode = (
             "rag"
@@ -119,7 +126,34 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
     # Build merged filters (access control + request filters)
     merged_filters = await _build_merged_filters(current_user, request.filters)
 
-    # Generate response
+    # Tool execution path
+    if mode == "tool":
+        from agent.mcp.registry import get_registry
+
+        registry = get_registry()
+        result = await registry.execute(tool_selection.tool_name, **tool_selection.arguments)
+
+        if result.success:
+            content_key = next(
+                (k for k in ("draft", "material") if k in (result.data or {})),
+                None,
+            )
+            content = result.data.get(content_key, str(result.data)) if content_key else str(result.data)
+        else:
+            content = result.error or "도구 실행 중 오류가 발생했습니다."
+
+        msg_id = await _get_memory().add_message(session_id, "assistant", content)
+        return ChatResponse(
+            message_id=msg_id,
+            content=content,
+            sources=[],
+            confidence=0.9 if result.success else 0.0,
+            confidence_level="high" if result.success else "low",
+            session_id=session_id,
+            metadata={"tool_used": tool_selection.tool_name, **(result.metadata or {})},
+        )
+
+    # Generate response (RAG / direct)
     response = await rag_chain.query(
         question=request.message,
         mode=mode,
@@ -163,7 +197,14 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
     rag_chain = await _get_rag_chain()
     query_router = await _get_router()
 
-    if request.mode == "auto":
+    # Tool selection (keyword-based, before LLM routing)
+    from agent.tool_selector import select_tool
+
+    tool_selection = select_tool(request.message) if request.mode != "direct" else None
+
+    if tool_selection:
+        mode = "tool"
+    elif request.mode == "auto":
         routing = await query_router.route(request.message, history)
         mode = (
             "rag"
@@ -186,23 +227,106 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
 
         full_content = ""
         try:
-            async for event in rag_chain.stream_query(
-                question=request.message,
-                mode=mode,
-                filters=merged_filters,
-                provider=request.provider,
-                model=request.model,
-                temperature=request.temperature,
-            ):
-                if event["event"] == "start":
-                    # Skip the rag_chain's own start event; we already sent one
-                    continue
-                if event["event"] == "chunk":
-                    full_content += event["data"].get("content", "")
+            if mode == "tool":
+                # ── MCP tool execution with chunked streaming ──
+                from agent.mcp.registry import get_registry
+
+                registry = get_registry()
+                tool_label = {
+                    "report_draft": "보고서 초안",
+                    "training_material": "교육자료",
+                }.get(tool_selection.tool_name, tool_selection.tool_name)
+
                 yield {
-                    "event": event["event"],
-                    "data": json.dumps(event["data"], ensure_ascii=False),
+                    "event": "tool_start",
+                    "data": json.dumps(
+                        {
+                            "tool_name": tool_selection.tool_name,
+                            "message": f"{tool_label}을(를) 생성 중입니다...",
+                        },
+                        ensure_ascii=False,
+                    ),
                 }
+
+                result = await registry.execute(
+                    tool_selection.tool_name, **tool_selection.arguments
+                )
+
+                if result.success:
+                    content_key = next(
+                        (k for k in ("draft", "material") if k in (result.data or {})),
+                        None,
+                    )
+                    full_content = (
+                        result.data.get(content_key, str(result.data))
+                        if content_key
+                        else str(result.data)
+                    )
+
+                    # Stream in chunks for smooth UX
+                    for i in range(0, len(full_content), 80):
+                        yield {
+                            "event": "chunk",
+                            "data": json.dumps(
+                                {"content": full_content[i : i + 80]},
+                                ensure_ascii=False,
+                            ),
+                        }
+
+                    # Emit sources from tool metadata
+                    for src in (result.metadata or {}).get("sources", []):
+                        yield {
+                            "event": "source",
+                            "data": json.dumps(
+                                {"filename": src, "content": "", "score": 0},
+                                ensure_ascii=False,
+                            ),
+                        }
+
+                    yield {
+                        "event": "tool_end",
+                        "data": json.dumps(
+                            {"tool_name": tool_selection.tool_name, "success": True},
+                            ensure_ascii=False,
+                        ),
+                    }
+                    yield {
+                        "event": "end",
+                        "data": json.dumps(
+                            {"confidence_score": 0.9, "latency_ms": 0},
+                            ensure_ascii=False,
+                        ),
+                    }
+                else:
+                    yield {
+                        "event": "error",
+                        "data": json.dumps(
+                            {
+                                "message": result.error
+                                or "도구 실행 중 오류가 발생했습니다.",
+                            },
+                            ensure_ascii=False,
+                        ),
+                    }
+            else:
+                # ── Existing RAG / direct streaming flow ──
+                async for event in rag_chain.stream_query(
+                    question=request.message,
+                    mode=mode,
+                    filters=merged_filters,
+                    provider=request.provider,
+                    model=request.model,
+                    temperature=request.temperature,
+                ):
+                    if event["event"] == "start":
+                        # Skip the rag_chain's own start event; we already sent one
+                        continue
+                    if event["event"] == "chunk":
+                        full_content += event["data"].get("content", "")
+                    yield {
+                        "event": event["event"],
+                        "data": json.dumps(event["data"], ensure_ascii=False),
+                    }
         except Exception as e:
             logger.error("Streaming error: %s", e)
             yield {

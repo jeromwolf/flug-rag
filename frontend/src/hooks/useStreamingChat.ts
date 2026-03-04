@@ -25,6 +25,7 @@ export function useStreamingChat({
   const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [toolInProgress, setToolInProgress] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -166,6 +167,12 @@ export function useStreamingChat({
             confidence = data.confidence_score ?? data.confidence ?? 0;
             latencyMs = data.latency_ms ?? 0;
             break;
+          case "tool_start":
+            setToolInProgress(data.message ?? data.tool_name ?? "도구 실행 중...");
+            break;
+          case "tool_end":
+            setToolInProgress(null);
+            break;
           case "self_rag_warning":
             showSnackbar(data.message ?? "근거 검증 주의: 원문을 확인해주세요.", "info");
             break;
@@ -277,6 +284,7 @@ export function useStreamingChat({
     } finally {
       setIsStreaming(false);
       setStreamingContent("");
+      setToolInProgress(null);
       abortRef.current = null;
     }
   }, [
@@ -331,5 +339,6 @@ export function useStreamingChat({
     handleNewChat,
     handleKeyDown,
     handleEditUserMessage,
+    toolInProgress,
   };
 }

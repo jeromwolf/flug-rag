@@ -88,6 +88,7 @@ export default function ChatPage() {
     handleNewChat,
     handleKeyDown,
     handleEditUserMessage,
+    toolInProgress,
   } = useStreamingChat({
     currentSessionId,
     setCurrentSessionId,
@@ -197,6 +198,7 @@ export default function ChatPage() {
             messages={messages}
             streamingContent={streamingContent}
             isStreaming={isStreaming}
+            toolInProgress={toolInProgress}
             announcements={announcementsData}
             onSampleClick={setInputValue}
             onFeedback={handleFeedback}

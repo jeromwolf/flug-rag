@@ -28,6 +28,7 @@ interface ChatMessageListProps {
   messages: Message[];
   streamingContent: string;
   isStreaming: boolean;
+  toolInProgress?: string | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   announcements: any;
   onSampleClick: (question: string) => void;
@@ -44,6 +45,7 @@ export function ChatMessageList({
   messages,
   streamingContent,
   isStreaming,
+  toolInProgress,
   announcements,
   onSampleClick,
   onFeedback,
@@ -242,7 +244,7 @@ export function ChatMessageList({
         </Box>
       )}
 
-      {/* Bouncing dots typing indicator */}
+      {/* Bouncing dots typing indicator (with optional tool-in-progress label) */}
       {isStreaming && !streamingContent && (
         <Box
           sx={{
@@ -278,6 +280,14 @@ export function ChatMessageList({
               >
                 KOGAS AI
               </Typography>
+              {toolInProgress && (
+                <Typography
+                  variant="body2"
+                  sx={{ color: "primary.main", fontWeight: 500, mb: 0.5 }}
+                >
+                  {toolInProgress}
+                </Typography>
+              )}
               <Box sx={{ display: "flex", gap: 0.75, alignItems: "center" }}>
                 {[0, 1, 2].map((i) => (
                   <Box
