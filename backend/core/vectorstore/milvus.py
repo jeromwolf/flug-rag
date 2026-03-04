@@ -186,20 +186,22 @@ class MilvusStore(BaseVectorStore):
         await asyncio.to_thread(self._ensure_collection)
 
     async def get_all_documents(self) -> list[dict]:
-        """Get all documents for BM25 index building."""
+        """Get all documents for BM25 index building.
+
+        Uses id-based cursor pagination to avoid Milvus offset+limit 16384 cap.
+        """
         items = []
-        # Use iterator for large collections
         batch_size = 1000
-        offset = 0
+        last_id = ""
 
         while True:
+            filter_expr = f'id > "{last_id}"' if last_id else ""
             batch = await asyncio.to_thread(
                 self.client.query,
                 collection_name=self.collection_name,
-                filter="",
+                filter=filter_expr,
                 output_fields=["id", "content", "source_type", "metadata_json"],
                 limit=batch_size,
-                offset=offset,
             )
 
             if not batch:
@@ -216,9 +218,9 @@ class MilvusStore(BaseVectorStore):
                     "metadata": metadata,
                 })
 
+            last_id = batch[-1].get("id", "")
             if len(batch) < batch_size:
                 break
-            offset += batch_size
 
         return items
 
