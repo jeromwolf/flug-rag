@@ -33,7 +33,7 @@ def _build_cache_key(func: Callable, args: tuple, kwargs: dict, key_builder: Opt
     except (TypeError, ValueError):
         arg_str = str(args) + str(sorted(kwargs.items()))
 
-    arg_hash = hashlib.md5(arg_str.encode()).hexdigest()[:16]
+    arg_hash = hashlib.sha256(arg_str.encode()).hexdigest()[:24]
     return ":".join(parts) + ":" + arg_hash
 
 

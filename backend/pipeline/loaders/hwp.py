@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import uuid
 from pathlib import Path
 
 from .base import BaseLoader, LoadedDocument
@@ -138,13 +139,18 @@ class HWPLoader(BaseLoader):
     def _load_with_libreoffice(self, path: Path) -> LoadedDocument:
         """Convert HWP to DOCX using LibreOffice, then extract text."""
         with tempfile.TemporaryDirectory() as tmp_dir:
+            # Copy to temp dir with safe UUID-based filename
+            safe_name = f"{uuid.uuid4().hex}.hwp"
+            safe_path = Path(tmp_dir) / safe_name
+            shutil.copy2(path, safe_path)
+
             result = subprocess.run(
                 [
                     "libreoffice",
                     "--headless",
                     "--convert-to", "docx",
                     "--outdir", tmp_dir,
-                    str(path),
+                    str(safe_path),
                 ],
                 capture_output=True,
                 text=True,

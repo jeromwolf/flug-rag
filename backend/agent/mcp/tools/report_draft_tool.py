@@ -53,7 +53,14 @@ class ReportDraftTool(BaseTool):
     def get_definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="report_draft",
-            description="주제에 맞는 보고서 초안을 자동 생성합니다. 관련 사규, 기술문서, 점검 이력을 검색하여 구조화된 보고서를 작성합니다.",
+            description="검색된 문서를 기반으로 보고서 초안을 작성합니다",
+            help_text=(
+                "RAG 검색으로 관련 문서를 찾아 구조화된 보고서 초안을 자동 생성합니다.\n"
+                "지원 유형: 결과보고서, 현황보고서, 분석보고서, 점검보고서\n"
+                "예시 topic: '2026년 1분기 배관 안전점검 결과', '정압기 유지보수 현황'\n"
+                "생성된 초안에는 목차, 본문, 참조 문서 목록이 포함됩니다.\n"
+                "최종 보고 전 담당자 검토가 반드시 필요합니다."
+            ),
             parameters=[
                 ToolParameter(
                     name="topic",
@@ -78,6 +85,7 @@ class ReportDraftTool(BaseTool):
             ],
             category="generation",
         )
+
 
     async def execute(self, **kwargs) -> ToolResult:
         topic = kwargs.get("topic", "").strip()

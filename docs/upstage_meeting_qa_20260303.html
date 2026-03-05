@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>업스테이지 미팅 Q&A 준비자료 — 2026.03.03</title>
+<style>
+  :root {
+    --primary: #1a56db;
+    --primary-light: #e8eefb;
+    --green: #059669;
+    --green-bg: #d1fae5;
+    --red: #dc2626;
+    --red-bg: #fee2e2;
+    --orange: #d97706;
+    --orange-bg: #fef3c7;
+    --yellow-bg: #fefce8;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--gray-800);
+    line-height: 1.7;
+    background: #fff;
+    font-size: 14px;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 32px; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    border-bottom: 3px solid var(--primary);
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+  }
+  .header .project {
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 12px;
+  }
+  .header .meta {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    font-size: 13px;
+    color: var(--gray-600);
+  }
+  .header .meta span { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* TOC */
+  .toc {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 20px 28px;
+    margin-bottom: 36px;
+  }
+  .toc h2 { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: var(--gray-700); }
+  .toc ul { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 24px; }
+  .toc a {
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 500;
+    padding: 2px 0;
+    border-bottom: 1px solid transparent;
+    transition: border-color .2s;
+  }
+  .toc a:hover { border-bottom-color: var(--primary); }
+
+  /* Section */
+  .section { margin-bottom: 40px; }
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gray-900);
+    padding: 10px 16px;
+    background: var(--primary-light);
+    border-left: 4px solid var(--primary);
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 16px;
+  }
+  .section-desc {
+    font-size: 13.5px;
+    color: var(--gray-600);
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  thead th {
+    background: var(--gray-800);
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gray-200);
+    vertical-align: top;
+  }
+  tbody tr:nth-child(even) td { background: var(--gray-50); }
+  tbody tr:hover td { background: var(--primary-light); }
+
+  /* Special column styles */
+  .col-id { width: 36px; text-align: center; font-weight: 700; color: var(--primary); }
+  .col-question { width: 22%; font-weight: 600; }
+  .col-bg { width: 22%; color: var(--gray-600); font-size: 12.5px; }
+  .col-research { width: 30%; }
+  .col-meeting { width: 20%; background: var(--yellow-bg) !important; }
+  thead .col-meeting { background: var(--orange) !important; color: #fff; }
+
+  /* Badge */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-orange { background: var(--orange-bg); color: var(--orange); }
+
+  /* 6-step pipeline table */
+  .pipeline-provided { text-align: center; font-weight: 700; }
+  .pipeline-yes { color: var(--green); }
+  .pipeline-partial { color: var(--orange); }
+  .pipeline-no { color: var(--red); }
+
+  /* Summary box */
+  .summary-box {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+  .summary-box h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+  .summary-box ul { padding-left: 20px; font-size: 13px; }
+  .summary-box li { margin-bottom: 4px; }
+
+  /* Key question callout */
+  .callout {
+    background: #fef3c7;
+    border-left: 4px solid var(--orange);
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
+    font-size: 13.5px;
+    font-weight: 500;
+    margin: 16px 0;
+  }
+
+  /* Checklist */
+  .checklist {
+    list-style: none;
+    padding: 0;
+  }
+  .checklist li {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 13.5px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .checklist li:hover { background: var(--gray-50); }
+  .checklist input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  /* Code blocks */
+  .code-block {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 12px 0;
+    font-size: 12.5px;
+  }
+  .code-header {
+    background: #313244;
+    padding: 6px 14px;
+    font-size: 11.5px;
+    color: #a6adc8;
+    font-weight: 600;
+  }
+  .code-body {
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    line-height: 1.6;
+    white-space: pre;
+  }
+  .code-body .key { color: #89b4fa; }
+  .code-body .str { color: #a6e3a1; }
+  .code-body .comment { color: #6c7086; }
+  .code-body .num { color: #fab387; }
+
+  /* Status/impl */
+  .impl-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+  .impl-card {
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .impl-card h4 {
+    font-size: 13.5px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--green);
+  }
+  .impl-card.pending h4 { border-bottom-color: var(--orange); }
+  .impl-card ul { padding-left: 18px; font-size: 12.5px; }
+  .impl-card li { margin-bottom: 4px; }
+  .impl-card code { background: var(--gray-100); padding: 1px 5px; border-radius: 3px; font-size: 11.5px; }
+
+  /* Format table */
+  .format-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
+  .format-item {
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+  }
+  .format-item .label { font-size: 11px; color: var(--gray-600); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  .format-item .value { font-size: 13px; font-weight: 500; margin-top: 4px; }
+  .format-item.highlight { border-color: var(--primary); background: var(--primary-light); }
+
+  /* Footer */
+  .footer {
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--gray-200);
+    font-size: 12px;
+    color: var(--gray-600);
+    text-align: center;
+  }
+
+  /* Print */
+  @media print {
+    body { font-size: 11px; }
+    .container { padding: 0; max-width: 100%; }
+    .toc { break-after: page; }
+    .section { break-inside: avoid; }
+    table { font-size: 10.5px; }
+    thead th { background: #333 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    tbody tr:nth-child(even) td { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .col-meeting { background: #fffde7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge, .callout, .summary-box, .section-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .code-block { background: #f5f5f5 !important; color: #333 !important; border: 1px solid #ddd; }
+    .code-header { background: #eee !important; color: #666 !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div class="project">한국가스기술공사 생성형 AI 플랫폼 구축</div>
+  <h1>업스테이지 미팅 Q&A 준비자료</h1>
+  <div class="meta">
+    <span>&#128197; 미팅 일시: 2026년 3월 3일</span>
+    <span>&#128269; 사전 조사: 2026년 3월 2일</span>
+    <span>&#127919; Upstage Document Parse</span>
+  </div>
+</div>
+
+<!-- TOC -->
+<nav class="toc" id="toc">
+  <h2>목차</h2>
+  <ul>
+    <li><a href="#section-a">A. 라이선스 & 비용</a></li>
+    <li><a href="#section-b">B. 온프레미스 배포</a></li>
+    <li><a href="#section-c">C. 기술 기능</a></li>
+    <li><a href="#section-d">D. 6단계 OCR 후처리 파이프라인</a></li>
+    <li><a href="#section-e">E. POC/데모 지원</a></li>
+    <li><a href="#section-checklist">미팅 체크리스트</a></li>
+    <li><a href="#section-impl">현재 구현 상태</a></li>
+    <li><a href="#section-api">API 요청/응답 스펙</a></li>
+  </ul>
+</nav>
+
+<!-- A. 라이선스 & 비용 -->
+<div class="section" id="section-a">
+  <div class="section-title">A. 라이선스 & 비용</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-id">#</th>
+        <th class="col-question">질문</th>
+        <th class="col-bg">배경</th>
+        <th class="col-research">사전 조사</th>
+        <th class="col-meeting">미팅 확인</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-id">A1</td>
+        <td class="col-question">온프레미스 라이선스 모델은?<br><small style="font-weight:400;color:var(--gray-600)">영구? 연간? 문서 단위?</small></td>
+        <td class="col-bg">제안서에 "온프레미스 라이선스 구매" + "기술 지원 계약 별도 체결"로 기재. 정확한 가격 모델 필요</td>
+        <td class="col-research">AWS SageMaker Marketplace를 통한 온프렘 배포 확인됨. 라이선스 모델 세부는 영업 확인 필요</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">A2</td>
+        <td class="col-question">라이선스 비용 견적<br><small style="font-weight:400;color:var(--gray-600)">GPU 1~2대, 폐쇄망, 월 500~1000건</small></td>
+        <td class="col-bg">총 사업비 429,000천원 중 OCR 비용 미확정 (제안서에 "이부일 대표님 체크 필요"로 표기)</td>
+        <td class="col-research">Cloud API: <strong>$0.01/페이지</strong>. 온프렘은 별도 견적 필요</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">A3</td>
+        <td class="col-question">Cloud API 가격<br><small style="font-weight:400;color:var(--gray-600)">페이지당 단가? 볼륨 할인?</small></td>
+        <td class="col-bg">POC/개발 단계에서 Cloud API 사용 중. 운영 전환 전까지 비용 예측 필요</td>
+        <td class="col-research"><span class="badge badge-green">$0.01/페이지</span> 공식 단가. 볼륨 할인 여부는 영업 확인</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">A4</td>
+        <td class="col-question">기술 지원 계약 범위와 비용<br><small style="font-weight:400;color:var(--gray-600)">SLA, 응답 시간, 모델 업데이트</small></td>
+        <td class="col-bg">제안서에 별도 체결로 기재했으나 구체적 조건 미확정</td>
+        <td class="col-research"><span class="badge badge-orange">미팅 확인</span></td>
+        <td class="col-meeting"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- B. 온프레미스 배포 -->
+<div class="section" id="section-b">
+  <div class="section-title">B. 온프레미스 배포</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-id">#</th>
+        <th class="col-question">질문</th>
+        <th class="col-bg">배경</th>
+        <th class="col-research">사전 조사</th>
+        <th class="col-meeting">미팅 확인</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-id">B1</td>
+        <td class="col-question">최소 하드웨어 스펙<br><small style="font-weight:400;color:var(--gray-600)">GPU 필수? CPU-only? VRAM?</small></td>
+        <td class="col-bg">발주처 서버: L40S 48GB x4, CPU 16Core x2, RAM 256GB</td>
+        <td class="col-research">GPU/CPU 양쪽 Docker 이미지 제공 확인. 정확한 VRAM 요구량은 미팅 확인</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">B2</td>
+        <td class="col-question">폐쇄망 Docker 이미지 반입<br><small style="font-weight:400;color:var(--gray-600)">오프라인/에어갭 환경 지원?</small></td>
+        <td class="col-bg">발주처가 폐쇄망(인터넷 차단). <code>docker save/load</code> 가능 여부 확인</td>
+        <td class="col-research">AWS SageMaker 기반 온프렘 배포 확인됨. 순수 에어갭 가능 여부는 미팅 확인</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">B3</td>
+        <td class="col-question">모델 버전 업데이트 주기<br><small style="font-weight:400;color:var(--gray-600)">교체 절차? API 하위 호환성?</small></td>
+        <td class="col-bg">현재 <code>document-parse-240910</code> 사용 중</td>
+        <td class="col-research">최신: <code>250508</code>. 릴리스: 240910→250404→250508.<br><span class="badge badge-red">HWP 모듈은 251217.1 이상 필요</span> (이전 버전 2025.12.31 라이선스 만료)</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">B4</td>
+        <td class="col-question">동시 처리 성능<br><small style="font-weight:400;color:var(--gray-600)">동시 요청 수, 페이지/분 처리량</small></td>
+        <td class="col-bg">배치 인제스트 시 5건 병렬 처리. 초기 데이터 로딩 소요 시간 예측 필요</td>
+        <td class="col-research">동기 API 최대 <strong>100페이지/요청</strong>, 비동기 API 최대 <strong>1,000페이지/요청</strong>. GPU별 벤치마크는 미팅 확인</td>
+        <td class="col-meeting"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- C. 기술 기능 -->
+<div class="section" id="section-c">
+  <div class="section-title">C. 기술 기능</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-id">#</th>
+        <th class="col-question">질문</th>
+        <th class="col-bg">배경</th>
+        <th class="col-research">사전 조사</th>
+        <th class="col-meeting">미팅 확인</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-id">C1</td>
+        <td class="col-question">HWP 파일 직접 지원 여부<br><small style="font-weight:400;color:var(--gray-600)">직접 파싱? PDF 변환 필요?</small></td>
+        <td class="col-bg">발주처 핵심 문서 676건이 HWP. 현재 pyhwp로 텍스트 추출 중이나 표 구조 손실</td>
+        <td class="col-research"><span class="badge badge-green">지원됨</span> 2025.4월 <code>250404</code>부터 HWP/HWPX 네이티브 파싱. PDF 변환 불필요. 표 구조를 HTML <code>&lt;table&gt;</code>로 반환. 최대 50MB.<br><span class="badge badge-red">주의</span> 온프렘은 모델 <code>251217.1</code> 이상 필요 (HWP 라이선스 만료)</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">C2</td>
+        <td class="col-question">표 구조 인식 정확도<br><small style="font-weight:400;color:var(--gray-600)">다단 표, 병합 셀, 다중 페이지 표</small></td>
+        <td class="col-bg">제안서에 "배관 스펙 시트의 다단 표 구조 복원" 약속</td>
+        <td class="col-research"><span class="badge badge-green">우수</span> 병합 셀, 다단 표, 숨겨진 격자선, 다중 페이지 표 자동 병합. <strong>TEDS 93.48</strong> (Google/MS 대비 5%+ 우위). 차트/그래프는 구조화 데이터 변환 가능</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">C3</td>
+        <td class="col-question">응답 포맷<br><small style="font-weight:400;color:var(--gray-600)">마크다운/HTML? 좌표?</small></td>
+        <td class="col-bg"><code>coordinates=true</code> 옵션 사용 중. 반환 포맷 스펙 확인</td>
+        <td class="col-research"><strong>JSON 반환</strong>: <code>content.html/markdown/text</code> (문서 전체) + <code>elements[]</code> 배열 (요소별).<br><strong>12개 카테고리:</strong> table, figure, chart, heading1, header, footer, caption, paragraph, equation, list, index, footnote.<br><strong>좌표:</strong> 정규화된 4점 바운딩 박스 (0~1 범위)</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">C4</td>
+        <td class="col-question">confidence 점수 제공 여부<br><small style="font-weight:400;color:var(--gray-600)">페이지별? 문서별?</small></td>
+        <td class="col-bg">제안서에 "품질 점수 임계값 0.85" 기재. confidence 0.0 반환 가능성</td>
+        <td class="col-research"><span class="badge badge-red">API 미노출</span> 내부적으로 워드 레벨 confidence 존재하나 표준 API JSON에 <code>confidence</code> 필드 없음. 페이지별/문서별 점수도 미제공.<br>→ 품질 점수는 <strong>자체 구현 필요</strong><br><span class="badge badge-orange">향후 노출 계획 확인 필수</span></td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">C5</td>
+        <td class="col-question">한국어 전문용어 커스터마이징<br><small style="font-weight:400;color:var(--gray-600)">KGS, KOSHA 코드 사전 등록?</small></td>
+        <td class="col-bg">제안서 6단계 중 2단계 "가스 설비 전문용어 사전 기반 교정"의 실현 가능성</td>
+        <td class="col-research"><span class="badge badge-red">미지원</span> 커스텀 사전/어휘 등록 기능 없음. 도메인 용어 교정은 <strong>자체 후처리 파이프라인</strong>으로 구현 필요. 엔터프라이즈 커스텀 파인튜닝은 별도 협의</td>
+        <td class="col-meeting"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- D. 6단계 OCR 후처리 파이프라인 -->
+<div class="section" id="section-d">
+  <div class="section-title">D. 6단계 OCR 후처리 파이프라인</div>
+  <p class="section-desc">제안서에 약속한 6단계에 대해 <strong>업스테이지 제공 범위 vs 자체 구현 범위</strong>를 사전 조사 결과로 정리합니다.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:60px">단계</th>
+        <th style="width:14%">처리 내용</th>
+        <th style="width:16%">제안서 예시</th>
+        <th style="width:80px;text-align:center">업스테이지</th>
+        <th style="width:80px;text-align:center">자체구현</th>
+        <th>사전 조사 결과</th>
+        <th class="col-meeting" style="width:14%">미팅 확인</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align:center;font-weight:700">1</td>
+        <td>구조 검증<br><small>표/리스트/제목 정합성</small></td>
+        <td><small>배관 스펙 시트의 다단 표 구조 복원</small></td>
+        <td class="pipeline-provided pipeline-partial">부분</td>
+        <td class="pipeline-provided pipeline-yes">O</td>
+        <td>12개 element category 태깅 제공. 구조 검증 로직은 자체 구현 필요</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td style="text-align:center;font-weight:700">2</td>
+        <td>오인식 보정<br><small>전문용어 사전 교정</small></td>
+        <td><small>'KGS FP551' → 'KGS EP551'</small></td>
+        <td class="pipeline-provided pipeline-no">X</td>
+        <td class="pipeline-provided pipeline-yes">O</td>
+        <td><strong>전량 자체개발.</strong> 커스텀 사전 미지원. 가스 설비 전문용어 사전 + 매칭 로직 필요</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td style="text-align:center;font-weight:700">3</td>
+        <td>노이즈 제거<br><small>머리글/꼬리글/워터마크</small></td>
+        <td><small>'대외비' 워터마크, 페이지 번호 제거</small></td>
+        <td class="pipeline-provided pipeline-yes">대부분</td>
+        <td class="pipeline-provided pipeline-partial">일부</td>
+        <td>header/footer 별도 카테고리로 필터 가능. <strong>워터마크 제거는 자체 구현</strong></td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td style="text-align:center;font-weight:700">4</td>
+        <td>텍스트 정규화<br><small>특수문자/인코딩/공백</small></td>
+        <td><small>㎥→m³, ㎏/㎠→kg/cm²</small></td>
+        <td class="pipeline-provided pipeline-partial">부분</td>
+        <td class="pipeline-provided pipeline-yes">O</td>
+        <td>UTF-8 출력 기본 제공. 단위 정규화, 특수문자 통일은 자체 구현</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td style="text-align:center;font-weight:700">5</td>
+        <td>메타데이터 추출<br><small>문서명/작성일/버전/부서</small></td>
+        <td><small>사규 개정 이력 자동 식별</small></td>
+        <td class="pipeline-provided pipeline-no">X</td>
+        <td class="pipeline-provided pipeline-yes">O</td>
+        <td>구조화된 메타데이터 추출 미지원. header/footer에서 regex/NER로 <strong>자체 추출</strong></td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td style="text-align:center;font-weight:700">6</td>
+        <td>품질 점수 산정<br><small>글자 수/구조/오인식률</small></td>
+        <td><small>임계값 미달 시 수동 검수 플래그</small></td>
+        <td class="pipeline-provided pipeline-no">X</td>
+        <td class="pipeline-provided pipeline-yes">O</td>
+        <td>confidence 미노출. 글자 수/구조 완결성/한국어 비율 기반 <strong>자체 산정</strong></td>
+        <td class="col-meeting"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="summary-box">
+    <h4>사전 조사 요약</h4>
+    <ul>
+      <li><span class="badge badge-green">네이티브 커버</span> 3단계(노이즈 제거) 대부분</li>
+      <li><span class="badge badge-orange">부분 지원</span> 1단계(구조 태깅), 4단계(인코딩)</li>
+      <li><span class="badge badge-red">전량 자체 개발</span> 2단계(전문용어), 5단계(메타데이터), 6단계(품질 점수)</li>
+    </ul>
+  </div>
+
+  <div class="callout">
+    &#9888;&#65039; <strong>핵심 확인 질문:</strong> 6단계 중 업스테이지가 추가 제공 가능한 기능이 있는지? 특히 <strong>confidence 점수 노출 계획</strong>과 <strong>커스텀 사전 지원 로드맵</strong>.
+  </div>
+</div>
+
+<!-- E. POC/데모 지원 -->
+<div class="section" id="section-e">
+  <div class="section-title">E. POC/데모 지원</div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-id">#</th>
+        <th class="col-question">질문</th>
+        <th class="col-bg">배경</th>
+        <th class="col-research">사전 조사</th>
+        <th class="col-meeting">미팅 확인</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-id">E1</td>
+        <td class="col-question">트라이얼 API 키/크레딧<br><small style="font-weight:400;color:var(--gray-600)">POC용 무료/할인?</small></td>
+        <td class="col-bg">3/5 발주처 원본 데이터 수령 후 즉시 인제스트 필요. 수천 페이지 예상</td>
+        <td class="col-research">공식 단가 $0.01/페이지. 수천 페이지 = $수십 수준. 트라이얼 크레딧 유무 미팅 확인</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">E2</td>
+        <td class="col-question">샘플 문서 사전 테스트<br><small style="font-weight:400;color:var(--gray-600)">HWP/PDF 5~10건 파싱 품질</small></td>
+        <td class="col-bg">제안서에 "문서 파싱 품질 사전 검증" 약속</td>
+        <td class="col-research">Cloud API로 즉시 테스트 가능. HWP 5~10건 사전 파싱하여 품질 확인 제안</td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">E3</td>
+        <td class="col-question">기술 지원 채널<br><small style="font-weight:400;color:var(--gray-600)">Slack/이메일/전담 담당자?</small></td>
+        <td class="col-bg">개발 기간 4개월. 빠른 이슈 해결 필요</td>
+        <td class="col-research"><span class="badge badge-orange">미팅 확인</span></td>
+        <td class="col-meeting"></td>
+      </tr>
+      <tr>
+        <td class="col-id">E4</td>
+        <td class="col-question">레퍼런스/사례<br><small style="font-weight:400;color:var(--gray-600)">공공기관 폐쇄망 배포, HWP 대량 처리</small></td>
+        <td class="col-bg">발주처 설득 자료 및 리스크 판단용</td>
+        <td class="col-research"><span class="badge badge-orange">미팅 확인</span></td>
+        <td class="col-meeting"></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Checklist -->
+<div class="section" id="section-checklist">
+  <div class="section-title">미팅에서 꼭 받아올 것 (체크리스트)</div>
+  <ul class="checklist">
+    <li><input type="checkbox"> 온프레미스 라이선스 견적서 (제안서 비용 항목에 반영)</li>
+    <li><input type="checkbox"> Cloud API 단가표 + 볼륨 할인 (POC 비용 산정)</li>
+    <li><input type="checkbox"> HWP 온프렘 모델 버전 확인 (<code>251217.1</code> 이상인지) — 라이선스 만료 이슈</li>
+    <li><input type="checkbox"> 폐쇄망 Docker 이미지 반입 절차 문서 (에어갭 <code>docker save/load</code> 가능 여부)</li>
+    <li><input type="checkbox"> confidence 점수 향후 API 노출 계획 확인</li>
+    <li><input type="checkbox"> 커스텀 사전/파인튜닝 지원 가능 여부 (가스 설비 전문용어)</li>
+    <li><input type="checkbox"> 트라이얼 키 또는 크레딧 (3/5 데이터 인제스트용)</li>
+    <li><input type="checkbox"> 6단계 파이프라인 중 추가 제공 가능한 기능 확인</li>
+    <li><input type="checkbox"> 공공기관 폐쇄망 배포 레퍼런스/사례</li>
+    <li><input type="checkbox"> GPU별 성능 벤치마크 (L40S 48GB 기준 페이지/분 처리량)</li>
+  </ul>
+</div>
+
+<!-- 현재 구현 상태 -->
+<div class="section" id="section-impl">
+  <div class="section-title">참고: 현재 구현 상태</div>
+  <div class="impl-section">
+    <div class="impl-card">
+      <h4 style="color:var(--green)">이미 구현된 것 (코드 완료)</h4>
+      <ul>
+        <li>Cloud API 연동 (<code>pipeline/ocr/upstage_cloud.py</code>)</li>
+        <li>On-prem Docker 연동 (<code>pipeline/ocr/upstage_onprem.py</code>)</li>
+        <li>런타임 프로바이더 전환 API (<code>POST /ocr/switch-provider</code>)</li>
+        <li>OCR 학습 데이터 수집 (<code>pipeline/ocr/training_collector.py</code>)</li>
+        <li>배치 재인제스트 스크립트 (<code>scripts/reingest_travel.py</code>)</li>
+        <li>Docker Compose GPU/CPU 설정 (<code>docker-compose.ocr.yml</code>)</li>
+      </ul>
+    </div>
+    <div class="impl-card pending">
+      <h4 style="color:var(--orange)">미구현 (확인 후 구현 예정)</h4>
+      <ul>
+        <li>6단계 OCR 후처리 파이프라인 (1~6단계 전체)</li>
+        <li>OCR 검수 관리 인터페이스 (원본 ↔ OCR 비교 UI)</li>
+        <li>전문용어 커스텀 사전 (가스 설비 용어)</li>
+        <li>품질 점수 기반 자동 플래그 시스템</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- API 스펙 -->
+<div class="section" id="section-api">
+  <div class="section-title">참고: API 요청/응답 스펙 (사전 조사)</div>
+
+  <h4 style="font-size:14px;margin:12px 0 8px">요청 파라미터</h4>
+  <div class="code-block">
+    <div class="code-header">Python — requests</div>
+    <div class="code-body">response = requests.post(
+    <span class="str">"https://api.upstage.ai/v1/document-ai/document-parse"</span>,
+    headers={<span class="str">"Authorization"</span>: <span class="str">f"Bearer {UPSTAGE_API_KEY}"</span>},
+    files={<span class="str">"document"</span>: open(<span class="str">"document.hwp"</span>, <span class="str">"rb"</span>)},
+    data={
+        <span class="str">"model"</span>: <span class="str">"document-parse"</span>,           <span class="comment"># 모델명</span>
+        <span class="str">"ocr"</span>: <span class="str">"auto"</span>,                        <span class="comment"># "auto" | "force"</span>
+        <span class="str">"coordinates"</span>: <span class="str">"true"</span>,               <span class="comment"># 바운딩 박스 좌표</span>
+        <span class="str">"output_formats"</span>: <span class="str">'["html", "markdown", "text"]'</span>,
+        <span class="str">"base64_encoding"</span>: <span class="str">'["table", "figure", "chart"]'</span>,
+        <span class="str">"chart_recognition"</span>: <span class="str">"true"</span>,         <span class="comment"># 차트→구조화 데이터</span>
+        <span class="str">"mode"</span>: <span class="str">"enhanced"</span>,                  <span class="comment"># "standard" | "enhanced" | "auto"</span>
+    }
+)</div>
+  </div>
+
+  <h4 style="font-size:14px;margin:16px 0 8px">응답 JSON 구조</h4>
+  <div class="code-block">
+    <div class="code-header">JSON — Response</div>
+    <div class="code-body">{
+  <span class="key">"api"</span>: <span class="str">"2.0"</span>,
+  <span class="key">"model"</span>: <span class="str">"document-parse-250508"</span>,
+  <span class="key">"content"</span>: {
+    <span class="key">"html"</span>: <span class="str">"&lt;html&gt;전체 문서 HTML&lt;/html&gt;"</span>,
+    <span class="key">"markdown"</span>: <span class="str">"# 제목\n| 열1 | 열2 |\n..."</span>,
+    <span class="key">"text"</span>: <span class="str">"플레인 텍스트"</span>
+  },
+  <span class="key">"elements"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="num">0</span>,
+      <span class="key">"page"</span>: <span class="num">1</span>,
+      <span class="key">"category"</span>: <span class="str">"table"</span>,
+      <span class="key">"content"</span>: { <span class="key">"html"</span>: <span class="str">"&lt;table&gt;...&lt;/table&gt;"</span>, <span class="key">"markdown"</span>: <span class="str">"| ... |"</span> },
+      <span class="key">"coordinates"</span>: [
+        {<span class="key">"x"</span>: <span class="num">0.1</span>, <span class="key">"y"</span>: <span class="num">0.05</span>},
+        {<span class="key">"x"</span>: <span class="num">0.9</span>, <span class="key">"y"</span>: <span class="num">0.05</span>},
+        {<span class="key">"x"</span>: <span class="num">0.9</span>, <span class="key">"y"</span>: <span class="num">0.12</span>},
+        {<span class="key">"x"</span>: <span class="num">0.1</span>, <span class="key">"y"</span>: <span class="num">0.12</span>}
+      ]
+    }
+  ],
+  <span class="key">"usage"</span>: { <span class="key">"pages"</span>: <span class="num">3</span> }
+}</div>
+  </div>
+
+  <h4 style="font-size:14px;margin:16px 0 8px">지원 파일 포맷</h4>
+  <div class="format-grid">
+    <div class="format-item">
+      <div class="label">이미지</div>
+      <div class="value">JPEG, PNG, BMP, TIFF, HEIC</div>
+    </div>
+    <div class="format-item">
+      <div class="label">문서</div>
+      <div class="value">PDF, DOCX, PPTX, XLSX</div>
+    </div>
+    <div class="format-item highlight">
+      <div class="label">한국어</div>
+      <div class="value"><strong>HWP, HWPX</strong> (2025.4~)</div>
+    </div>
+  </div>
+
+  <h4 style="font-size:14px;margin:16px 0 8px">element 카테고리 (12종)</h4>
+  <p style="font-size:13px;">
+    <code>table</code> <code>figure</code> <code>chart</code> <code>heading1</code> <code>header</code> <code>footer</code> <code>caption</code> <code>paragraph</code> <code>equation</code> <code>list</code> <code>index</code> <code>footnote</code>
+  </p>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>이 문서는 미팅 중 <strong>"미팅 확인"</strong> 칸을 직접 채우며 사용하세요.</p>
+  <p style="margin-top:4px">사전 조사 출처: Upstage 공식 문서, AWS Marketplace, GitHub Cookbook, 블로그 (2025-2026)</p>
+</div>
+
+</div>
+</body>
+</html>

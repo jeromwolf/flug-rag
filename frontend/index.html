@@ -6,6 +6,353 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
     <title>AI 질의응답 시스템</title>
+
+    <style>
+      /* ============================================================
+         PRINT STYLES — AI 대화 인쇄
+         Print: only message content, clean black-on-white layout
+         ============================================================ */
+
+      @page {
+        size: A4 portrait;
+        margin: 20mm 18mm 24mm 18mm;
+        @bottom-center {
+          content: counter(page) " / " counter(pages);
+          font-size: 9pt;
+          color: #888;
+          font-family: "Pretendard Variable", "Malgun Gothic", sans-serif;
+        }
+      }
+
+      @media print {
+        /* ── Reset colours for print ── */
+        *,
+        *::before,
+        *::after {
+          color: #111 !important;
+          background: #fff !important;
+          box-shadow: none !important;
+          text-shadow: none !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        body {
+          font-family: "Pretendard Variable", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+          font-size: 10.5pt;
+          line-height: 1.65;
+          color: #111;
+          background: #fff;
+          margin: 0;
+          padding: 0;
+        }
+
+        /* ── Hide everything that must not print ── */
+
+        /* Sidebar */
+        aside,
+        [class*="sidebar"],
+        [class*="Sidebar"],
+        nav,
+        .no-print {
+          display: none !important;
+        }
+
+        /* Top bar */
+        header,
+        [class*="topbar"],
+        [class*="TopBar"],
+        [class*="AppBar"],
+        [class*="toolbar"],
+        [class*="Toolbar"] {
+          display: none !important;
+        }
+
+        /* Input area (bottom bar) */
+        [class*="inputbar"],
+        [class*="InputBar"],
+        [class*="ChatInput"],
+        [class*="input-area"],
+        [class*="composer"],
+        form {
+          display: none !important;
+        }
+
+        /* All icon buttons, action buttons, emoji reactions, pin/bookmark buttons */
+        button,
+        [role="button"],
+        [class*="IconButton"],
+        [class*="Action"],
+        [class*="Reaction"],
+        [class*="emoji"],
+        [class*="feedback"],
+        [class*="bookmark"],
+        [class*="pin"],
+        [class*="Fab"] {
+          display: none !important;
+        }
+
+        /* Search bar overlay */
+        [class*="search"],
+        [class*="Search"] {
+          display: none !important;
+        }
+
+        /* Tooltips, popovers, modals, snackbars */
+        [role="tooltip"],
+        [role="dialog"],
+        [role="alertdialog"],
+        [class*="Popover"],
+        [class*="Snackbar"],
+        [class*="Modal"],
+        [class*="Drawer"],
+        [class*="Alert"] {
+          display: none !important;
+        }
+
+        /* Chip action controls (keep text chips) */
+        [class*="MuiChip-deleteIcon"],
+        [class*="MuiChip-icon"] {
+          display: none !important;
+        }
+
+        /* ── Print header injected via ::before on #root ── */
+        #root::before {
+          content: "AI 대화 기록";
+          display: block;
+          font-size: 18pt;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          color: #111 !important;
+          border-bottom: 2px solid #111;
+          padding-bottom: 6pt;
+          margin-bottom: 4pt;
+        }
+
+        #root::after {
+          content: attr(data-print-date);
+          display: block;
+          font-size: 9pt;
+          color: #555 !important;
+          margin-bottom: 18pt;
+        }
+
+        /* ── Message list container: make it a simple block flow ── */
+        [class*="MessageList"],
+        [class*="message-list"],
+        [class*="ChatMessageList"],
+        [class*="messages-container"] {
+          display: block !important;
+          overflow: visible !important;
+          max-height: none !important;
+          height: auto !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          flex: unset !important;
+        }
+
+        /* ── Individual message block ── */
+        [class*="MessageBubble"],
+        [class*="message-bubble"],
+        [class*="message-row"],
+        [class*="MessageRow"] {
+          display: block !important;
+          page-break-inside: avoid;
+          break-inside: avoid;
+          margin: 0 0 16pt 0 !important;
+          padding: 10pt 0 10pt 0 !important;
+          border-bottom: 1px solid #ddd !important;
+          border-radius: 0 !important;
+          background: #fff !important;
+          max-width: 100% !important;
+        }
+
+        /* ── Role label (사용자 / AI) ── */
+        [class*="message-role"],
+        [class*="MessageRole"] {
+          display: block !important;
+          font-size: 8pt !important;
+          font-weight: 700 !important;
+          letter-spacing: 0.06em !important;
+          text-transform: uppercase !important;
+          color: #444 !important;
+          margin-bottom: 3pt !important;
+        }
+
+        /* Avatar: shrink and keep visible as a role indicator */
+        [class*="MuiAvatar-root"] {
+          width: 18pt !important;
+          height: 18pt !important;
+          font-size: 7pt !important;
+          display: inline-flex !important;
+          vertical-align: middle !important;
+          margin-right: 4pt !important;
+          border: 1px solid #bbb !important;
+          background: #f0f0f0 !important;
+        }
+
+        /* ── Message content typography ── */
+        [class*="message-content"],
+        [class*="MessageContent"],
+        p,
+        li,
+        td,
+        th {
+          font-size: 10.5pt !important;
+          line-height: 1.65 !important;
+          color: #111 !important;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+          color: #111 !important;
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+
+        /* ── Timestamp ── */
+        [class*="timestamp"],
+        [class*="Timestamp"],
+        [class*="createdAt"],
+        time {
+          display: inline !important;
+          font-size: 8pt !important;
+          color: #777 !important;
+          margin-left: 4pt !important;
+        }
+
+        /* ── Code blocks: keep legible, no colour ── */
+        pre,
+        code,
+        [class*="SyntaxHighlighter"],
+        [class*="code-block"] {
+          font-family: "JetBrains Mono", "Consolas", "Courier New", monospace !important;
+          font-size: 8.5pt !important;
+          background: #f5f5f5 !important;
+          border: 1px solid #ddd !important;
+          border-radius: 3pt !important;
+          padding: 6pt 8pt !important;
+          white-space: pre-wrap !important;
+          word-break: break-word !important;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        /* Inline code */
+        :not(pre) > code {
+          background: #f0f0f0 !important;
+          border: 1px solid #ddd !important;
+          border-radius: 2pt !important;
+          padding: 0 3pt !important;
+          font-size: 9pt !important;
+        }
+
+        /* Code block language header bar — hide it */
+        [class*="code-header"],
+        [class*="CodeHeader"],
+        [class*="language-label"] {
+          display: none !important;
+        }
+
+        /* ── Tables ── */
+        table {
+          width: 100% !important;
+          border-collapse: collapse !important;
+          page-break-inside: avoid;
+          break-inside: avoid;
+          font-size: 9.5pt !important;
+        }
+
+        th, td {
+          border: 1px solid #ccc !important;
+          padding: 4pt 6pt !important;
+          text-align: left !important;
+        }
+
+        th {
+          background: #f0f0f0 !important;
+          font-weight: 600 !important;
+        }
+
+        /* ── Sources panel: flat text list instead of cards ── */
+        [class*="SourcesPanel"],
+        [class*="sources-panel"],
+        [class*="source-panel"] {
+          display: block !important;
+          margin-top: 8pt !important;
+          padding-top: 6pt !important;
+          border-top: 1px dashed #bbb !important;
+        }
+
+        /* Source card → flat */
+        [class*="source-card"],
+        [class*="SourceCard"],
+        [class*="MuiAccordion"],
+        [class*="MuiCard"] {
+          display: block !important;
+          border: none !important;
+          border-radius: 0 !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          box-shadow: none !important;
+        }
+
+        /* Source chips — inline text */
+        [class*="source-chip"],
+        [class*="SourceChip"] {
+          display: inline !important;
+          font-size: 8.5pt !important;
+          border: none !important;
+          background: transparent !important;
+          padding: 0 !important;
+          margin-right: 6pt !important;
+        }
+
+        /* Confidence score chips */
+        [class*="MuiChip-root"] {
+          border: 1px solid #bbb !important;
+          border-radius: 3pt !important;
+          padding: 0 3pt !important;
+          font-size: 8pt !important;
+          height: auto !important;
+          background: #f5f5f5 !important;
+        }
+
+        /* ── Collapse panels — force open for sources ── */
+        [class*="MuiCollapse-root"] {
+          height: auto !important;
+          overflow: visible !important;
+          visibility: visible !important;
+        }
+
+        /* ── Scrollbars — hide ── */
+        ::-webkit-scrollbar {
+          display: none !important;
+        }
+
+        /* ── Links ── */
+        a {
+          color: #111 !important;
+          text-decoration: underline !important;
+        }
+
+        a[href]::after {
+          content: " (" attr(href) ")";
+          font-size: 8pt;
+          color: #666 !important;
+        }
+
+        /* ── Page break helpers ── */
+        .page-break-before {
+          page-break-before: always;
+          break-before: page;
+        }
+
+        .page-break-after {
+          page-break-after: always;
+          break-after: page;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

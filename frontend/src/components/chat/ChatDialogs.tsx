@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Box,
   Typography,
@@ -14,6 +15,7 @@ import {
   Alert,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
+import { authApi } from "../../api/client";
 
 // ---------------------------------------------------------------------------
 // Delete Session Dialog
@@ -92,6 +94,56 @@ export function ErrorReportDialog({
 }
 
 // ---------------------------------------------------------------------------
+// Feedback Comment Dialog (for negative/partial feedback)
+// ---------------------------------------------------------------------------
+
+interface FeedbackCommentDialogProps {
+  open: boolean;
+  rating: number;
+  comment: string;
+  onCommentChange: (value: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}
+
+export function FeedbackCommentDialog({
+  open,
+  rating,
+  comment,
+  onCommentChange,
+  onClose,
+  onSubmit,
+}: FeedbackCommentDialogProps) {
+  const ratingLabel = rating === -1 ? "부정확" : "부분적으로 정확";
+  return (
+    <Dialog open={open} onClose={onClose}>
+      <DialogTitle>피드백 - {ratingLabel}</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          어떤 부분이 {rating === -1 ? "부정확" : "부족"}했는지 알려주세요. (선택사항)
+        </DialogContentText>
+        <TextField
+          autoFocus
+          margin="dense"
+          multiline
+          rows={3}
+          fullWidth
+          placeholder="예: 답변에 포함된 날짜가 틀렸습니다..."
+          value={comment}
+          onChange={(e) => onCommentChange(e.target.value)}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>취소</Button>
+        <Button color="primary" variant="contained" onClick={onSubmit}>
+          전송
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Golden Data Edit Dialog
 // ---------------------------------------------------------------------------
 
@@ -158,6 +210,95 @@ export function GoldenDataEditDialog({
           disabled={!editedAnswer.trim()}
         >
           저장
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Password Confirm Dialog (for sensitive admin operations)
+// ---------------------------------------------------------------------------
+
+interface PasswordConfirmDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (password: string) => void;
+  title?: string;
+  description?: string;
+}
+
+export function PasswordConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title = "설정 변경 확인",
+  description = "이 작업은 시스템에 즉시 반영됩니다. 계속하시려면 비밀번호를 입력하세요.",
+}: PasswordConfirmDialogProps) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleClose = () => {
+    setPassword("");
+    setError("");
+    onClose();
+  };
+
+  const handleConfirm = async () => {
+    if (!password) {
+      setError("비밀번호를 입력해주세요.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await authApi.verifyPassword(password);
+      onConfirm(password);
+      setPassword("");
+      setError("");
+    } catch {
+      setError("비밀번호가 올바르지 않습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      void handleConfirm();
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
+      <DialogTitle>{title}</DialogTitle>
+      <DialogContent>
+        <DialogContentText sx={{ mb: 2 }}>{description}</DialogContentText>
+        <TextField
+          autoFocus
+          type="password"
+          label="비밀번호"
+          fullWidth
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={handleKeyDown}
+          error={!!error}
+          helperText={error}
+          size="small"
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose} disabled={loading}>
+          취소
+        </Button>
+        <Button
+          color="primary"
+          variant="contained"
+          onClick={() => void handleConfirm()}
+          disabled={loading}
+        >
+          {loading ? "확인 중..." : "확인"}
         </Button>
       </DialogActions>
     </Dialog>

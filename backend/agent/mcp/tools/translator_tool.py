@@ -42,6 +42,13 @@ class TranslatorTool(BaseTool):
             name="translator",
             description="텍스트를 다른 언어로 번역합니다. 한국어↔영어, 한국어↔일본어, 한국어↔중국어를 지원합니다.",
             category="nlp",
+            help_text=(
+                "LLM 기반 전문 번역 도구입니다.\n"
+                "지원 언어 쌍: ko↔en, ko↔ja, ko↔zh\n"
+                "언어 코드: ko(한국어), en(영어), ja(일본어), zh(중국어)\n"
+                "전문 용어를 정확히 번역하며, 번역 결과만 반환합니다.\n"
+                "주의: 같은 언어 간 번역 시 원문을 그대로 반환합니다."
+            ),
             parameters=[
                 ToolParameter(
                     name="text",

@@ -56,7 +56,14 @@ class TrainingMaterialTool(BaseTool):
     def get_definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="training_material",
-            description="교육자료를 자동 생성합니다. 관련 사규, ISO 규정, 기술 매뉴얼을 검색하여 학습 목표와 핵심 내용을 구조화합니다.",
+            description="교육자료를 자동 생성합니다",
+            help_text=(
+                "사규, ISO 규정, 기술 매뉴얼을 RAG로 검색하여 교육자료를 자동 생성합니다.\n"
+                "수준: 신입(기초 개념), 중급(실무 적용), 고급(심화 분석)\n"
+                "형식: 교안(강의용), 체크리스트(현장용), 퀴즈(평가용), 종합(통합 패키지)\n"
+                "예시 topic: '배관 용접 검사', '가스 누출 대응 절차', '정압기 유지보수'\n"
+                "최종 배포 전 담당 전문가 검토가 필요합니다."
+            ),
             parameters=[
                 ToolParameter(
                     name="topic",

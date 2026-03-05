@@ -65,6 +65,15 @@ class ReportGeneratorTool(BaseTool):
             name="report_generator",
             description="보고서를 생성합니다. 안전 점검, 월간 요약, 사고 보고서 템플릿을 지원합니다.",
             category="document",
+            help_text=(
+                "사전 정의된 템플릿으로 전문 보고서를 생성합니다.\n"
+                "지원 템플릿:\n"
+                "  - safety_inspection: 가스 시설 안전 점검 결과 보고서\n"
+                "  - monthly_summary: 월간 업무 요약 보고서\n"
+                "  - incident_report: 사고/이상 상황 보고서\n"
+                "data 파라미터에 보고서에 포함할 정보를 딕셔너리로 전달합니다.\n"
+                "출력 형식: markdown(기본값) 또는 json"
+            ),
             parameters=[
                 ToolParameter(
                     name="template_name",

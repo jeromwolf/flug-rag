@@ -9,6 +9,9 @@ export interface Message {
   responseMode?: "rag" | "direct" | "hybrid";
   modelUsed?: string;
   latencyMs?: number;
+  ttftMs?: number;
+  tps?: number;
+  suggestedQuestions?: string[];
   createdAt: string;
 }
 
@@ -18,6 +21,7 @@ export interface Source {
   page?: number;
   content: string;
   score: number;
+  source_url?: string;
 }
 
 export interface Session {

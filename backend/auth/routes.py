@@ -323,6 +323,27 @@ async def get_current_user_info(
     return _user_to_response(current_user)
 
 
+@router.post("/auth/verify-password")
+async def verify_password(
+    body: dict,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
+    """Verify the current user's password for sensitive operations."""
+    if current_user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    password = body.get("password", "")
+    if not password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password required")
+
+    user_store = await get_user_store()
+    user = await user_store.authenticate(current_user.username, password)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid password")
+
+    return {"verified": True}
+
+
 @router.post("/auth/change-password")
 async def change_password(
     body: ChangePasswordRequest,
@@ -406,6 +427,18 @@ class CreateUserRequest(BaseModel):
     full_name: str = ""
     department: str = ""
     role: str = "user"
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_complexity(cls, v: str) -> str:
+        import re
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("Password must contain at least one digit")
+        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]", v):
+            raise ValueError("Password must contain at least one special character")
+        return v
 
 
 @router.post("/auth/users")

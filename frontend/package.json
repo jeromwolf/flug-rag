@@ -26,6 +26,7 @@
     "react-dropzone": "^14.4.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",
+    "react-syntax-highlighter": "^16.1.1",
     "recharts": "^3.7.0",
     "remark-gfm": "^4.0.1",
     "zustand": "^5.0.11"
@@ -36,6 +37,7 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@types/react-router-dom": "^5.3.3",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",

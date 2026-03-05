@@ -33,18 +33,16 @@ echo "============================================"
 echo ""
 
 # Check data exists
-if [ ! -d "$BACKEND_DIR/data/chroma_db" ]; then
-    echo -e "${RED}[ERROR]${NC} ChromaDB data not found at $BACKEND_DIR/data/chroma_db"
+if [ ! -f "$BACKEND_DIR/data/milvus.db" ]; then
+    echo -e "${RED}[ERROR]${NC} Milvus Lite data not found at $BACKEND_DIR/data/milvus.db"
     exit 1
 fi
 
 echo "Scanning data..."
 echo ""
 
-CHROMA_SIZE=$(du -sh "$BACKEND_DIR/data/chroma_db" 2>/dev/null | awk '{print $1}')
-UPLOADS_SIZE=$(du -sh "$BACKEND_DIR/data/uploads" 2>/dev/null | awk '{print $1}')
-echo "  ChromaDB:  $CHROMA_SIZE"
-echo "  Uploads:   $UPLOADS_SIZE"
+MILVUS_SIZE=$(du -sh "$BACKEND_DIR/data/milvus.db" 2>/dev/null | awk '{print $1}')
+echo "  Milvus Lite (milvus.db):  $MILVUS_SIZE"
 
 # Check for SQLite DBs (memory, audit, users)
 DB_FILES=""
@@ -65,11 +63,7 @@ echo -e "${GREEN}[INFO]${NC} Creating archive..."
 cd "$PROJECT_DIR"
 
 # Build file list
-TAR_PATHS="backend/data/chroma_db"
-
-if [ -d "$BACKEND_DIR/data/uploads" ]; then
-    TAR_PATHS="$TAR_PATHS backend/data/uploads"
-fi
+TAR_PATHS="backend/data/milvus.db"
 
 # Add DB files
 TAR_PATHS="$TAR_PATHS $DB_FILES"

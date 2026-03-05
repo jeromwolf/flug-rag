@@ -32,6 +32,7 @@ class ToolDefinition:
     description: str
     parameters: list[ToolParameter] = field(default_factory=list)
     category: str = "general"
+    help_text: str = ""
 
     def to_schema(self) -> dict:
         """Convert to JSON Schema format for MCP protocol."""
@@ -50,6 +51,8 @@ class ToolDefinition:
         return {
             "name": self.name,
             "description": self.description,
+            "help_text": self.help_text,
+            "category": self.category,
             "inputSchema": {
                 "type": "object",
                 "properties": properties,

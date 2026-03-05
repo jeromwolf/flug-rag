@@ -11,9 +11,10 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # App
-    app_name: str = "flux-rag"
-    app_version: str = "0.1.0"
+    app_name: str = "ai-platform"
+    app_version: str = "1.0.0"
     debug: bool = False
+    log_level: str = "INFO"  # DEBUG, INFO, WARNING, ERROR
 
     # Server
     host: str = "0.0.0.0"
@@ -158,8 +159,12 @@ class Settings(BaseSettings):
 
     # File Upload
     max_file_size: int = 50 * 1024 * 1024  # 50MB
+    max_file_size_mb: int = 50  # per-file limit (MB)
+    max_user_storage_mb: int = 500  # per-user total limit (MB)
+    max_total_storage_gb: int = 10  # system total limit (GB)
+    file_retention_days: int = 365  # auto-cleanup after N days
     upload_dir: str = "./data/uploads"
-    allowed_extensions: set[str] = {".pdf", ".hwp", ".docx", ".xlsx", ".pptx", ".txt"}
+    allowed_extensions: set[str] = {".pdf", ".hwp", ".docx", ".xlsx", ".pptx", ".txt", ".csv"}
 
     # Sync / Scheduler
     sync_enabled: bool = False

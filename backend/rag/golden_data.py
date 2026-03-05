@@ -163,6 +163,19 @@ class GoldenDataManager:
                     "vectorstore_synced": bool(r["vectorstore_synced"]),
                 }) for r in rows]
 
+    async def delete(self, entry_id: str) -> None:
+        """골든 데이터 삭제 (소프트 삭제)."""
+        await self._ensure_initialized()
+        async with aiosqlite.connect(self.db_path) as db:
+            cursor = await db.execute(
+                "UPDATE golden_data SET is_active = 0, updated_at = ? WHERE id = ?",
+                (datetime.now(timezone.utc).isoformat(), entry_id),
+            )
+            if cursor.rowcount == 0:
+                raise ValueError(f"Golden data not found: {entry_id}")
+            await db.commit()
+        logger.info("Golden data deleted (soft): %s", entry_id[:8])
+
     async def _sync_to_vectorstore(self, entry: GoldenDataEntry):
         """골든 데이터를 벡터DB에 동기화 (우선순위 메타데이터 포함)."""
         try:

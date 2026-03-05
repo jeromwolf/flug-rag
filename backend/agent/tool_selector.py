@@ -102,14 +102,100 @@ _DATA_TRIGGERS = [
     "평균 구해", "분포 분석",
 ]
 
+# ── Summarizer ──────────────────────────────────────────────────────
+_SUMMARIZE_TRIGGERS = [
+    "요약해", "요약해줘", "요약 해줘", "요약해주세요",
+    "요약해 줘", "요약해 주세요", "요약하면",
+    "summarize", "요약본", "핵심 정리", "핵심정리",
+    "간략히 정리", "간단히 정리", "줄여서 말해", "짧게 정리",
+]
+
+_SUMMARIZE_MODE_MAP = {
+    "핵심 문장": "extractive",
+    "핵심문장": "extractive",
+    "문장 추출": "extractive",
+    "추출": "extractive",
+}
+
+# ── Translator ──────────────────────────────────────────────────────
+_TRANSLATE_TRIGGERS = [
+    "번역해", "번역해줘", "번역 해줘", "번역해주세요",
+    "번역해 줘", "번역해 주세요", "translate",
+    "영어로", "영어로 번역", "일본어로", "일본어로 번역",
+    "중국어로", "중국어로 번역", "한국어로 번역",
+    "영문으로", "영문 번역", "번역본 만들",
+]
+
+_TRANSLATE_SOURCE_MAP = {
+    "영어": "en", "english": "en", "영문": "en",
+    "일본어": "ja", "일어": "ja", "japanese": "ja",
+    "중국어": "zh", "chinese": "zh", "중문": "zh",
+    "한국어": "ko", "korean": "ko", "한글": "ko",
+}
+
+_TRANSLATE_TARGET_MAP = {
+    "영어로": "en", "영문으로": "en", "영어 번역": "en",
+    "일본어로": "ja", "일어로": "ja",
+    "중국어로": "zh", "중문으로": "zh",
+    "한국어로": "ko", "한글로": "ko",
+}
+
+# ── Email composer ──────────────────────────────────────────────────
+_EMAIL_TRIGGERS = [
+    "이메일 작성", "이메일 써줘", "이메일 써주세요",
+    "이메일을 작성", "이메일을 써줘", "이메일을 써주세요",
+    "메일 작성", "메일 써줘", "메일 써주세요",
+    "메일을 작성", "메일을 써줘", "메일을 써주세요",
+    "이메일 초안", "메일 초안", "메일 만들어줘",
+    "이메일 만들어줘", "이메일 만들어주세요", "메일 만들어주세요",
+]
+
+_EMAIL_TONE_MAP = {
+    "격식": "formal", "공식": "formal", "공문": "formal",
+    "반격식": "semi-formal", "일반": "semi-formal",
+    "캐주얼": "casual", "친근": "casual", "편하게": "casual",
+}
+
+# ── Report generator (template-based) ──────────────────────────────
+_REPORT_GEN_TRIGGERS = [
+    "안전 점검 보고서", "안전점검보고서", "안전점검 보고서",
+    "월간 보고서", "월간보고서", "월간 요약",
+    "사고 보고서", "사고보고서", "이상 보고서", "이상보고서",
+]
+
+_REPORT_GEN_TEMPLATE_MAP = {
+    "안전 점검": "safety_inspection",
+    "안전점검": "safety_inspection",
+    "월간": "monthly_summary",
+    "사고": "incident_report",
+    "이상": "incident_report",
+}
+
+# ── Knowledge base / Search ─────────────────────────────────────────
+_SEARCH_TRIGGERS = [
+    "문서 검색", "문서검색", "지식베이스 검색", "지식 베이스 검색",
+    "관련 문서 찾아", "관련문서 찾아", "자료 검색", "자료검색",
+    "검색해줘", "검색해 줘", "검색해주세요",
+]
+
+_KB_TRIGGERS = [
+    "문서 몇 개", "총 문서 수", "지식베이스 현황", "지식 베이스 현황",
+    "청크 수", "등록된 문서", "인덱스 현황",
+]
+
 
 # ── Public API ─────────────────────────────────────────────────────
 def select_tool(message: str) -> ToolSelection | None:
     """Select MCP tool based on message keywords.
 
     Returns *ToolSelection* if a generation tool matches, ``None`` otherwise.
+    Evaluation order: more-specific patterns first to avoid false matches.
     """
     msg = message.strip()
+
+    # Higher-specificity triggers first
+    if any(kw in msg for kw in _REPORT_GEN_TRIGGERS):
+        return _select_report_generator(msg)
 
     if any(kw in msg for kw in _REPORT_TRIGGERS):
         return _select_report(msg)
@@ -122,6 +208,21 @@ def select_tool(message: str) -> ToolSelection | None:
 
     if any(kw in msg for kw in _SAFETY_TRIGGERS):
         return _select_safety(msg)
+
+    if any(kw in msg for kw in _EMAIL_TRIGGERS):
+        return _select_email(msg)
+
+    if any(kw in msg for kw in _TRANSLATE_TRIGGERS):
+        return _select_translator(msg)
+
+    if any(kw in msg for kw in _SUMMARIZE_TRIGGERS):
+        return _select_summarizer(msg)
+
+    if any(kw in msg for kw in _KB_TRIGGERS):
+        return _select_knowledge_base(msg)
+
+    if any(kw in msg for kw in _SEARCH_TRIGGERS):
+        return _select_search(msg)
 
     if any(kw in msg for kw in _CALC_TRIGGERS):
         return _select_calculator(msg)
@@ -214,5 +315,98 @@ def _select_data_analyzer(msg: str) -> ToolSelection:
     return ToolSelection(
         tool_name="data_analyzer",
         arguments={"data": [], "analysis_type": "statistics"},
+        confidence=0.7,
+    )
+
+
+def _select_summarizer(msg: str) -> ToolSelection:
+    """Select document_summarizer tool with mode detection."""
+    mode = "abstractive"
+    for kw, m in _SUMMARIZE_MODE_MAP.items():
+        if kw in msg:
+            mode = m
+            break
+    return ToolSelection(
+        tool_name="document_summarizer",
+        arguments={"text": msg, "mode": mode, "language": "ko"},
+        confidence=0.75,
+    )
+
+
+def _select_translator(msg: str) -> ToolSelection:
+    """Select translator tool with language-pair detection."""
+    # Detect target language from target-direction keywords first
+    target_lang = "en"  # default: translate to English
+    for kw, lang in _TRANSLATE_TARGET_MAP.items():
+        if kw in msg:
+            target_lang = lang
+            break
+
+    # Infer source language: opposite of target, default ko
+    source_lang = "ko" if target_lang != "ko" else "en"
+    # Override source if explicitly mentioned
+    for kw, lang in _TRANSLATE_SOURCE_MAP.items():
+        if kw in msg and lang != target_lang:
+            source_lang = lang
+            break
+
+    return ToolSelection(
+        tool_name="translator",
+        arguments={"text": msg, "source_lang": source_lang, "target_lang": target_lang},
+        confidence=0.8,
+    )
+
+
+def _select_email(msg: str) -> ToolSelection:
+    """Select email_composer tool with tone detection."""
+    tone = "formal"  # default
+    for kw, t in _EMAIL_TONE_MAP.items():
+        if kw in msg:
+            tone = t
+            break
+
+    # Try to extract a subject hint from the message
+    subject_hint = msg if len(msg) <= 80 else msg[:80]
+
+    return ToolSelection(
+        tool_name="email_composer",
+        arguments={
+            "subject": subject_hint,
+            "recipients": [],
+            "body_context": msg,
+            "tone": tone,
+        },
+        confidence=0.8,
+    )
+
+
+def _select_report_generator(msg: str) -> ToolSelection:
+    """Select report_generator tool with template detection."""
+    template = "monthly_summary"  # safe default
+    for kw, tmpl in _REPORT_GEN_TEMPLATE_MAP.items():
+        if kw in msg:
+            template = tmpl
+            break
+    return ToolSelection(
+        tool_name="report_generator",
+        arguments={"template_name": template, "data": {"description": msg}, "output_format": "markdown"},
+        confidence=0.75,
+    )
+
+
+def _select_search(msg: str) -> ToolSelection:
+    """Select search_documents tool."""
+    return ToolSelection(
+        tool_name="search_documents",
+        arguments={"query": msg, "top_k": 5},
+        confidence=0.7,
+    )
+
+
+def _select_knowledge_base(msg: str) -> ToolSelection:
+    """Select knowledge_base tool for status/count queries."""
+    return ToolSelection(
+        tool_name="knowledge_base",
+        arguments={"action": "count"},
         confidence=0.7,
     )

@@ -196,7 +196,7 @@ class QueueStatsResponse(BaseModel):
 
 
 @router.get("/quality/documents/status")
-async def get_document_status(status_filter: Optional[str] = None):
+async def get_document_status(status_filter: Optional[str] = None, current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     문서 처리 상태 조회.
 
@@ -226,7 +226,7 @@ async def get_document_status(status_filter: Optional[str] = None):
 
 
 @router.get("/quality/documents/changes")
-async def detect_document_changes():
+async def detect_document_changes(current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     업로드 디렉토리의 파일 변경 감지.
 
@@ -253,7 +253,7 @@ async def detect_document_changes():
 
 
 @router.get("/quality/chunks/metrics", response_model=ChunkQualityReportResponse)
-async def get_chunk_quality_metrics():
+async def get_chunk_quality_metrics(current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     전체 청크 품질 지표 조회.
 
@@ -271,7 +271,7 @@ async def get_chunk_quality_metrics():
 
 
 @router.get("/quality/chunks/preview/{document_id}")
-async def get_chunk_preview(document_id: str):
+async def get_chunk_preview(document_id: str, current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     특정 문서의 청크 미리보기 조회.
 
@@ -297,7 +297,7 @@ async def get_chunk_preview(document_id: str):
 
 
 @router.get("/quality/chunks/by-document")
-async def get_chunks_by_document():
+async def get_chunks_by_document(current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     문서별 청크 통계 집계.
 
@@ -326,7 +326,7 @@ async def get_chunks_by_document():
 
 
 @router.get("/quality/embeddings/status", response_model=EmbeddingStatusResponse)
-async def get_embedding_status():
+async def get_embedding_status(current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     임베딩 처리 현황 조회.
 
@@ -351,7 +351,7 @@ async def get_embedding_status():
 
 
 @router.get("/quality/embeddings/history")
-async def get_embedding_history(limit: int = 50):
+async def get_embedding_history(limit: int = 50, current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     임베딩 작업 이력 조회.
 
@@ -376,7 +376,7 @@ async def get_embedding_history(limit: int = 50):
 
 
 @router.get("/quality/embeddings/failed")
-async def get_failed_embeddings():
+async def get_failed_embeddings(current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     실패한 임베딩 작업 조회.
 
@@ -403,7 +403,7 @@ async def get_failed_embeddings():
 
 
 @router.get("/quality/vectors/distribution", response_model=VectorDistributionResponse)
-async def get_vector_distribution():
+async def get_vector_distribution(current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     벡터 분포 분석 조회.
 
@@ -421,7 +421,7 @@ async def get_vector_distribution():
 
 
 @router.get("/quality/vectors/health", response_model=CollectionHealthResponse)
-async def get_vector_health():
+async def get_vector_health(current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     벡터 컬렉션 상태 조회.
 
@@ -447,6 +447,7 @@ async def get_vector_health():
 async def get_reprocess_queue_items(
     status: Optional[str] = None,
     limit: int = 50,
+    current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER])),
 ):
     """
     재처리 큐 목록 조회.
@@ -473,7 +474,7 @@ async def get_reprocess_queue_items(
 
 
 @router.get("/quality/reprocess/stats", response_model=QueueStatsResponse)
-async def get_reprocess_stats():
+async def get_reprocess_stats(current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     재처리 큐 통계 조회.
 
@@ -491,7 +492,7 @@ async def get_reprocess_stats():
 
 
 @router.post("/quality/reprocess/retry/{queue_id}")
-async def retry_reprocess_item(queue_id: str):
+async def retry_reprocess_item(queue_id: str, current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     """
     재처리 큐 항목 개별 재시도.
 
@@ -525,7 +526,7 @@ async def retry_reprocess_item(queue_id: str):
 
 
 @router.post("/quality/reprocess/retry-all")
-async def retry_all_failed():
+async def retry_all_failed(current_user: User = Depends(require_role([Role.ADMIN]))):
     """
     실패한 모든 재처리 큐 항목 재시도.
 
@@ -554,7 +555,7 @@ async def retry_all_failed():
 
 
 @router.delete("/quality/reprocess/{queue_id}")
-async def delete_reprocess_item(queue_id: str):
+async def delete_reprocess_item(queue_id: str, current_user: User = Depends(require_role([Role.ADMIN]))):
     """
     재처리 큐 항목 삭제.
 
@@ -691,3 +692,30 @@ async def update_golden_data(
     except Exception as e:
         logger.error(f"Failed to update golden data: {e}")
         raise HTTPException(500, f"Failed to update golden data: {str(e)}")
+
+
+@router.delete("/quality/golden-data/{entry_id}")
+async def delete_golden_data(
+    entry_id: str,
+    current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER])),
+):
+    """
+    골든 데이터 삭제 (소프트 삭제).
+
+    Args:
+        entry_id: 골든 데이터 항목 ID
+        current_user: 현재 사용자 (ADMIN, MANAGER 권한 필요)
+
+    Returns:
+        삭제 성공 여부
+    """
+    try:
+        from rag.golden_data import get_golden_data_manager
+        manager = await get_golden_data_manager()
+        await manager.delete(entry_id)
+        return {"status": "deleted", "id": entry_id}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to delete golden data: {e}")
+        raise HTTPException(500, f"Failed to delete golden data: {str(e)}")

@@ -17,8 +17,16 @@ class DataAnalyzerTool(BaseTool):
     def get_definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="data_analyzer",
-            description="데이터를 분석합니다. 기본 통계(평균, 중앙값, 표준편차 등) 계산 및 차트 데이터 생성을 지원합니다.",
+            description="데이터를 분석하고 통계를 제공합니다",
             category="analytics",
+            help_text=(
+                "숫자 데이터의 기술통계(평균, 중앙값, 표준편차, 백분위수 등)를 계산합니다.\n"
+                "분석 유형:\n"
+                "  - statistics: 기술통계 계산 (기본값)\n"
+                "  - chart_data: 차트용 데이터 변환 (bar/line/pie/scatter)\n"
+                "  - csv_summary: CSV 문자열 요약 분석\n"
+                "입력 형식: 숫자 리스트 [1,2,3], 딕셔너리 {\"항목A\":10, \"항목B\":20}, CSV 문자열"
+            ),
             parameters=[
                 ToolParameter(
                     name="data",
@@ -249,6 +257,12 @@ class DataAnalyzerTool(BaseTool):
 
     async def analyze_csv(self, file_path: str) -> dict:
         """Analyze a CSV file from disk."""
+        from pathlib import Path
+        from config.settings import settings
+        allowed_dir = Path(settings.upload_dir).resolve()
+        resolved = Path(file_path).resolve()
+        if not resolved.is_relative_to(allowed_dir):
+            raise PermissionError(f"Access denied: path must be within {settings.upload_dir}")
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
         result = await self.execute(data=content, analysis_type="csv_summary")

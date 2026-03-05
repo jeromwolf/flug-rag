@@ -1,6 +1,6 @@
 """Pydantic request/response models for API endpoints."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # --- Chat ---
@@ -11,6 +11,18 @@ class ChatRequest(BaseModel):
     provider: str | None = None
     model: str | None = None
     filters: dict | None = None
+
+    @field_validator("filters")
+    @classmethod
+    def validate_filters(cls, v: dict | None) -> dict | None:
+        if v is None:
+            return v
+        allowed_keys = {"source_type", "file_type", "date_range", "category"}
+        invalid_keys = set(v.keys()) - allowed_keys
+        if invalid_keys:
+            raise ValueError(f"Invalid filter keys: {invalid_keys}. Allowed: {allowed_keys}")
+        return v
+
     temperature: float | None = Field(None, ge=0.0, le=2.0, description="Temperature")
 
 
@@ -103,6 +115,8 @@ class FeedbackRequest(BaseModel):
     rating: int = Field(ge=-1, le=1)  # -1=bad, 0=neutral, 1=good
     comment: str = ""
     corrected_answer: str | None = None
+    query: str = ""        # The user's question
+    answer: str = ""       # The AI's answer
 
 
 class FeedbackResponse(BaseModel):

@@ -135,6 +135,8 @@ class RAGChain:
         text = _RE_A_PREFIX.sub('', text.strip())
         text = _RE_SOURCE_TAG.sub('', text)
         text = _RE_CJK_LEAKAGE.sub('', text)
+        # Strip any HTML tags from LLM output to prevent XSS
+        text = re.sub(r'<[^>]+>', '', text)
         return text.strip()
 
     @staticmethod
@@ -433,6 +435,11 @@ class RAGChain:
                 "content": r.content,
                 "score": round(r.score, 3),
                 "metadata": r.metadata,
+                "source_url": (
+                    f"/api/documents/{r.metadata.get('document_id')}/download"
+                    if r.metadata.get("document_id")
+                    else ""
+                ),
             }
             for r in retrieval_results
         ]
@@ -890,6 +897,7 @@ class RAGChain:
 
             # Emit sources (include content for frontend expand)
             for r in results:
+                doc_id = r.metadata.get("document_id", "")
                 yield {
                     "event": "source",
                     "data": {
@@ -898,6 +906,7 @@ class RAGChain:
                         "page": r.metadata.get("page_number"),
                         "score": round(r.score, 3),
                         "content": r.content[:500] if r.content else "",
+                        "source_url": f"/api/documents/{doc_id}/download" if doc_id else "",
                     },
                 }
 
@@ -921,6 +930,8 @@ class RAGChain:
             accumulated = []
             prefix_stripped = False
             prefix_buffer = ""
+            ttft_ms: int | None = None
+            generation_start_time = time.time()
             async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
                 if not prefix_stripped:
                     prefix_buffer += token
@@ -931,9 +942,13 @@ class RAGChain:
                     stripped = _RE_A_PREFIX.sub('', prefix_buffer.lstrip())
                     prefix_stripped = True
                     if stripped:
+                        if ttft_ms is None:
+                            ttft_ms = int((time.time() - start_time) * 1000)
                         accumulated.append(stripped)
                         yield {"event": "chunk", "data": {"content": stripped}}
                     continue
+                if ttft_ms is None:
+                    ttft_ms = int((time.time() - start_time) * 1000)
                 accumulated.append(token)
                 yield {"event": "chunk", "data": {"content": token}}
 
@@ -986,12 +1001,20 @@ class RAGChain:
                     logger.warning("Stream Self-RAG grading failed: %s", e)
 
             latency_ms = int((time.time() - start_time) * 1000)
+            # TPS: total characters / generation duration (seconds)
+            full_response_len = len("".join(accumulated))
+            generation_elapsed = time.time() - generation_start_time
+            tps = round(full_response_len / generation_elapsed, 1) if generation_elapsed > 0 and full_response_len > 0 else None
             end_data = {
                 "confidence_score": round(confidence, 3),
                 "confidence_level": self.quality.get_confidence_level(confidence),
                 "latency_ms": latency_ms,
                 "source_count": len(results),
             }
+            if ttft_ms is not None:
+                end_data["ttft_ms"] = ttft_ms
+            if tps is not None:
+                end_data["tps"] = tps
             if guardrail_triggered:
                 end_data["guardrail_blocked"] = True
             if correction_info:
@@ -1015,6 +1038,11 @@ class RAGChain:
                             "page": r.metadata.get("page_number"),
                             "score": round(r.score, 3),
                             "content": r.content[:500] if r.content else "",
+                            "source_url": (
+                                f"/api/documents/{r.metadata.get('document_id')}/download"
+                                if r.metadata.get("document_id")
+                                else ""
+                            ),
                         }
                         for r in results
                     ]

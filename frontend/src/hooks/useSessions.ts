@@ -42,7 +42,7 @@ export function useSessions(
   const queryClient = useQueryClient();
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
 
-  const { data: sessionsData } = useQuery({
+  const { data: sessionsData, isLoading: isSessionsLoading } = useQuery({
     queryKey: ["sessions"],
     queryFn: async () => {
       const res = await sessionsApi.list();
@@ -68,12 +68,27 @@ export function useSessions(
     deleteSessionMutation.mutate(id);
   };
 
+  const renameSessionMutation = useMutation({
+    mutationFn: ({ id, title }: { id: string; title: string }) =>
+      sessionsApi.update(id, title),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
+
+  const renameSession = (id: string, title: string) => {
+    renameSessionMutation.mutate({ id, title });
+  };
+
   return {
     sessions,
     sessionGroups,
     deleteDialogId,
     setDeleteDialogId,
     deleteSession,
+    renameSession,
+    isLoading: isSessionsLoading,
     isDeleting: deleteSessionMutation.isPending,
+    isRenaming: renameSessionMutation.isPending,
   };
 }

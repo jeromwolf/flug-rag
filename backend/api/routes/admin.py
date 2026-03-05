@@ -17,6 +17,16 @@ from rag import PromptManager
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+# ==================== Per-Category Cache TTL (runtime mutable) ====================
+# These store the TTL values that are applied per cache category.
+# Keys match the category names used in cache operations.
+_CACHE_TTL_CONFIG: dict[str, int] = {
+    "rag_query": 120,      # RAG stream cache (seconds)
+    "llm_response": 300,   # LLM response cache
+    "embeddings": 3600,    # Embedding cache
+    "documents": 86400,    # Document metadata cache
+}
+
 _ADMIN_INFO_CACHE_KEY = "admin:info"
 _ADMIN_PROMPTS_CACHE_KEY = "admin:prompts"
 _ADMIN_CACHE_TTL = 60  # seconds
@@ -87,13 +97,13 @@ async def get_system_info(
 async def get_system_metrics(
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
 ):
-    """실시간 시스템 메트릭 (CPU, 메모리, 디스크)."""
+    """실시간 시스템 메트릭 (CPU, 메모리, 디스크, GPU, 프로세스, 업타임)."""
     from monitoring.alerting import get_alert_manager
 
     manager = get_alert_manager()
     metrics = await manager.collect_system_metrics()
 
-    # Add extra memory detail if psutil available
+    # Add extra memory detail, process count, and uptime if psutil available
     try:
         import psutil
         mem = psutil.virtual_memory()
@@ -103,6 +113,17 @@ async def get_system_metrics(
 
         # CPU count
         metrics["cpu_count"] = psutil.cpu_count()
+
+        # Process count
+        metrics["process_count"] = len(psutil.pids())
+
+        # System uptime (seconds since boot)
+        boot_time = psutil.boot_time()
+        uptime_seconds = int(__import__("time").time() - boot_time)
+        metrics["uptime_seconds"] = uptime_seconds
+        hours, remainder = divmod(uptime_seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+        metrics["uptime_human"] = f"{hours}h {minutes}m"
     except ImportError:
         pass
 
@@ -115,6 +136,35 @@ async def get_system_metrics(
         metrics["disk_free_gb"] = round(disk.free / (1024**3), 1)
     except Exception:
         pass
+
+    # GPU info (nvidia-smi via pynvml, optional)
+    gpu_info = []
+    try:
+        import pynvml  # type: ignore
+        pynvml.nvmlInit()
+        device_count = pynvml.nvmlDeviceGetCount()
+        for i in range(device_count):
+            handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+            name = pynvml.nvmlDeviceGetName(handle)
+            if isinstance(name, bytes):
+                name = name.decode()
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            gpu_info.append({
+                "index": i,
+                "name": name,
+                "utilization": util.gpu,
+                "memory_used_gb": round(mem_info.used / (1024**3), 1),
+                "memory_total_gb": round(mem_info.total / (1024**3), 1),
+                "memory_percent": round(mem_info.used / mem_info.total * 100, 1),
+            })
+        pynvml.nvmlShutdown()
+    except Exception:
+        # pynvml not available or no NVIDIA GPU — skip silently
+        pass
+
+    if gpu_info:
+        metrics["gpu"] = gpu_info
 
     return {"metrics": metrics}
 
@@ -212,7 +262,71 @@ class PromptSaveRequest(BaseModel):
     change_note: str = Field("", description="변경 메모")
 
 
+# ==================== Settings Endpoint ====================
+
+
+class SettingsUpdateRequest(BaseModel):
+    default_provider: Literal["vllm", "ollama", "openai", "anthropic"] = Field(
+        ..., description="기본 LLM 프로바이더"
+    )
+
+
+@router.put("/admin/settings")
+async def update_settings(
+    request: SettingsUpdateRequest,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """시스템 설정 업데이트 (기본 프로바이더 변경 등) (ADMIN only)."""
+    old_provider = settings.default_llm_provider
+    settings.default_llm_provider = request.default_provider
+    await _invalidate_admin_cache()
+    logger.info(
+        f"Default provider changed by {current_user.username}: {old_provider} → {request.default_provider}"
+    )
+    return {"status": "updated", "default_provider": request.default_provider}
+
+
 # ==================== Model Management Endpoints ====================
+
+
+_DEFAULT_SEED_MODELS = [
+    {
+        "name": "Qwen2.5 7B (Ollama)",
+        "provider": "ollama",
+        "model_id": "qwen2.5:7b",
+        "parameters": '{"temperature": 0.2, "max_tokens": 2048}',
+    },
+    {
+        "name": "Qwen2.5 14B (Ollama)",
+        "provider": "ollama",
+        "model_id": "qwen2.5:14b",
+        "parameters": '{"temperature": 0.2, "max_tokens": 2048}',
+    },
+    {
+        "name": "GPT-4o (OpenAI)",
+        "provider": "openai",
+        "model_id": "gpt-4o",
+        "parameters": '{"temperature": 0.2, "max_tokens": 4096}',
+    },
+    {
+        "name": "GPT-4o Mini (OpenAI)",
+        "provider": "openai",
+        "model_id": "gpt-4o-mini",
+        "parameters": '{"temperature": 0.2, "max_tokens": 4096}',
+    },
+    {
+        "name": "Claude Sonnet 4 (Anthropic)",
+        "provider": "anthropic",
+        "model_id": "claude-sonnet-4-20250514",
+        "parameters": '{"temperature": 0.2, "max_tokens": 4096}',
+    },
+    {
+        "name": "Claude Haiku 4.5 (Anthropic)",
+        "provider": "anthropic",
+        "model_id": "claude-haiku-4-5-20251001",
+        "parameters": '{"temperature": 0.2, "max_tokens": 4096}',
+    },
+]
 
 
 @router.get("/admin/models")
@@ -220,10 +334,20 @@ async def list_registered_models(
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
     active_only: bool = True,
 ):
-    """등록된 LLM 모델 목록 조회 (ADMIN only)."""
+    """등록된 LLM 모델 목록 조회 (ADMIN only). 빈 경우 기본 모델 시드 데이터 자동 삽입."""
     from core.llm.model_registry import get_model_registry
 
     registry = await get_model_registry()
+    # Check all models (not just active) to decide if seeding is needed
+    all_models = await registry.list_models(active_only=False)
+    if not all_models:
+        logger.info("Model registry empty — seeding default models")
+        for seed in _DEFAULT_SEED_MODELS:
+            try:
+                await registry.register_model(**seed)
+            except Exception as e:
+                logger.warning(f"Seed model registration failed ({seed['model_id']}): {e}")
+
     models = await registry.list_models(active_only=active_only)
     return {"models": [_mask_model(m) for m in models]}
 
@@ -362,3 +486,389 @@ async def get_all_active_prompts(
     manager = await get_version_manager()
     prompts = await manager.get_all_prompts()
     return {"prompts": [p.__dict__ for p in prompts]}
+
+
+# ==================== Chunking Config Endpoints ====================
+
+
+@router.get("/admin/chunking-config")
+async def get_chunking_config(
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """현재 청킹 설정 조회 (ADMIN only)."""
+    return {
+        "chunk_strategy": settings.chunk_strategy,
+        "chunk_size": settings.chunk_size,
+        "chunk_overlap": settings.chunk_overlap,
+    }
+
+
+@router.put("/admin/chunking-config")
+async def update_chunking_config(
+    request: dict,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """청킹 설정 업데이트 (런타임 변경, 재인제스트 필요)."""
+    allowed_strategies = ["recursive", "semantic", "table", "hierarchical", "adaptive"]
+
+    if "chunk_strategy" in request:
+        if request["chunk_strategy"] not in allowed_strategies:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid strategy. Allowed: {allowed_strategies}",
+            )
+        settings.chunk_strategy = request["chunk_strategy"]
+    if "chunk_size" in request:
+        val = int(request["chunk_size"])
+        if not (100 <= val <= 4000):
+            raise HTTPException(status_code=400, detail="chunk_size must be 100–4000")
+        settings.chunk_size = val
+    if "chunk_overlap" in request:
+        val = int(request["chunk_overlap"])
+        if not (0 <= val <= 500):
+            raise HTTPException(status_code=400, detail="chunk_overlap must be 0–500")
+        settings.chunk_overlap = val
+
+    logger.info(
+        f"Chunking config updated by {current_user.username}: "
+        f"strategy={settings.chunk_strategy}, size={settings.chunk_size}, overlap={settings.chunk_overlap}"
+    )
+
+    return {
+        "status": "updated",
+        "chunk_strategy": settings.chunk_strategy,
+        "chunk_size": settings.chunk_size,
+        "chunk_overlap": settings.chunk_overlap,
+        "note": "변경된 설정은 새로 인제스트하는 문서부터 적용됩니다.",
+    }
+
+
+# ==================== Log Level Endpoints ====================
+
+
+@router.get("/admin/log-level")
+async def get_log_level(
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """현재 로그 레벨 조회 (ADMIN only)."""
+    current = logging.getLogger().getEffectiveLevel()
+    return {"level": logging.getLevelName(current)}
+
+
+@router.put("/admin/log-level")
+async def set_log_level(
+    level: str,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """런타임 로그 레벨 변경 (ADMIN only)."""
+    level_upper = level.upper()
+    if level_upper not in ("DEBUG", "INFO", "WARNING", "ERROR"):
+        raise HTTPException(status_code=400, detail=f"Invalid log level: {level}. Allowed: DEBUG, INFO, WARNING, ERROR")
+    numeric = getattr(logging, level_upper)
+    logging.getLogger().setLevel(numeric)
+    for name in ("api", "rag", "pipeline", "core", "agent", "auth", "monitoring"):
+        logging.getLogger(name).setLevel(numeric)
+    logger.info(f"Log level changed to {level_upper} by {current_user.username}")
+    return {"status": "updated", "level": level_upper}
+
+
+# ==================== Cache Config Endpoints ====================
+
+
+class CacheConfigUpdateRequest(BaseModel):
+    rag_query: int | None = Field(None, ge=0, le=86400, description="RAG 질의 캐시 TTL (초)")
+    llm_response: int | None = Field(None, ge=0, le=86400, description="LLM 응답 캐시 TTL (초)")
+    embeddings: int | None = Field(None, ge=0, le=604800, description="임베딩 캐시 TTL (초)")
+    documents: int | None = Field(None, ge=0, le=604800, description="문서 메타데이터 캐시 TTL (초)")
+
+
+class CacheClearRequest(BaseModel):
+    category: str | None = Field(None, description="지울 카테고리 (없으면 전체 삭제)")
+
+
+@router.get("/admin/cache-config")
+async def get_cache_config(
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """캐시 카테고리별 TTL 설정 조회 (ADMIN only)."""
+    from core.cache import get_cache, InMemoryCache
+
+    cache = await get_cache()
+    cache_type = "memory" if isinstance(cache, InMemoryCache) else "redis"
+
+    return {
+        "cache_enabled": settings.cache_enabled,
+        "cache_type": cache_type,
+        "ttl": dict(_CACHE_TTL_CONFIG),
+        "categories": [
+            {"key": "rag_query", "label": "RAG 질의", "description": "동일한 질의에 대한 스트리밍 응답 캐시", "unit": "초"},
+            {"key": "llm_response", "label": "LLM 응답", "description": "LLM 완성 결과 캐시", "unit": "초"},
+            {"key": "embeddings", "label": "임베딩", "description": "텍스트 임베딩 벡터 캐시", "unit": "초"},
+            {"key": "documents", "label": "문서 메타데이터", "description": "문서 목록/메타데이터 캐시", "unit": "초"},
+        ],
+    }
+
+
+@router.put("/admin/cache-config")
+async def update_cache_config(
+    request: CacheConfigUpdateRequest,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """캐시 카테고리별 TTL 설정 변경 (ADMIN only). 런타임 적용, 재시작 시 초기화."""
+    updates = request.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="변경할 TTL 값을 하나 이상 지정해야 합니다.")
+
+    for key, value in updates.items():
+        if key in _CACHE_TTL_CONFIG:
+            _CACHE_TTL_CONFIG[key] = value
+
+    logger.info(f"Cache TTL config updated by {current_user.username}: {updates}")
+    return {
+        "status": "updated",
+        "ttl": dict(_CACHE_TTL_CONFIG),
+        "note": "변경된 TTL은 런타임에만 적용됩니다. 서버 재시작 시 기본값으로 초기화됩니다.",
+    }
+
+
+@router.post("/admin/cache-clear")
+async def clear_cache(
+    request: CacheClearRequest,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """캐시 초기화 (전체 또는 카테고리별) (ADMIN only)."""
+    from core.cache import get_cache, InMemoryCache
+
+    valid_categories = list(_CACHE_TTL_CONFIG.keys())
+    category = request.category
+
+    if category and category not in valid_categories:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid category '{category}'. Valid: {valid_categories}",
+        )
+
+    cache = await get_cache()
+    deleted = 0
+
+    try:
+        if category:
+            # Clear keys matching the category prefix
+            # RAG stream cache keys start with the query hash; use a broad pattern
+            pattern_map = {
+                "rag_query": "rag.chain.*",
+                "llm_response": "*.llm.*",
+                "embeddings": "*.embedding*",
+                "documents": "*.document*",
+            }
+            pattern = pattern_map.get(category, f"{category}:*")
+            deleted = await cache.clear_pattern(pattern)
+            # Also try admin cache
+            await cache.clear_pattern("admin:*")
+        else:
+            # Clear all: for InMemoryCache use clear(), for Redis use pattern
+            if isinstance(cache, InMemoryCache):
+                await cache.clear()
+                deleted = -1  # unknown count for full clear
+            else:
+                deleted = await cache.clear_pattern("*")
+                await cache.clear_pattern("flux-rag:*")
+    except Exception as e:
+        logger.warning(f"Cache clear failed: {e}")
+        raise HTTPException(status_code=500, detail=f"캐시 초기화 실패: {e}")
+
+    logger.info(f"Cache cleared by {current_user.username}: category={category or 'ALL'}, deleted={deleted}")
+    return {
+        "status": "cleared",
+        "category": category or "all",
+        "deleted_count": deleted,
+    }
+
+
+def get_cache_ttl(category: str) -> int:
+    """Helper for other modules to read the current TTL for a category."""
+    return _CACHE_TTL_CONFIG.get(category, settings.cache_default_ttl)
+
+
+# ==================== Storage Management Endpoints ====================
+
+
+@router.get("/admin/storage-stats")
+async def get_storage_stats(
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """저장소 통계 조회: 총 사용량, 사용자별 분류, 파일 유형별 통계, 대용량 파일, 보존 기간 임박 파일 (ADMIN only)."""
+    import os
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    upload_dir = Path(settings.upload_dir)
+    if not upload_dir.exists():
+        return {
+            "total_bytes": 0,
+            "total_files": 0,
+            "by_user": [],
+            "by_type": [],
+            "largest_files": [],
+            "expiring_soon": [],
+            "quota": {
+                "max_file_size_mb": settings.max_file_size_mb,
+                "max_user_storage_mb": settings.max_user_storage_mb,
+                "max_total_storage_gb": settings.max_total_storage_gb,
+                "file_retention_days": settings.file_retention_days,
+            },
+        }
+
+    _HIDDEN = {".DS_Store", ".omc", "Store", ".gitkeep", "Thumbs.db", "__MACOSX"}
+    total_bytes = 0
+    total_files = 0
+    by_type: dict[str, dict] = {}
+    file_records: list[dict] = []
+
+    now = datetime.now(tz=timezone.utc)
+    retention_threshold = settings.file_retention_days - 30  # warn 30 days before
+
+    for f in upload_dir.rglob("*"):
+        if not f.is_file():
+            continue
+        if f.name in _HIDDEN or f.name.startswith("."):
+            continue
+
+        stat = f.stat()
+        size = stat.st_size
+        mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+        age_days = (now - mtime).days
+        ext = f.suffix.lower() or "unknown"
+
+        total_bytes += size
+        total_files += 1
+
+        # By type
+        if ext not in by_type:
+            by_type[ext] = {"extension": ext, "count": 0, "bytes": 0}
+        by_type[ext]["count"] += 1
+        by_type[ext]["bytes"] += size
+
+        file_records.append({
+            "filename": f.name,
+            "size_bytes": size,
+            "extension": ext,
+            "uploaded_at": mtime.isoformat(),
+            "age_days": age_days,
+        })
+
+    # Sort largest files
+    largest_files = sorted(file_records, key=lambda x: x["size_bytes"], reverse=True)[:10]
+
+    # Files approaching retention limit
+    expiring_soon = [
+        r for r in file_records
+        if r["age_days"] >= retention_threshold
+    ]
+    expiring_soon = sorted(expiring_soon, key=lambda x: x["age_days"], reverse=True)[:20]
+
+    # by_type list sorted by bytes desc
+    by_type_list = sorted(by_type.values(), key=lambda x: x["bytes"], reverse=True)
+
+    # Per-user breakdown (parse user_id from filenames where possible via sub-dirs)
+    # Since uploads use flat uuid_filename format without user tagging, aggregate by
+    # sub-directory name (personal knowledge uses username subdirs)
+    by_user: list[dict] = []
+    user_dirs: dict[str, dict] = {}
+    for sub in upload_dir.iterdir():
+        if sub.is_dir() and not sub.name.startswith(".") and sub.name not in _HIDDEN:
+            user_bytes = 0
+            user_files = 0
+            for uf in sub.rglob("*"):
+                if uf.is_file() and not uf.name.startswith("."):
+                    user_bytes += uf.stat().st_size
+                    user_files += 1
+            if user_files > 0:
+                user_dirs[sub.name] = {
+                    "user": sub.name,
+                    "file_count": user_files,
+                    "bytes": user_bytes,
+                }
+    by_user = sorted(user_dirs.values(), key=lambda x: x["bytes"], reverse=True)[:20]
+
+    return {
+        "total_bytes": total_bytes,
+        "total_files": total_files,
+        "by_user": by_user,
+        "by_type": by_type_list,
+        "largest_files": largest_files,
+        "expiring_soon": expiring_soon,
+        "quota": {
+            "max_file_size_mb": settings.max_file_size_mb,
+            "max_user_storage_mb": settings.max_user_storage_mb,
+            "max_total_storage_gb": settings.max_total_storage_gb,
+            "file_retention_days": settings.file_retention_days,
+        },
+    }
+
+
+# ==================== LLM Playground Endpoint ====================
+
+
+class PlaygroundRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, description="사용자 프롬프트")
+    model: str | None = Field(None, description="모델 이름 (미지정 시 기본 모델)")
+    temperature: float = Field(0.2, ge=0.0, le=1.0, description="샘플링 온도")
+    max_tokens: int = Field(1024, ge=64, le=4096, description="최대 생성 토큰 수")
+    system_prompt: str | None = Field(None, description="시스템 프롬프트 (선택)")
+
+
+class PlaygroundResponse(BaseModel):
+    response: str
+    latency_ms: int
+    model_used: str
+    tokens_used: int | None = None
+
+
+@router.post("/admin/playground", response_model=PlaygroundResponse)
+async def llm_playground(
+    request: PlaygroundRequest,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """LLM 직접 테스트 (RAG 파이프라인 우회, ADMIN only)."""
+    import time
+
+    from core.llm import create_llm
+
+    try:
+        llm = create_llm(
+            model=request.model or None,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LLM 초기화 실패: {e}")
+
+    start = time.monotonic()
+    try:
+        result = await llm.generate(
+            prompt=request.prompt,
+            system=request.system_prompt or None,
+        )
+    except Exception as e:
+        logger.error(f"Playground LLM error for {current_user.username}: {e}")
+        raise HTTPException(status_code=502, detail=f"LLM 응답 실패: {e}")
+    finally:
+        await llm.close()
+
+    latency_ms = int((time.monotonic() - start) * 1000)
+    tokens_used: int | None = None
+    if result.usage:
+        tokens_used = result.usage.get("completion_tokens") or result.usage.get("total_tokens")
+
+    logger.info(
+        f"Playground request by {current_user.username}: model={result.model}, "
+        f"latency={latency_ms}ms, tokens={tokens_used}"
+    )
+
+    return PlaygroundResponse(
+        response=result.content,
+        latency_ms=latency_ms,
+        model_used=result.model,
+        tokens_used=tokens_used,
+    )

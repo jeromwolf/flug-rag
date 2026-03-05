@@ -1,11 +1,26 @@
 """MCP tool endpoints."""
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
 from agent.mcp import MCPServer, get_registry
 from api.schemas import MCPCallRequest
 from auth.dependencies import get_current_user, require_role
 from auth.models import Role, User
+
+
+class CustomToolCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=64, pattern=r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+    description: str = Field("", max_length=500)
+    tool_type: str = Field("api", pattern=r'^(api|script|query)$')
+    config: dict = {}
+
+
+class CustomToolUpdate(BaseModel):
+    description: str | None = None
+    config: dict | None = None
+    enabled: bool | None = None
+
 
 router = APIRouter()
 
@@ -26,7 +41,7 @@ async def list_tools(current_user: User | None = Depends(get_current_user)):
 
 
 @router.post("/mcp/call")
-async def call_tool(request: MCPCallRequest, current_user: User | None = Depends(get_current_user)):
+async def call_tool(request: MCPCallRequest, current_user: User = Depends(require_role([Role.USER, Role.MANAGER, Role.ADMIN]))):
     registry = get_registry()
     result = await registry.execute(request.tool_name, **request.arguments)
     return {
@@ -44,7 +59,7 @@ async def call_tool(request: MCPCallRequest, current_user: User | None = Depends
 
 @router.post("/mcp/tools/custom")
 async def create_custom_tool(
-    request: dict,
+    request: CustomToolCreate,
     current_user: User = Depends(require_role([Role.ADMIN])),
 ):
     """커스텀 도구 생성."""
@@ -54,10 +69,10 @@ async def create_custom_tool(
     registry = get_registry()
 
     # Validate name uniqueness against built-in tools
-    if request.get("name") in [t.name for t in registry.list_tools()]:
-        raise HTTPException(status_code=409, detail=f"도구 이름 '{request['name']}'이 이미 존재합니다")
+    if request.name in [t.name for t in registry.list_tools()]:
+        raise HTTPException(status_code=409, detail=f"도구 이름 '{request.name}'이 이미 존재합니다")
 
-    tool = await store.create(created_by=current_user.username, **request)
+    tool = await store.create(created_by=current_user.username, **request.model_dump())
 
     # Register in runtime
     executor = CustomToolExecutor(tool)
@@ -80,7 +95,7 @@ async def list_custom_tools(
 @router.put("/mcp/tools/custom/{tool_id}")
 async def update_custom_tool(
     tool_id: str,
-    request: dict,
+    request: CustomToolUpdate,
     current_user: User = Depends(require_role([Role.ADMIN])),
 ):
     """커스텀 도구 수정."""
@@ -89,7 +104,7 @@ async def update_custom_tool(
     registry = get_registry()
 
     try:
-        tool = await store.update(tool_id, **request)
+        tool = await store.update(tool_id, **request.model_dump(exclude_none=True))
 
         # Re-register executor with updated config
         executor = CustomToolExecutor(tool)
@@ -97,8 +112,8 @@ async def update_custom_tool(
         registry.register(executor)
 
         return {"status": "updated", "tool": tool.__dict__}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Tool not found")
 
 
 @router.delete("/mcp/tools/custom/{tool_id}")
@@ -124,8 +139,8 @@ async def delete_custom_tool(
         await store.delete(tool_id)
 
         return {"status": "deleted", "tool_id": tool_id}
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Tool not found")
 
 
 @router.post("/mcp/tools/custom/{tool_id}/test")

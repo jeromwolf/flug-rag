@@ -23,6 +23,15 @@ class DocumentSearchTool(BaseTool):
             name="search_documents",
             description="한국가스기술공사 문서 지식베이스에서 관련 문서를 검색합니다.",
             category="retrieval",
+            help_text=(
+                "하이브리드 검색(벡터 + BM25)으로 지식베이스 문서를 검색합니다.\n"
+                "파라미터:\n"
+                "  - query: 검색할 자연어 질의 (필수)\n"
+                "  - top_k: 반환할 최대 문서 수 (기본값: 5)\n"
+                "  - department: 부서 필터 (예: 안전팀, 기술연구소)\n"
+                "  - category: 문서 유형 필터 (예: 규정, 매뉴얼, 보고서)\n"
+                "반환: 문서 내용(500자 내), 관련도 점수, 메타데이터"
+            ),
             parameters=[
                 ToolParameter(
                     name="query",

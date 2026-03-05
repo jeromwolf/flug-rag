@@ -68,6 +68,34 @@ async def _get_rag_chain():
     return _rag_chain
 
 
+async def _generate_follow_up_questions(
+    question: str, answer: str
+) -> list[str]:
+    """Generate 3 follow-up question suggestions based on Q&A context."""
+    from core.llm.factory import create_llm
+
+    llm = create_llm()
+    prompt = (
+        "다음 질문과 답변을 보고, 사용자가 이어서 물어볼 만한 후속 질문 3개를 생성하세요.\n"
+        "각 질문은 한 줄에 하나씩, 번호 없이 질문만 작성하세요.\n"
+        "질문은 구체적이고 원래 주제와 관련되어야 합니다.\n\n"
+        f"질문: {question}\n"
+        f"답변: {answer[:500]}\n\n"
+        "후속 질문 3개:"
+    )
+    try:
+        result = await llm.agenerate(prompt, max_tokens=200, temperature=0.7)
+        lines = [
+            line.strip().lstrip("0123456789.-) ").strip()
+            for line in result.strip().split("\n")
+            if line.strip() and len(line.strip()) > 5
+        ]
+        return lines[:3]
+    except Exception as e:
+        logger.debug("Follow-up generation failed: %s", e)
+        return []
+
+
 async def _build_merged_filters(user, request_filters):
     """사용자 접근 권한 필터와 요청 필터를 병합."""
     if user is None:
@@ -403,5 +431,21 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
         # Save assistant message after streaming (only if content was produced)
         if full_content:
             await _get_memory().add_message(session_id, "assistant", full_content)
+
+        # Generate follow-up question suggestions (best-effort, non-blocking)
+        if full_content and request.message:
+            try:
+                suggestions = await _generate_follow_up_questions(
+                    request.message, full_content
+                )
+                if suggestions:
+                    yield {
+                        "event": "suggested_questions",
+                        "data": json.dumps(
+                            {"questions": suggestions}, ensure_ascii=False
+                        ),
+                    }
+            except Exception as e:
+                logger.debug("Follow-up question generation skipped: %s", e)
 
     return EventSourceResponse(event_generator())

@@ -23,6 +23,14 @@ class KnowledgeBaseTool(BaseTool):
             name="knowledge_base",
             description="지식베이스 관리: 문서 수 확인, 문서 정보 조회",
             category="management",
+            help_text=(
+                "벡터 지식베이스의 문서를 조회하고 관리합니다.\n"
+                "액션:\n"
+                "  - count: 전체 청크(chunk) 수 반환\n"
+                "  - get: document_ids로 특정 문서 조회\n"
+                "  - info: 컬렉션 메타데이터 조회 (총 문서 수 포함)\n"
+                "현재 벡터스토어: Milvus Lite"
+            ),
             parameters=[
                 ToolParameter(
                     name="action",

@@ -52,8 +52,14 @@ class CalculatorTool(BaseTool):
     def get_definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="calculator",
-            description="수학 계산을 수행합니다. 사칙연산, 거듭제곱 등을 지원합니다.",
+            description="수식을 계산합니다. 사칙연산, 괄호, 지수 등 지원",
             category="utility",
+            help_text=(
+                "수학 수식을 안전하게 평가합니다.\n"
+                "지원 연산: +, -, *, /, ** (거듭제곱), % (나머지), 괄호\n"
+                "예시: '(100 + 200) * 1.1', '2 ** 10', '355 / 113'\n"
+                "주의: 변수, 함수 호출은 지원하지 않습니다."
+            ),
             parameters=[
                 ToolParameter(
                     name="expression",

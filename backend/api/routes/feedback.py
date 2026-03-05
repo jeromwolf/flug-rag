@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
 from api.schemas import FeedbackRequest, FeedbackResponse
@@ -36,6 +36,9 @@ async def submit_feedback(request: FeedbackRequest, current_user: User | None = 
         "rating_label": rating_label_map.get(request.rating, "unknown"),
         "comment": request.comment,
         "corrected_answer": request.corrected_answer,
+        "query": request.query,
+        "answer": request.answer,
+        "username": current_user.username if current_user else "anonymous",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -47,7 +50,7 @@ async def submit_feedback(request: FeedbackRequest, current_user: User | None = 
 
 
 @router.get("/feedback")
-async def list_feedback(limit: int = 50, current_user: User | None = Depends(get_current_user)):
+async def list_feedback(limit: int = Query(50, ge=1, le=200), current_user: User | None = Depends(get_current_user)):
     if not FEEDBACK_FILE.exists():
         return {"feedbacks": [], "total": 0}
 
@@ -123,7 +126,7 @@ async def submit_error_report(
 @router.get("/feedback/error-reports")
 async def list_error_reports(
     current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER])),
-    limit: int = 50,
+    limit: int = Query(50, ge=1, le=200),
 ):
     """오류 신고 목록 조회 (관리자)."""
     report_path = Path(settings.data_dir) / "error_reports.jsonl"

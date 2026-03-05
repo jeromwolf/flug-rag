@@ -14,7 +14,13 @@ class RegulationReviewTool(BaseTool):
     def get_definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="regulation_review",
-            description="업로드된 문서의 내용을 관련 규정과 대조하여 위반/불일치 항목을 식별하고 검토 의견을 생성합니다.",
+            description="규정을 검토하고 비교 분석합니다",
+            help_text=(
+                "문서 텍스트를 관련 사내 규정과 대조하여 위반·불일치·누락 항목을 식별합니다.\n"
+                "검토 깊이: brief(요약), standard(근거 규정 포함), detailed(심각도·개선권고 상세)\n"
+                "규정 카테고리: 안전관리, 시설기준, 운영규정, 전체\n"
+                "예시 사용법: 작업계획서, 점검보고서, 내부 지침을 붙여넣어 규정 적합성을 확인합니다."
+            ),
             parameters=[
                 ToolParameter(
                     name="document_text",

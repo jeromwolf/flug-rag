@@ -13,6 +13,7 @@ class Role(str, Enum):
 
     ADMIN = "admin"
     MANAGER = "manager"
+    EXPERT = "expert"
     USER = "user"
     VIEWER = "viewer"
 
@@ -35,6 +36,8 @@ ROLE_PERMISSIONS: dict[Role, set[str]] = {
         "users:write",
         "feedback:read",
         "feedback:write",
+        "quality:read",
+        "quality:write",
         "sessions:read",
         "sessions:write",
         "sessions:delete",
@@ -56,6 +59,8 @@ ROLE_PERMISSIONS: dict[Role, set[str]] = {
         "monitor:read",
         "feedback:read",
         "feedback:write",
+        "quality:read",
+        "quality:write",
         "sessions:read",
         "sessions:write",
         "sessions:delete",
@@ -63,6 +68,21 @@ ROLE_PERMISSIONS: dict[Role, set[str]] = {
         "workflows:read",
         "workflows:execute",
         "agent-builder:read",
+    },
+    Role.EXPERT: {
+        "chat:read",
+        "chat:write",
+        "documents:read",
+        "documents:write",
+        "quality:read",
+        "quality:write",
+        "feedback:read",
+        "feedback:write",
+        "sessions:read",
+        "sessions:write",
+        "sessions:delete",
+        "mcp:read",
+        "workflows:read",
     },
     Role.USER: {
         "chat:read",
@@ -150,6 +170,15 @@ _DEFAULT_USERS: list[dict] = [
         "full_name": "Manager User",
         "department": "Engineering",
         "role": Role.MANAGER,
+        "is_active": True,
+    },
+    {
+        "id": "expert-001",
+        "username": "expert",
+        "email": "expert@kogas-tech.co.kr",
+        "full_name": "Domain Expert",
+        "department": "Quality",
+        "role": Role.EXPERT,
         "is_active": True,
     },
     {

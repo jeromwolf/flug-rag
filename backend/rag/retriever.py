@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 from dataclasses import asdict, dataclass, field
 
 from rank_bm25 import BM25Okapi
@@ -61,6 +62,38 @@ class HybridRetriever:
         except ImportError:
             self._kiwi = None
 
+    def _compute_dynamic_weights(self, query: str) -> tuple[float, float]:
+        """Analyze query characteristics and return (vector_weight, bm25_weight).
+
+        - Keyword-heavy queries (regulation numbers, codes, proper nouns) → favor BM25: (0.5, 0.5)
+        - Semantic queries (conceptual questions, explanations) → favor vector: (0.85, 0.15)
+        - Default/mixed → use configured weights from settings
+        """
+        keyword_patterns = [
+            r'제\d+조',           # 제N조 (article number)
+            r'제\d+항',           # 제N항
+            r'\d{4}[-/]\d{1,2}',  # dates like 2024-01
+            r'[A-Z]{2,}[-\d]+',   # codes like ISO-1234
+            r'규정\s*제',          # 규정 제...
+        ]
+        semantic_keywords = ['무엇', '어떻게', '왜', '설명', '비교', '차이', '의미', '개념', '목적', '이유']
+
+        is_keyword_heavy = any(re.search(pat, query) for pat in keyword_patterns)
+        is_semantic = any(kw in query for kw in semantic_keywords)
+
+        if is_keyword_heavy and not is_semantic:
+            vw, bw = 0.5, 0.5
+        elif is_semantic and not is_keyword_heavy:
+            vw, bw = 0.85, 0.15
+        else:
+            vw, bw = self.vector_weight, self.bm25_weight
+
+        logger.debug(
+            "Dynamic weights: vector=%.2f, bm25=%.2f for query: %s",
+            vw, bw, query[:50],
+        )
+        return vw, bw
+
     def _retrieval_cache_key(self, query: str, top_k: int | None, filters: dict | None, hyde: bool = False) -> str:
         """Build a cache key for retrieval results."""
         raw = json.dumps({
@@ -107,6 +140,9 @@ class HybridRetriever:
         except Exception:
             pass
 
+        # Compute dynamic weights based on query characteristics
+        vector_weight, bm25_weight = self._compute_dynamic_weights(query)
+
         # Stage 1: Vector search with expanded pool for BM25 re-scoring
         expanded_k = top_k * 3  # Fetch 3x candidates for BM25 scoring
         vector_results = await self._vector_search(query, expanded_k, filters, hyde_embedding=hyde_embedding)
@@ -114,8 +150,8 @@ class HybridRetriever:
         # Stage 2: BM25 score the vector candidates (no full-corpus load)
         bm25_results = await asyncio.to_thread(self._bm25_score_candidates, query, vector_results)
 
-        # Combine results
-        combined = self._merge_results(vector_results[:top_k], bm25_results)
+        # Combine results with dynamic weights
+        combined = self._merge_results(vector_results[:top_k], bm25_results, vector_weight, bm25_weight)
 
         # Re-rank if enabled
         if use_rerank and combined:
@@ -196,8 +232,20 @@ class HybridRetriever:
         self,
         vector_results: list[SearchResult],
         bm25_results: list[dict],
+        vector_weight: float | None = None,
+        bm25_weight: float | None = None,
     ) -> list[RetrievalResult]:
-        """Merge vector and BM25 results with weighted scoring."""
+        """Merge vector and BM25 results with weighted scoring.
+
+        Args:
+            vector_results: Results from vector similarity search.
+            bm25_results: Results from BM25 keyword scoring.
+            vector_weight: Weight for vector scores. Defaults to self.vector_weight.
+            bm25_weight: Weight for BM25 scores. Defaults to self.bm25_weight.
+        """
+        vw = vector_weight if vector_weight is not None else self.vector_weight
+        bw = bm25_weight if bm25_weight is not None else self.bm25_weight
+
         merged: dict[str, RetrievalResult] = {}
 
         # Normalize vector scores
@@ -207,7 +255,7 @@ class HybridRetriever:
             merged[r.id] = RetrievalResult(
                 id=r.id,
                 content=r.content,
-                score=norm_score * self.vector_weight,
+                score=norm_score * vw,
                 vector_score=norm_score,
                 metadata=r.metadata,
             )
@@ -218,12 +266,12 @@ class HybridRetriever:
             norm_score = r["score"] / max_bm25
             if r["id"] in merged:
                 merged[r["id"]].bm25_score = norm_score
-                merged[r["id"]].score += norm_score * self.bm25_weight
+                merged[r["id"]].score += norm_score * bw
             else:
                 merged[r["id"]] = RetrievalResult(
                     id=r["id"],
                     content=r["content"],
-                    score=norm_score * self.bm25_weight,
+                    score=norm_score * bw,
                     bm25_score=norm_score,
                     metadata=r.get("metadata", {}),
                 )

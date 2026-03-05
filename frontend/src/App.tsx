@@ -1,24 +1,68 @@
-import { useMemo } from "react";
+import { useMemo, lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { ThemeProvider, createTheme, CssBaseline, Snackbar, Alert, CircularProgress, Box } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
 import PrivateRoute from "./components/PrivateRoute";
 import { useAppStore } from "./stores/appStore";
+import NotificationStack from "./components/NotificationStack";
+import NetworkStatusBanner from "./components/NetworkStatusBanner";
 import LoginPage from "./pages/LoginPage";
 import ChatPage from "./pages/ChatPage";
-import DocumentsPage from "./pages/DocumentsPage";
-import AdminPage from "./pages/AdminPage";
-import MonitorPage from "./pages/MonitorPage";
-import AgentBuilderPage from "./pages/AgentBuilderPage";
-import QualityDashboardPage from "./pages/QualityDashboardPage";
+
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const MonitorPage = lazy(() => import('./pages/MonitorPage'));
+const DocumentsPage = lazy(() => import('./pages/DocumentsPage'));
+const QualityDashboardPage = lazy(() => import('./pages/QualityDashboardPage'));
+const AgentBuilderPage = lazy(() => import('./pages/AgentBuilderPage'));
+const PersonalKnowledgePage = lazy(() => import('./pages/PersonalKnowledgePage'));
+const ActivityPage = lazy(() => import('./pages/ActivityPage'));
+
+function LoadingFallback() {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+      }}
+    >
+      <CircularProgress color="primary" />
+    </Box>
+  );
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 30000 },
   },
 });
+
+function GlobalErrorSnackbar() {
+  const globalError = useAppStore((s) => s.globalError);
+  const setGlobalError = useAppStore((s) => s.setGlobalError);
+
+  return (
+    <Snackbar
+      open={!!globalError}
+      autoHideDuration={5000}
+      onClose={() => setGlobalError(null)}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+    >
+      <Alert
+        severity="error"
+        variant="filled"
+        onClose={() => setGlobalError(null)}
+        sx={{ width: "100%", maxWidth: 480 }}
+      >
+        {globalError}
+      </Alert>
+    </Snackbar>
+  );
+}
 
 function AppContent() {
   const darkMode = useAppStore((s) => s.darkMode);
@@ -88,64 +132,124 @@ function AppContent() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      {/* Network status banner — fixed top, above everything */}
+      <NetworkStatusBanner />
+      {/* Outer boundary catches catastrophic failures (theme provider, router init) */}
       <ErrorBoundary>
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/login"
+                element={
+                  <ErrorBoundary>
+                    <LoginPage />
+                  </ErrorBoundary>
+                }
+              />
               <Route path="/" element={<Navigate to="/chat" replace />} />
               <Route
                 path="/chat"
                 element={
-                  <PrivateRoute>
-                    <ChatPage />
-                  </PrivateRoute>
+                  <ErrorBoundary>
+                    <PrivateRoute>
+                      <ChatPage />
+                    </PrivateRoute>
+                  </ErrorBoundary>
                 }
               />
               <Route
                 path="/documents"
                 element={
-                  <PrivateRoute requiredPermission="documents:read">
-                    <DocumentsPage />
-                  </PrivateRoute>
+                  <ErrorBoundary>
+                    <PrivateRoute requiredPermission="documents:read">
+                      <Suspense fallback={<LoadingFallback />}>
+                        <DocumentsPage />
+                      </Suspense>
+                    </PrivateRoute>
+                  </ErrorBoundary>
                 }
               />
               <Route
                 path="/admin"
                 element={
-                  <PrivateRoute requiredPermission="admin:read">
-                    <AdminPage />
-                  </PrivateRoute>
+                  <ErrorBoundary>
+                    <PrivateRoute requiredPermission="admin:read">
+                      <Suspense fallback={<LoadingFallback />}>
+                        <AdminPage />
+                      </Suspense>
+                    </PrivateRoute>
+                  </ErrorBoundary>
                 }
               />
               <Route
                 path="/monitor"
                 element={
-                  <PrivateRoute requiredPermission="monitor:read">
-                    <MonitorPage />
-                  </PrivateRoute>
+                  <ErrorBoundary>
+                    <PrivateRoute requiredPermission="monitor:read">
+                      <Suspense fallback={<LoadingFallback />}>
+                        <MonitorPage />
+                      </Suspense>
+                    </PrivateRoute>
+                  </ErrorBoundary>
                 }
               />
               <Route
                 path="/agent-builder"
                 element={
-                  <PrivateRoute requiredPermission="agent-builder:read">
-                    <AgentBuilderPage />
-                  </PrivateRoute>
+                  <ErrorBoundary>
+                    <PrivateRoute requiredPermission="agent-builder:read">
+                      <Suspense fallback={<LoadingFallback />}>
+                        <AgentBuilderPage />
+                      </Suspense>
+                    </PrivateRoute>
+                  </ErrorBoundary>
                 }
               />
               <Route
                 path="/quality"
                 element={
-                  <PrivateRoute requiredPermission="admin:read">
-                    <QualityDashboardPage />
-                  </PrivateRoute>
+                  <ErrorBoundary>
+                    <PrivateRoute requiredPermission="admin:read">
+                      <Suspense fallback={<LoadingFallback />}>
+                        <QualityDashboardPage />
+                      </Suspense>
+                    </PrivateRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/personal-knowledge"
+                element={
+                  <ErrorBoundary>
+                    <PrivateRoute>
+                      <Suspense fallback={<LoadingFallback />}>
+                        <PersonalKnowledgePage />
+                      </Suspense>
+                    </PrivateRoute>
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/activity"
+                element={
+                  <ErrorBoundary>
+                    <PrivateRoute>
+                      <Suspense fallback={<LoadingFallback />}>
+                        <ActivityPage />
+                      </Suspense>
+                    </PrivateRoute>
+                  </ErrorBoundary>
                 }
               />
             </Routes>
           </AuthProvider>
         </BrowserRouter>
       </ErrorBoundary>
+      {/* Global error notification — reads from Zustand store */}
+      <GlobalErrorSnackbar />
+      {/* Centralized toast notification stack */}
+      <NotificationStack />
     </ThemeProvider>
   );
 }
@@ -153,7 +257,9 @@ function AppContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

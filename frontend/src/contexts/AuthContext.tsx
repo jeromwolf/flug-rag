@@ -13,7 +13,7 @@ import api from "../api/client";
 // Types
 // ---------------------------------------------------------------------------
 
-export type UserRole = "admin" | "manager" | "user" | "viewer";
+export type UserRole = "admin" | "manager" | "expert" | "user" | "viewer";
 
 export interface AuthUser {
   id: string;
@@ -45,6 +45,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Set<string>> = {
     "chat:read", "chat:write", "documents:read", "documents:write",
     "documents:delete", "admin:read", "admin:write", "monitor:read",
     "users:read", "users:write", "feedback:read", "feedback:write",
+    "quality:read", "quality:write",
     "sessions:read", "sessions:write", "sessions:delete",
     "mcp:read", "mcp:execute", "workflows:read", "workflows:execute",
     "agent-builder:read", "agent-builder:write", "settings:read", "settings:write",
@@ -52,8 +53,17 @@ const ROLE_PERMISSIONS: Record<UserRole, Set<string>> = {
   manager: new Set([
     "chat:read", "chat:write", "documents:read", "documents:write",
     "admin:read", "monitor:read", "feedback:read", "feedback:write",
+    "quality:read", "quality:write",
     "sessions:read", "sessions:write", "sessions:delete",
     "mcp:read", "workflows:read", "workflows:execute", "agent-builder:read",
+  ]),
+  expert: new Set([
+    "chat:read", "chat:write",
+    "documents:read", "documents:write",
+    "quality:read", "quality:write",
+    "feedback:read", "feedback:write",
+    "sessions:read", "sessions:write", "sessions:delete",
+    "mcp:read", "workflows:read",
   ]),
   user: new Set([
     "chat:read", "chat:write", "documents:read",

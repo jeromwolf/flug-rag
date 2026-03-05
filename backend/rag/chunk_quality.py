@@ -1,6 +1,5 @@
 """Chunk quality analysis for RAG pipeline quality management (SFR-008)."""
 
-import asyncio
 import hashlib
 import re
 import statistics
@@ -67,24 +66,18 @@ class ChunkQualityAnalyzer:
         Returns:
             ChunkQualityReport with comprehensive quality metrics
         """
-        if not hasattr(self.vectorstore, '_collection'):
-            raise RuntimeError("ChunkQualityAnalyzer requires ChromaDB vectorstore")
+        # Use get_all_documents() which works for both ChromaDB and Milvus.
+        # For ChromaDB: fetches via _collection.get(); for Milvus: cursor-paginated query.
+        try:
+            all_docs = await self.vectorstore.get_all_documents()
+        except NotImplementedError:
+            raise RuntimeError(
+                f"ChunkQualityAnalyzer requires a vectorstore that implements get_all_documents(). "
+                f"Got: {type(self.vectorstore).__name__}"
+            )
 
-        # ChromaDB 컬렉션에서 모든 청크 가져오기 (문서와 메타데이터 포함)
-        results = await asyncio.to_thread(
-            self.vectorstore._collection.get,
-            include=["documents", "metadatas"],
-            limit=limit,
-        )
-
-        chunks = []
-        if results["ids"]:
-            for i, chunk_id in enumerate(results["ids"]):
-                chunks.append({
-                    "id": chunk_id,
-                    "content": results["documents"][i] if results["documents"] else "",
-                    "metadata": results["metadatas"][i] if results["metadatas"] else {},
-                })
+        # Apply limit to avoid analysing huge corpora slowly
+        chunks = all_docs[:limit]
 
         total_chunks = len(chunks)
         if total_chunks == 0:
@@ -159,32 +152,33 @@ class ChunkQualityAnalyzer:
         Returns:
             List of ChunkPreview objects
         """
-        if not hasattr(self.vectorstore, '_collection'):
-            raise RuntimeError("ChunkQualityAnalyzer requires ChromaDB vectorstore")
-
-        # ChromaDB where 필터로 해당 문서 청크만 가져오기
-        results = await asyncio.to_thread(
-            self.vectorstore._collection.get,
-            where={"document_id": document_id},
-            include=["documents", "metadatas"],
-        )
+        # Fetch all documents and filter by document_id (works for both ChromaDB and Milvus).
+        # ChromaDB supports server-side where filtering via _collection.get(), but using
+        # get_all_documents() + client-side filter keeps the implementation store-agnostic.
+        try:
+            all_docs = await self.vectorstore.get_all_documents()
+        except NotImplementedError:
+            raise RuntimeError(
+                f"ChunkQualityAnalyzer requires a vectorstore that implements get_all_documents(). "
+                f"Got: {type(self.vectorstore).__name__}"
+            )
 
         previews = []
-        if results["ids"]:
-            for i, chunk_id in enumerate(results["ids"]):
-                metadata = results["metadatas"][i] if results["metadatas"] else {}
-                content = results["documents"][i] if results["documents"] else ""
-
-                previews.append(
-                    ChunkPreview(
-                        id=chunk_id,
-                        content_preview=content[:200],  # 처음 200자만
-                        index=metadata.get("chunk_index", 0),
-                        length=len(content),
-                        has_table=metadata.get("has_table", False),
-                        page_number=metadata.get("page_number"),
-                    )
+        for doc in all_docs:
+            metadata = doc.get("metadata", {})
+            if metadata.get("document_id") != document_id:
+                continue
+            content = doc.get("content", "")
+            previews.append(
+                ChunkPreview(
+                    id=doc.get("id", ""),
+                    content_preview=content[:200],  # 처음 200자만
+                    index=metadata.get("chunk_index", 0),
+                    length=len(content),
+                    has_table=metadata.get("has_table", False),
+                    page_number=metadata.get("page_number"),
                 )
+            )
 
         # chunk_index로 정렬
         previews.sort(key=lambda x: x.index)
@@ -199,32 +193,33 @@ class ChunkQualityAnalyzer:
         Returns:
             Dict mapping document_id to DocumentChunkStats
         """
-        if not hasattr(self.vectorstore, '_collection'):
-            raise RuntimeError("ChunkQualityAnalyzer requires ChromaDB vectorstore")
+        # Use get_all_documents() which works for both ChromaDB and Milvus.
+        try:
+            all_docs = await self.vectorstore.get_all_documents()
+        except NotImplementedError:
+            raise RuntimeError(
+                f"ChunkQualityAnalyzer requires a vectorstore that implements get_all_documents(). "
+                f"Got: {type(self.vectorstore).__name__}"
+            )
 
-        # 모든 청크 가져오기
-        results = await asyncio.to_thread(
-            self.vectorstore._collection.get,
-            include=["documents", "metadatas"],
-            limit=limit,
-        )
+        # Apply limit
+        all_docs = all_docs[:limit]
 
         # 문서별로 그룹화
         doc_chunks: dict[str, list[dict]] = {}
-        if results["ids"]:
-            for i, chunk_id in enumerate(results["ids"]):
-                metadata = results["metadatas"][i] if results["metadatas"] else {}
-                content = results["documents"][i] if results["documents"] else ""
-                doc_id = metadata.get("document_id", "unknown")
+        for doc in all_docs:
+            metadata = doc.get("metadata", {})
+            content = doc.get("content", "")
+            doc_id = metadata.get("document_id", "unknown")
 
-                if doc_id not in doc_chunks:
-                    doc_chunks[doc_id] = []
+            if doc_id not in doc_chunks:
+                doc_chunks[doc_id] = []
 
-                doc_chunks[doc_id].append({
-                    "id": chunk_id,
-                    "content": content,
-                    "metadata": metadata,
-                })
+            doc_chunks[doc_id].append({
+                "id": doc.get("id", ""),
+                "content": content,
+                "metadata": metadata,
+            })
 
         # 각 문서별 통계 계산
         stats = {}

@@ -3,13 +3,16 @@
 SFR-018: 노코드 도구 정의, SQLite 저장, 런타임 등록
 """
 import asyncio
+import ipaddress
 import json
 import logging
+import socket
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 import aiosqlite
 import httpx
@@ -17,6 +20,37 @@ import httpx
 from .tools.base import BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult
 
 logger = logging.getLogger(__name__)
+
+_BLOCKED_HOSTS = {"169.254.169.254", "metadata.google.internal", "metadata.internal"}
+_ALLOWED_SCHEMES = {"http", "https"}
+
+
+def _validate_api_url(url: str) -> None:
+    """Validate custom tool URL to prevent SSRF attacks."""
+    parsed = urlparse(url)
+    if parsed.scheme not in _ALLOWED_SCHEMES:
+        raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
+    hostname = parsed.hostname or ""
+    if not hostname:
+        raise ValueError("URL must include a hostname")
+    if hostname in _BLOCKED_HOSTS:
+        raise ValueError(f"Blocked host: {hostname}")
+    # Check for private/loopback IPs
+    try:
+        ip = ipaddress.ip_address(hostname)
+        if ip.is_private or ip.is_loopback or ip.is_link_local:
+            raise ValueError(f"Private/loopback IP not allowed: {ip}")
+    except ValueError:
+        pass  # Not an IP literal — hostname is OK
+    # DNS resolution check for private IPs
+    try:
+        for info in socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM):
+            addr = info[4][0]
+            resolved_ip = ipaddress.ip_address(addr)
+            if resolved_ip.is_private or resolved_ip.is_loopback or resolved_ip.is_link_local:
+                raise ValueError(f"Hostname {hostname} resolves to private IP {resolved_ip}")
+    except socket.gaierror:
+        pass  # DNS resolution failed, will fail on actual request
 
 
 @dataclass
@@ -72,6 +106,7 @@ class CustomToolExecutor(BaseTool):
 
     async def _execute_api(self, **kwargs) -> ToolResult:
         try:
+            _validate_api_url(self._config.api_url)
             headers = json.loads(self._config.api_headers) if self._config.api_headers else {}
             headers.setdefault("Content-Type", "application/json")
 

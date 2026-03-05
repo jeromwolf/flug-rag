@@ -62,7 +62,13 @@ class SafetyChecklistTool(BaseTool):
     def get_definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="safety_checklist",
-            description="설비 유형에 맞는 안전 체크리스트를 생성하고 관련 규정을 RAG로 매핑합니다.",
+            description="안전 점검 체크리스트를 생성합니다",
+            help_text=(
+                "설비 유형별 안전 체크리스트를 생성하고 각 항목에 관련 규정을 자동 매핑합니다.\n"
+                "지원 설비: 배관, 정압기, 저장탱크, 공급설비, 일반\n"
+                "출력 형식: markdown(표 형식, 서명란 포함), text(텍스트 형식)\n"
+                "추가 항목은 쉼표로 구분하여 입력합니다 (예: '인화성 물질 보관 상태, 접지 저항 측정')."
+            ),
             parameters=[
                 ToolParameter(
                     name="equipment_type",

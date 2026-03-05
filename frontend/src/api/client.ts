@@ -138,6 +138,10 @@ export const authApi = {
   toggleUserActive: (userId: string, isActive: boolean) =>
     api.patch(`/auth/users/${userId}/active`, { is_active: isActive }),
   deleteUser: (userId: string) => api.delete(`/auth/users/${userId}`),
+  verifyPassword: (password: string) =>
+    api.post("/auth/verify-password", { password }),
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    api.post("/auth/change-password", data),
 };
 
 // === Chat ===
@@ -162,6 +166,8 @@ export const sessionsApi = {
   getMessages: (sessionId: string, limit = 50) =>
     api.get(`/sessions/${sessionId}/messages`, { params: { limit } }),
   delete: (sessionId: string) => api.delete(`/sessions/${sessionId}`),
+  update: (sessionId: string, title: string) =>
+    api.patch(`/sessions/${sessionId}`, null, { params: { title } }),
 };
 
 // === Documents ===
@@ -175,6 +181,14 @@ export const documentsApi = {
   },
   list: () => api.get("/documents"),
   delete: (id: string) => api.delete(`/documents/${id}`),
+  download: (id: string) => {
+    window.open(`${API_BASE}/documents/${id}/download`, "_blank");
+  },
+};
+
+// === Storage Management ===
+export const storageApi = {
+  getStats: () => api.get("/admin/storage-stats"),
 };
 
 // === Admin ===
@@ -199,6 +213,30 @@ export const adminApi = {
   rollbackPrompt: (name: string, version: number) =>
     api.post(`/admin/prompts/rollback/${name}/${version}`),
   getSystemMetrics: () => api.get("/admin/system-metrics"),
+  // Chunking config
+  getChunkingConfig: () => api.get("/admin/chunking-config"),
+  updateChunkingConfig: (data: { chunk_strategy?: string; chunk_size?: number; chunk_overlap?: number }) =>
+    api.put("/admin/chunking-config", data),
+  // Log level
+  getLogLevel: () => api.get("/admin/log-level"),
+  setLogLevel: (level: string) => api.put("/admin/log-level", null, { params: { level } }),
+  // Cache management
+  getCacheConfig: () => api.get("/admin/cache-config"),
+  updateCacheConfig: (data: Partial<{ rag_query: number; llm_response: number; embeddings: number; documents: number }>) =>
+    api.put("/admin/cache-config", data),
+  clearCache: (category?: string) =>
+    api.post("/admin/cache-clear", { category: category ?? null }),
+  // Settings
+  setDefaultProvider: (provider: string) =>
+    api.put("/admin/settings", { default_provider: provider }),
+  // LLM Playground
+  playground: (data: {
+    prompt: string;
+    model?: string;
+    temperature?: number;
+    max_tokens?: number;
+    system_prompt?: string;
+  }) => api.post<{ response: string; latency_ms: number; model_used: string; tokens_used?: number }>("/admin/playground", data),
 };
 
 // === Feedback ===
@@ -209,6 +247,8 @@ export const feedbackApi = {
     rating: number;
     comment?: string;
     corrected_answer?: string;
+    query?: string;
+    answer?: string;
   }) => api.post("/feedback", data),
   submitErrorReport: (data: {
     message_id: string;
@@ -246,10 +286,42 @@ export const mcpApi = {
 
 // === Workflows ===
 export const workflowsApi = {
+  // Presets (built-in)
   listPresets: () => api.get("/workflows/presets"),
   run: (preset: string, inputData: Record<string, unknown>) =>
     api.post("/workflows/run", { preset, input_data: inputData }),
+
+  // User-saved workflows CRUD
+  list: () => api.get<{ workflows: WorkflowListItem[] }>("/workflows"),
+  create: (data: WorkflowSavePayload) =>
+    api.post<WorkflowRecord>("/workflows", data),
+  get: (id: string) => api.get<WorkflowRecord>(`/workflows/${id}`),
+  update: (id: string, data: WorkflowSavePayload) =>
+    api.put<WorkflowRecord>(`/workflows/${id}`, data),
+  delete: (id: string) => api.delete(`/workflows/${id}`),
 };
+
+export interface WorkflowSavePayload {
+  name: string;
+  description?: string;
+  nodes: unknown[];
+  edges: unknown[];
+}
+
+export interface WorkflowListItem {
+  id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+  node_count: number;
+}
+
+export interface WorkflowRecord extends WorkflowListItem {
+  nodes: unknown[];
+  edges: unknown[];
+}
 
 // === Quality (RAG 파이프라인 품질 관리) ===
 export const qualityApi = {
@@ -291,6 +363,14 @@ export const qualityApi = {
   }) => api.post("/quality/golden-data", data),
   updateGoldenData: (id: string, data: Record<string, unknown>) =>
     api.put(`/quality/golden-data/${id}`, data),
+};
+
+// === Golden Data ===
+export const goldenDataApi = {
+  list: () => api.get("/quality/golden-data"),
+  create: (data: any) => api.post("/quality/golden-data", data),
+  update: (id: string, data: any) => api.put(`/quality/golden-data/${id}`, data),
+  delete: (id: string) => api.delete(`/quality/golden-data/${id}`),
 };
 
 // === Statistics ===
@@ -435,6 +515,41 @@ export const foldersApi = {
   setPermission: (id: string, data: { user_id: string; permission: string }) =>
     api.post(`/folders/${id}/permissions`, data),
   removePermission: (permId: string) => api.delete(`/folders/permissions/${permId}`),
+};
+
+// === Corrections ===
+export const correctionsApi = {
+  list: (status?: string) =>
+    api.get("/corrections", { params: status ? { status } : {} }),
+  stats: () => api.get("/corrections/stats"),
+  submit: (data: {
+    message_id: string;
+    session_id: string;
+    query: string;
+    original_answer: string;
+    corrected_answer: string;
+    correction_reason?: string;
+    category?: string;
+    difficulty?: string;
+  }) => api.post("/corrections", data),
+  review: (id: string, data: { approved: boolean; reviewer_comment?: string }) =>
+    api.post(`/corrections/${id}/review`, data),
+};
+
+// === Governance ===
+export const governanceApi = {
+  list: (status?: string) =>
+    api.get("/governance/changes", { params: status ? { status } : {} }),
+  create: (data: {
+    change_type: string;
+    description: string;
+    current_value: Record<string, unknown>;
+    proposed_value: Record<string, unknown>;
+  }) => api.post("/governance/changes", data),
+  simulate: (id: string) => api.post(`/governance/changes/${id}/simulate`),
+  approve: (id: string, data: { approved: boolean; comment?: string }) =>
+    api.post(`/governance/changes/${id}/approve`, data),
+  apply: (id: string) => api.post(`/governance/changes/${id}/apply`),
 };
 
 /**

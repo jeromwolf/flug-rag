@@ -1,0 +1,96 @@
+const ko = {
+  // ── Sidebar ──────────────────────────────────────────────────────────────
+  "sidebar.newChat": "새 대화",
+  "sidebar.searchPlaceholder": "대화 검색...",
+  "sidebar.chatList": "대화 목록",
+  "sidebar.savedAnswers": "저장한 답변",
+  "sidebar.noSavedAnswers": "저장한 답변이 없습니다",
+  "sidebar.noHistory": "대화 내역이 없습니다",
+  "sidebar.noSearchResults": "검색 결과가 없습니다",
+  "sidebar.noTaggedChats": "해당 태그가 붙은 대화가 없습니다",
+  "sidebar.filter": "필터:",
+  "sidebar.tagFilter": "태그 필터",
+  "sidebar.tagManage": "태그 관리",
+  "sidebar.allTags": "전체",
+
+  // ── Chat ─────────────────────────────────────────────────────────────────
+  "chat.inputPlaceholder": "무엇이든 물어보세요...",
+  "chat.inputPlaceholderDesktop": "무엇이든 물어보세요... (Shift+Enter: 줄바꿈)",
+  "chat.send": "전송",
+  "chat.stop": "중단",
+  "chat.regenerate": "재생성",
+  "chat.copied": "복사됨!",
+  "chat.stopGeneration": "생성 중단",
+  "chat.sendMessage": "메시지 전송",
+  "chat.recording": "녹음 중...",
+  "chat.voiceInput": "음성 입력",
+  "chat.stopRecording": "녹음 중단",
+  "chat.attachFile": "파일 첨부",
+  "chat.promptTemplate": "프롬프트 템플릿",
+  "chat.keyboardHint": "Ctrl+N 새 대화 · Esc 중단",
+
+  // ── TopBar ───────────────────────────────────────────────────────────────
+  "topbar.modelSelect": "모델 선택",
+  "topbar.darkMode": "다크 모드",
+  "topbar.lightMode": "라이트 모드",
+  "topbar.settings": "AI 설정",
+  "topbar.userSettings": "사용자 설정",
+  "topbar.print": "대화 인쇄",
+  "topbar.share": "대화 공유",
+  "topbar.export": "대화 내보내기",
+  "topbar.copy": "대화 복사",
+  "topbar.summarize": "대화 요약",
+  "topbar.compareMode": "모델 비교 모드",
+  "topbar.searchChat": "대화 내 검색 (Ctrl+F)",
+  "topbar.sidebar": "사이드바 열기/닫기",
+  "topbar.language": "언어",
+
+  // ── Settings dialog ──────────────────────────────────────────────────────
+  "settings.title": "사용자 설정",
+  "settings.profile": "프로필",
+  "settings.notifications": "알림 설정",
+  "settings.theme": "테마 설정",
+  "settings.fontSize": "글꼴 크기",
+  "settings.language": "언어",
+  "settings.save": "저장",
+  "settings.close": "닫기",
+  "settings.changePassword": "비밀번호 변경",
+  "settings.themeLight": "라이트",
+  "settings.themeDark": "다크",
+  "settings.themeSystem": "시스템",
+  "settings.fontSmall": "작게",
+  "settings.fontMedium": "보통",
+  "settings.fontLarge": "크게",
+  "settings.browserNotifications": "브라우저 알림",
+  "settings.korean": "한국어",
+  "settings.english": "English",
+
+  // ── Auth ─────────────────────────────────────────────────────────────────
+  "auth.login": "로그인",
+  "auth.logout": "로그아웃",
+  "auth.changePassword": "비밀번호 변경",
+  "auth.username": "사용자명",
+  "auth.password": "비밀번호",
+
+  // ── Documents ────────────────────────────────────────────────────────────
+  "documents.title": "문서 관리",
+  "documents.upload": "업로드",
+  "documents.delete": "삭제",
+  "documents.filter": "필터",
+  "documents.search": "검색",
+
+  // ── Common ───────────────────────────────────────────────────────────────
+  "common.confirm": "확인",
+  "common.cancel": "취소",
+  "common.close": "닫기",
+  "common.save": "저장",
+  "common.delete": "삭제",
+  "common.edit": "편집",
+  "common.search": "검색",
+  "common.add": "추가",
+  "common.loading": "로딩 중...",
+  "common.error": "오류가 발생했습니다",
+} as const;
+
+export type TranslationKey = keyof typeof ko;
+export default ko;

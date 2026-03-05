@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    # Configure root logger from settings
+    logging.basicConfig(level=getattr(logging, settings.log_level.upper(), logging.INFO))
+    logging.getLogger().setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
+
     security_logger = logging.getLogger("flux-rag.security")
 
     # Security checks
@@ -27,6 +31,13 @@ async def lifespan(app: FastAPI):
         raise RuntimeError(
             "FATAL: Default JWT secret key detected with AUTH_ENABLED=true. "
             "Set JWT_SECRET_KEY environment variable to a secure random value."
+        )
+
+    # Also check secret key minimum length
+    if settings.auth_enabled and len(settings.jwt_secret_key) < 32:
+        raise RuntimeError(
+            "FATAL: JWT_SECRET_KEY must be at least 32 characters. "
+            "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
         )
 
     # C-03: Default password warning
@@ -44,6 +55,13 @@ async def lifespan(app: FastAPI):
                 ">>> AUTH_ENABLED=false: ALL endpoints accessible WITHOUT authentication. "
                 "Set AUTH_ENABLED=true for production. <<<"
             )
+
+    if not settings.auth_enabled and settings.host == "0.0.0.0":
+        security_logger.critical(
+            "SECURITY RISK: AUTH_ENABLED=false with host=0.0.0.0. "
+            "The API is accessible from ALL network interfaces without authentication. "
+            "Set AUTH_ENABLED=true or bind to 127.0.0.1 for safety."
+        )
 
     # MinIO default credential check
     if settings.minio_enabled and settings.minio_access_key == "minioadmin" and settings.minio_secret_key == "minioadmin":
@@ -187,7 +205,7 @@ from auth.routes import router as auth_router
 app.include_router(auth_router, prefix="/api", tags=["auth"])
 
 # Register application routes
-from api.routes import admin, agents, bookmarks, chat, content, documents, feedback, folders, guardrails, logs, mcp, ocr, ocr_training, personal_knowledge, quality, sessions, statistics, sync, workflows
+from api.routes import admin, agents, bookmarks, chat, content, corrections, documents, feedback, folders, governance, guardrails, logs, mcp, ocr, ocr_training, personal_knowledge, quality, sessions, statistics, sync, workflows
 
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(documents.router, prefix="/api", tags=["documents"])
@@ -208,13 +226,21 @@ app.include_router(guardrails.router, prefix="/api", tags=["guardrails"])
 app.include_router(content.router, prefix="/api", tags=["content"])
 app.include_router(ocr_training.router, prefix="/api", tags=["ocr-training"])
 app.include_router(bookmarks.router, prefix="/api", tags=["bookmarks"])
+app.include_router(governance.router, prefix="/api", tags=["governance"])
+app.include_router(corrections.router, prefix="/api", tags=["corrections"])
 
 
 @app.get("/health")
 async def health_check():
     return {
         "status": "ok",
-        "app": settings.app_name,
+        "app_name": settings.app_name,
         "version": settings.app_version,
         "auth_enabled": settings.auth_enabled,
     }
+
+
+@app.get("/api/health")
+async def api_health_check():
+    """Alias for /health accessible via the /api prefix used by the frontend axios client."""
+    return await health_check()

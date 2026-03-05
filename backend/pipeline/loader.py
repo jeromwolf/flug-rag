@@ -34,12 +34,33 @@ class DocumentLoader:
             LoadedDocument with extracted text and metadata.
         """
         path = Path(file_path)
-        loader = get_loader(path.suffix)
-        doc = await loader.load(path)
 
         # Backward compatibility: apply_ocr=True acts like force_dp
         if apply_ocr:
             dp_mode = "force_dp"
+
+        # When force_dp, skip local loader entirely — go straight to Upstage DP
+        if dp_mode == "force_dp":
+            dp_result = await self._process_dp(path, enhanced=enhanced_ocr)
+            if dp_result and dp_result.text.strip():
+                return LoadedDocument(
+                    content=dp_result.text,
+                    metadata={
+                        "filename": path.name,
+                        "file_type": path.suffix.lstrip("."),
+                        "extraction_method": "upstage_dp",
+                        "dp_applied": True,
+                        "dp_mode": "full",
+                        "dp_confidence": dp_result.confidence,
+                        "dp_provider": dp_result.metadata.get("provider", ""),
+                        **({"dp_tables": len(dp_result.tables)} if dp_result.tables else {}),
+                    },
+                )
+            # DP failed — fall through to local loader as fallback
+            logger.warning("force_dp failed for %s, falling back to local loader", path.name)
+
+        loader = get_loader(path.suffix)
+        doc = await loader.load(path)
 
         # Determine DP usage strategy
         dp_decision = self._should_use_dp(doc, dp_mode)

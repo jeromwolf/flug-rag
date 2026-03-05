@@ -32,6 +32,14 @@ class SummarizerTool(BaseTool):
             name="document_summarizer",
             description="문서 또는 텍스트를 요약합니다. 추출적(키워드 기반) 또는 추상적(LLM 기반) 요약을 지원합니다.",
             category="nlp",
+            help_text=(
+                "LLM을 활용하여 긴 텍스트를 간결하게 요약합니다.\n"
+                "요약 방식:\n"
+                "  - extractive: 원문에서 핵심 문장 추출\n"
+                "  - abstractive: LLM이 새로운 문장으로 재작성 (기본값)\n"
+                "언어: ko(한국어, 기본값), en(영어)\n"
+                "max_length: 요약 최대 길이(글자 수), 기본값 500자"
+            ),
             parameters=[
                 ToolParameter(
                     name="text",

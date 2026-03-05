@@ -1,6 +1,6 @@
 """Session and conversation history endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from agent import get_memory
 from api.schemas import (
@@ -19,6 +19,17 @@ def _get_memory():
     return get_memory()
 
 
+async def _verify_session_owner(session_id: str, user_id: str) -> dict:
+    """Verify session exists and belongs to the user."""
+    session = await _get_memory().get_session(session_id)
+    if not session:
+        raise HTTPException(404, "Session not found")
+    session_owner = session.get("user_id", "")
+    if session_owner and session_owner != user_id:
+        raise HTTPException(403, "Access denied")
+    return session
+
+
 @router.post("/sessions", response_model=SessionResponse)
 async def create_session(request: SessionCreate, current_user: User | None = Depends(get_current_user)):
     user_id = current_user.id if current_user else ""
@@ -33,7 +44,7 @@ async def create_session(request: SessionCreate, current_user: User | None = Dep
 
 
 @router.get("/sessions", response_model=SessionListResponse)
-async def list_sessions(limit: int = 50, offset: int = 0, current_user: User | None = Depends(get_current_user)):
+async def list_sessions(limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0), current_user: User | None = Depends(get_current_user)):
     user_id = current_user.id if current_user else ""
     sessions = await _get_memory().get_sessions(limit=limit, offset=offset, user_id=user_id)
     return SessionListResponse(
@@ -52,14 +63,14 @@ async def list_sessions(limit: int = 50, offset: int = 0, current_user: User | N
 
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str, current_user: User | None = Depends(get_current_user)):
-    session = await _get_memory().get_session(session_id)
-    if not session:
-        raise HTTPException(404, "Session not found")
-    return session
+    user_id = current_user.id if current_user else ""
+    return await _verify_session_owner(session_id, user_id)
 
 
 @router.get("/sessions/{session_id}/messages", response_model=list[MessageResponse])
-async def get_messages(session_id: str, limit: int = 50, current_user: User | None = Depends(get_current_user)):
+async def get_messages(session_id: str, limit: int = Query(50, ge=1, le=500), current_user: User | None = Depends(get_current_user)):
+    user_id = current_user.id if current_user else ""
+    await _verify_session_owner(session_id, user_id)
     messages = await _get_memory().get_history(session_id, limit=limit)
     return [
         MessageResponse(
@@ -75,11 +86,15 @@ async def get_messages(session_id: str, limit: int = 50, current_user: User | No
 
 @router.delete("/sessions/{session_id}")
 async def delete_session(session_id: str, current_user: User | None = Depends(get_current_user)):
+    user_id = current_user.id if current_user else ""
+    await _verify_session_owner(session_id, user_id)
     await _get_memory().delete_session(session_id)
     return {"status": "deleted", "id": session_id}
 
 
 @router.patch("/sessions/{session_id}")
 async def update_session(session_id: str, title: str, current_user: User | None = Depends(get_current_user)):
+    user_id = current_user.id if current_user else ""
+    await _verify_session_owner(session_id, user_id)
     await _get_memory().update_session_title(session_id, title)
     return {"status": "updated", "id": session_id}

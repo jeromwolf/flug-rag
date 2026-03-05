@@ -148,7 +148,8 @@ pip install -q \
     "anthropic>=0.43.0" \
     "httpx>=0.28.0" \
     "sentence-transformers>=3.4.0" \
-    "chromadb>=0.6.0" \
+    "pymilvus>=2.5.6" \
+    "milvus-lite>=2.5.1" \
     "pymupdf>=1.25.0" \
     "pyhwp==0.1b15" \
     "python-docx>=1.1.0" \
@@ -258,8 +259,8 @@ OLLAMA_MODEL=$OLLAMA_MODEL
 OLLAMA_LIGHT_MODEL=$LIGHT_MODEL
 
 # Vector DB
-CHROMA_PERSIST_DIR=./data/chroma_db
-CHROMA_COLLECTION_NAME=knowledge_base
+VECTORSTORE_TYPE=milvus_lite
+MILVUS_STORE_URI=./data/milvus.db
 
 # Auth (disabled for demo)
 AUTH_ENABLED=false
@@ -280,25 +281,29 @@ PORT=8000
 DEBUG=false
 
 # Chunking
-CHUNK_STRATEGY=recursive
+CHUNK_STRATEGY=adaptive
 CHUNK_SIZE=800
 CHUNK_OVERLAP=80
 
 # RAG Tuning
 RETRIEVAL_TOP_K=30
-RERANK_TOP_N=7
+RERANK_TOP_N=5
 VECTOR_WEIGHT=0.6
 BM25_WEIGHT=0.4
 RETRIEVAL_SCORE_THRESHOLD=0.0
-LLM_MAX_TOKENS=1024
+LLM_MAX_TOKENS=512
 LLM_TEMPERATURE=0.1
 USE_RERANK=true
+CONTEXT_MAX_CHUNKS=5
 
 # Advanced RAG
 MULTI_QUERY_ENABLED=false
-SELF_RAG_ENABLED=false
+SELF_RAG_ENABLED=true
 AGENTIC_RAG_ENABLED=false
 QUERY_EXPANSION_ENABLED=false
+
+# Few-shot
+FEW_SHOT_MAX_EXAMPLES=2
 
 # OCR
 UPSTAGE_API_KEY=
@@ -316,22 +321,19 @@ log_info "Created .env with model=$OLLAMA_MODEL"
 log_step "8/$TOTAL_STEPS" "Setting up data directories..."
 
 mkdir -p "$PROJECT_DIR/backend/data/uploads"
-mkdir -p "$PROJECT_DIR/backend/data/chroma_db"
+mkdir -p "$PROJECT_DIR/backend/data"
 
-# Check if data was uploaded
-CHROMA_FILES=$(find "$PROJECT_DIR/backend/data/chroma_db" -type f 2>/dev/null | wc -l)
-UPLOAD_FILES=$(find "$PROJECT_DIR/backend/data/uploads" -type f 2>/dev/null | wc -l)
-
-if [ "$CHROMA_FILES" -gt 0 ]; then
-    log_info "ChromaDB data found: $CHROMA_FILES files"
+# Check if Milvus Lite DB was uploaded
+MILVUS_DB="$PROJECT_DIR/backend/data/milvus.db"
+if [ -f "$MILVUS_DB" ]; then
+    MILVUS_SIZE=$(du -sh "$MILVUS_DB" | awk '{print $1}')
+    log_info "Milvus Lite data found: milvus.db ($MILVUS_SIZE)"
+    MILVUS_FILES=1
 else
-    log_warn "ChromaDB data NOT found! Upload data before starting."
+    log_warn "Milvus Lite data NOT found! Upload data before starting."
     log_warn "From local machine: scp flux-rag-data.tar.gz root@<POD_IP>:/workspace/"
     log_warn "Then run: cd /workspace && tar xzf flux-rag-data.tar.gz"
-fi
-
-if [ "$UPLOAD_FILES" -gt 0 ]; then
-    log_info "Upload data found: $UPLOAD_FILES files"
+    MILVUS_FILES=0
 fi
 
 # =============================================================================
@@ -567,7 +569,7 @@ echo "  Next Steps:"
 echo "============================================"
 echo ""
 
-if [ "$CHROMA_FILES" -eq 0 ]; then
+if [ "$MILVUS_FILES" -eq 0 ]; then
     echo "  1. UPLOAD DATA (required!):"
     echo "     From local machine:"
     echo "       bash scripts/pack_data.sh"

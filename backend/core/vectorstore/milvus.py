@@ -233,6 +233,9 @@ class MilvusStore(BaseVectorStore):
         if not filters:
             return ""
 
+        import re
+        _SAFE_VALUE = re.compile(r'^[\w가-힣\s\-\.]+$')
+
         conditions = []
         for key, value in filters.items():
             if value is None:
@@ -240,12 +243,22 @@ class MilvusStore(BaseVectorStore):
             # source_type is a first-class field
             if key == "source_type":
                 if isinstance(value, list):
-                    escaped = [v.replace('"', '\\"') for v in value]
-                    val_str = ", ".join(f'"{v}"' for v in escaped)
-                    conditions.append(f"source_type in [{val_str}]")
+                    safe_values = []
+                    for v in value:
+                        sv = str(v)
+                        if not _SAFE_VALUE.match(sv):
+                            logger.warning("Unsafe filter value rejected: %s", sv[:50])
+                            continue
+                        safe_values.append(sv)
+                    if safe_values:
+                        val_str = ", ".join(f'"{v}"' for v in safe_values)
+                        conditions.append(f"source_type in [{val_str}]")
                 else:
-                    escaped = str(value).replace('"', '\\"')
-                    conditions.append(f'source_type == "{escaped}"')
+                    sv = str(value)
+                    if not _SAFE_VALUE.match(sv):
+                        logger.warning("Unsafe filter value rejected: %s", sv[:50])
+                    else:
+                        conditions.append(f'source_type == "{sv}"')
 
         return " and ".join(conditions) if conditions else ""
 

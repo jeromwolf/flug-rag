@@ -64,19 +64,35 @@ async def upload_document(
     if ext not in settings.allowed_extensions:
         raise HTTPException(
             400,
-            f"Unsupported file type: {ext}. Allowed: {settings.allowed_extensions}",
+            f"Unsupported file type: {ext}. Allowed: {sorted(settings.allowed_extensions)}",
         )
 
-    # Validate file size
+    # Validate per-file size limit
     content = await file.read()
-    if len(content) > settings.max_file_size:
+    max_bytes = settings.max_file_size_mb * 1024 * 1024
+    if len(content) > max_bytes:
         raise HTTPException(
-            400,
-            f"File too large. Max: {settings.max_file_size // (1024 * 1024)}MB",
+            status_code=413,
+            detail=f"File too large ({len(content) // (1024 * 1024)}MB). Maximum allowed: {settings.max_file_size_mb}MB per file.",
+        )
+
+    # Validate system total storage limit
+    upload_dir = Path(settings.upload_dir)
+    _HIDDEN = {".DS_Store", ".omc", "Store", ".gitkeep", "Thumbs.db", "__MACOSX"}
+    total_used_bytes = 0
+    if upload_dir.exists():
+        for f_existing in upload_dir.rglob("*"):
+            if f_existing.is_file() and not f_existing.name.startswith(".") and f_existing.name not in _HIDDEN:
+                total_used_bytes += f_existing.stat().st_size
+    max_total_bytes = settings.max_total_storage_gb * 1024 * 1024 * 1024
+    if total_used_bytes + len(content) > max_total_bytes:
+        used_gb = total_used_bytes / (1024 ** 3)
+        raise HTTPException(
+            status_code=413,
+            detail=f"System storage limit reached ({used_gb:.1f}GB / {settings.max_total_storage_gb}GB). Contact administrator.",
         )
 
     # Save file
-    upload_dir = Path(settings.upload_dir)
     upload_dir.mkdir(parents=True, exist_ok=True)
 
     doc_id = str(uuid.uuid4())
@@ -129,11 +145,14 @@ async def list_documents(current_user: User | None = Depends(get_current_user)):
 
     # Get upload directory files
     upload_dir = Path(settings.upload_dir)
+    _HIDDEN = {".DS_Store", ".omc", "Store", ".gitkeep", "Thumbs.db", "__MACOSX"}
     documents = []
     if upload_dir.exists():
         for f in sorted(
             upload_dir.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True
         ):
+            if f.name in _HIDDEN or f.name.startswith("."):
+                continue
             if f.is_file():
                 parts = f.stem.split("_", 1)
                 doc_id = parts[0] if len(parts) > 1 else f.stem

@@ -27,11 +27,13 @@ import {
   Switch,
   FormControlLabel,
   CircularProgress,
+  Tooltip,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import { mcpApi } from "../api/client";
 
 interface ToolParam {
@@ -155,11 +157,16 @@ export default function CustomToolBuilder() {
 
   return (
     <Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
         <Typography variant="h6" sx={{ fontWeight: 600 }}>커스텀 도구 관리</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} size="small">
-          도구 추가
-        </Button>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Tooltip title="도구 유형: api (REST API 호출) | script (스크립트 실행) | query (DB 조회). config에 endpoint URL, headers, body 템플릿을 JSON으로 작성합니다." arrow>
+            <HelpOutlineIcon sx={{ fontSize: 18, color: "text.secondary", cursor: "help" }} />
+          </Tooltip>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate} size="small">
+            도구 추가
+          </Button>
+        </Box>
       </Box>
 
       {isLoading ? <CircularProgress /> : (

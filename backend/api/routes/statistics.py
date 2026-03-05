@@ -274,7 +274,7 @@ async def export_stats_excel(
     wb.save(buf)
     buf.seek(0)
 
-    filename = f"flux-rag-stats-{period}-{datetime.now(timezone.utc).strftime('%Y%m%d')}.xlsx"
+    filename = f"ai-platform-stats-{period}-{datetime.now(timezone.utc).strftime('%Y%m%d')}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -28,6 +28,7 @@ _DEFAULT_PASSWORDS: dict[str, str] = {
     "evaluator": "Eval@2026!",
     "admin": "admin123",
     "manager": "manager123",
+    "expert": "expert123",
     "user": "user123",
     "viewer": "viewer123",
 }
@@ -98,7 +99,7 @@ class UserStore(AsyncSQLiteManager):
                         hashed,
                         user.created_at.isoformat(),
                         None,
-                        0 if user.username == "evaluator" else 1,  # must_change_password
+                        1,  # must_change_password
                     ),
                 )
             await db.commit()

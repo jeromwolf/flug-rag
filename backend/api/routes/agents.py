@@ -225,7 +225,7 @@ async def monitor_websocket(websocket: WebSocket):
         return
     try:
         from auth.jwt_handler import verify_token
-        verify_token(token)
+        payload = verify_token(token, required_type="access")
     except Exception:
         await websocket.close(code=1008)
         return
