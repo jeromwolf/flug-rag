@@ -1,0 +1,4750 @@
+{
+  "timestamp": "2026-02-11 12:41:43",
+  "dp_mode": "local_only",
+  "total_files": 676,
+  "success": 675,
+  "failed": 1,
+  "total_chunks": 17042,
+  "elapsed_minutes": 40.6,
+  "avg_seconds_per_file": 3.6,
+  "failed_files": [
+    {
+      "file": "사택및생활안정자금관리지침(2018년 8월 개정).hwp",
+      "error": "Failed to load HWP file: data/uploads/한국가스기술공사_내부규정/한국가스기술공사_내부규정/사택및생활안정자금관리지침(2018년 8월 개정).hwp. hwp5txt, olefile, LibreOffice all failed. Error: LibreOffice conversion produced no output"
+    }
+  ],
+  "results": [
+    {
+      "filename": "4-1 상용원운용지침(2014.05.09).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 9.2,
+      "error": null
+    },
+    {
+      "filename": "5-2 학자금지원운영지침(2014.12.26).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "[별지]보안업무규정(2017년 8월 제정).pdf",
+      "status": "completed",
+      "chunks": 66,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "[별지]보안업무규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 66,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "[별지]보안업무규정(2018년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 63,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "갈등관리지침(2014년 4월 제정).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2016년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2017년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2018년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2016년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 38,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 51,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2017년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 46,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2018년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 56,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 58,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 62,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "감사자문위원회 운영지침(2017년 12월 제정).pdf",
+      "status": "completed",
+      "chunks": 3,
+      "elapsed_s": 0.4,
+      "error": null
+    },
+    {
+      "filename": "감사자문위원회 운영지침(2018년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 3,
+      "elapsed_s": 0.4,
+      "error": null
+    },
+    {
+      "filename": "개방형직위운영지침(2017년 12월 제정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "개방형직위운영지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "개방형직위운영지침(2020년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "경력개발 및 전보지침(2015년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "경력개발 및 전보지침(2017년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "경력개발 및 전보지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2016년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 73,
+      "elapsed_s": 5.5,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2017년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 73,
+      "elapsed_s": 5.6,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 75,
+      "elapsed_s": 5.3,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 78,
+      "elapsed_s": 5.9,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 92,
+      "elapsed_s": 6.0,
+      "error": null
+    },
+    {
+      "filename": "공공데이터 관리지침(2019년 12월 제정).pdf",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2015년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 74,
+      "elapsed_s": 5.6,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2019년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 64,
+      "elapsed_s": 6.2,
+      "error": null
+    },
+    {
+      "filename": "공익신고 처리 및 신고자 보호 등에 관한 지침(2017년 9월 제정).pdf",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "공익신고처리 및 신고자보호 등에 관한 지침(2020년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 33,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "교육훈련규정(2016년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "교육훈련규정(2017년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "교육훈련지침(2016년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 39,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "교육훈련지침(2017년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 41,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "교육훈련지침(2019년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 42,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "그린누리봉사단운영지침(2019년 12월 제정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "기업비밀보호규정(2015년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "기업비밀보호규정(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "기업비밀보호규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "내부회계관리규정(2012년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "당직및비상근무규정(2014년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "당직및비상근무규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "당직및비상근무규정(2019년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "대외파견 및 해외근무자 관리지침(2014년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "대외파견 및 해외근무자 관리지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "리스크관리규정(2016년 10월 제정).pdf",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "리스크관리규정(2019년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "문서규정(2012년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 58,
+      "elapsed_s": 4.8,
+      "error": null
+    },
+    {
+      "filename": "문서규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 60,
+      "elapsed_s": 3.9,
+      "error": null
+    },
+    {
+      "filename": "민원사무처리지침(2014년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "반장운영지침(2016년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "반장운영지침(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "법무업무처리지침(2013년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 3.3,
+      "error": null
+    },
+    {
+      "filename": "법인신용카드관리지침(2015년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "법인신용카드관리지침(2017년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "법인신용카드관리지침(2018년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "법인신용카드관리지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2014년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2016년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2017년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2017년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 45,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "보상 및 배상규정(2014년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "보상 및 배상규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2015년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2017년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2018년 12월 개정 ).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2018년 8월 개정 ).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2017년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2019년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "보안업무규정(2017년 8월 제정).pdf",
+      "status": "completed",
+      "chunks": 33,
+      "elapsed_s": 4.9,
+      "error": null
+    },
+    {
+      "filename": "보안업무규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 44,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "보안업무규정(2018년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 44,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "보안업무규정(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "복리후생관리규정(2015년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "복리후생관리규정(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "복리후생관리규정(2017년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "복리후생관리규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "부정청탁 및 금품등 수수의 신고사무 처리지침(2016년 9월 제정).pdf",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "사규관리규정(2014년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "사내벤처운영규정(2018년 10월 제정).pdf",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "사업실명제 운영지침(2015년 12월 제정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "사업실명제 운영지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "사택및생활안정자금관리지침(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 39,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "사택및생활안정자금관리지침(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 40,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "사택및생활안정자금관리지침(2019년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "사회공헌활동지침(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2015년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 3.6,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 33,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 41,
+      "elapsed_s": 3.9,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2017년 7월 개정)_1.pdf",
+      "status": "completed",
+      "chunks": 40,
+      "elapsed_s": 3.7,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2017년 7월 개정)_2.pdf",
+      "status": "completed",
+      "chunks": 40,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 42,
+      "elapsed_s": 3.3,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 42,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2019년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 44,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2019년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.7,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2020년 3월 개정) .pdf",
+      "status": "completed",
+      "chunks": 46,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 51,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "상용원운용지침(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "상품권 관리지침(2017년 4월 제정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "성과공유제규정(2015년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "성과공유제규정(2018년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "성과공유제규정(2019년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "소액물품구매업무처리지침(2016년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.4,
+      "error": null
+    },
+    {
+      "filename": "소액물품구매업무처리지침(2019년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.4,
+      "error": null
+    },
+    {
+      "filename": "시간선택제채용직원운용지침(2014년 9월 제정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "시간선택제채용직원운용지침(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "신규사업선정평가지침(2013년 6월 제정).pdf",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2018년 10월 제정).pdf",
+      "status": "completed",
+      "chunks": 56,
+      "elapsed_s": 4.5,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2019년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 60,
+      "elapsed_s": 4.8,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2016년도 01월 27일 개정).pdf",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2017년도 07월 21일 개정).pdf",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2018년도 08월 22일 개정).pdf",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2019년도 06월 01일 개정).pdf",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2019년도 11월 08일 개정).pdf",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2015년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2019년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2020년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리지침(2015년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.3,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리지침(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리지침(2019년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 48,
+      "elapsed_s": 3.3,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리지침(2020년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 57,
+      "elapsed_s": 3.7,
+      "error": null
+    },
+    {
+      "filename": "연구노트관리지침(2014년 7월 제정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.4,
+      "error": null
+    },
+    {
+      "filename": "연구수당지급지침(2014년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.3,
+      "error": null
+    },
+    {
+      "filename": "연구수당지급지침(2018년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.5,
+      "error": null
+    },
+    {
+      "filename": "연구실안전관리지침(2015년 10월 제정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2016년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2017년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "외자계약지침(2007년 6월 제정).pdf",
+      "status": "completed",
+      "chunks": 29,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "위임전결규정(2015년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "위임전결규정(2016년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 37,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "위임전결규정(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "위임전결규정(2020년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 39,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "위촉연구원관리지침(2015년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "위촉연구원관리지침(2017년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.5,
+      "error": null
+    },
+    {
+      "filename": "위촉연구원관리지침(2019년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.5,
+      "error": null
+    },
+    {
+      "filename": "이사회규정(2013년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "이사회규정(2017년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "이해충돌 방지제도 운영지침(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 64,
+      "elapsed_s": 5.1,
+      "error": null
+    },
+    {
+      "filename": "익명신고처리지침(2019년 3월 제정).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "익명신고처리지침(2019년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2015년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2017년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2017년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2018년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2018년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2020년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 55,
+      "elapsed_s": 4.7,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2016년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 55,
+      "elapsed_s": 4.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 45,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 44,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2017년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 46,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2017년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 47,
+      "elapsed_s": 3.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 54,
+      "elapsed_s": 4.5,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2018년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 45,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 52,
+      "elapsed_s": 3.9,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 53,
+      "elapsed_s": 4.4,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 52,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2020년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 51,
+      "elapsed_s": 4.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 75,
+      "elapsed_s": 4.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2016년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 75,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2017년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2017년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 3.7,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 4.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2018년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 3.6,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 3.6,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 38,
+      "elapsed_s": 3.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2020년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 37,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 85,
+      "elapsed_s": 10.5,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2017년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 83,
+      "elapsed_s": 8.4,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 85,
+      "elapsed_s": 8.1,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 83,
+      "elapsed_s": 8.5,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 94,
+      "elapsed_s": 8.1,
+      "error": null
+    },
+    {
+      "filename": "인장관리지침(2016년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "인장관리지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "인장관리지침(2019년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "임금피크제운영규정(2016년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "임금피크제운영규정(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "임금피크제운영규정(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "임금피크제운영규정(2019년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "임시조직운영지침(2014년 4월 제정).pdf",
+      "status": "completed",
+      "chunks": 3,
+      "elapsed_s": 0.3,
+      "error": null
+    },
+    {
+      "filename": "임시조직운영지침(2018년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.4,
+      "error": null
+    },
+    {
+      "filename": "임시조직운영지침(2020년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "임원보수규정(2014년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "임원보수규정(2018년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "임원복무등에관한규정(2019년 5월 제정).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "임원직무청렴계약규정(2014년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "임원추천위원회운영규정(2017년 3월 제정).pdf",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.7,
+      "error": null
+    },
+    {
+      "filename": "임원추천위원회운영규정(2020년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "임직원직무청렴계약규정(2019년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2016년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 44,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 52,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2018년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 53,
+      "elapsed_s": 4.2,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 71,
+      "elapsed_s": 5.7,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2019년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 60,
+      "elapsed_s": 5.7,
+      "error": null
+    },
+    {
+      "filename": "자기개발휴직운영지침(2018년 10월 제정).pdf",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "적극 업무수행 면책 등 감사소명제도 운영 지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "적극 업무수행 면책 등 감사소명제도 운영 지침(2019년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "적극 업무수행 면책 등 감사소명제도 운영 지침(2019년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "적극 업무수행 면책 등 감사소명제도의 운영에 관한 지침(2016년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "적극 업무수행 면책 등 감사소명제도의 운영에 관한 지침(2017년 5월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "전임직운용지침(2017년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "전자조달시스템을 이용한 계약업무처리 지침(2015년 2월 제정).pdf",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "전환형 시간선택제직원 운용 지침(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "전환형 시간선택제직원 운용지침(2017년 11월 제정).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "전환형 시간선택제직원 운용지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "정관(2015년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "정관(2017년 3월 개정) .pdf",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "정관(2019년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2015년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 61,
+      "elapsed_s": 7.2,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 62,
+      "elapsed_s": 7.7,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 66,
+      "elapsed_s": 7.9,
+      "error": null
+    },
+    {
+      "filename": "정보관리규정(2012년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "정보관리규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "정보관리규정(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "제안규정(2013년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "제안규정(2018년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "제안규정(2019년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "지식재산권관리규정(2016년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 4.0,
+      "error": null
+    },
+    {
+      "filename": "지식재산권관리규정(2017년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "직무관련범죄고발지침(2014년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "직무관련자에 대한 청렴행동지침(2011년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "직무관리시행세칙(2015년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "직무관리시행세칙(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "직무관리시행세칙(2017년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "직장 내 성희롱·성폭력 예방 지침(2019년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "직장내성희롱예방지침(2015.12.31).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2019년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 29,
+      "elapsed_s": 4.4,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2016년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 29,
+      "elapsed_s": 4.7,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 29,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2017년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 29,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 5.2,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 33,
+      "elapsed_s": 4.0,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2019년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 29,
+      "elapsed_s": 3.6,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 47,
+      "elapsed_s": 5.5,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2020년 3월 제정).pdf",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "청렴계약입찰특별유의서(2013년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "청렴옴부즈만의 설치 및 운영에 관한 지침(2015년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "청렴옴부즈만의 설치 및 운영에 관한 지침(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "출납업무처리지침(2016년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "출납업무처리지침(2017년 4월 개정).pdf",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "출납업무처리지침(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "출납업무처리지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "출자회사관리규정(2015년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "출자회사관리규정(2017년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2014년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2017년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 4.9,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2017년 3월 개정).pdf",
+      "status": "completed",
+      "chunks": 33,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2018년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 38,
+      "elapsed_s": 3.7,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 3.6,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2019년 7월 개정).pdf",
+      "status": "completed",
+      "chunks": 39,
+      "elapsed_s": 4.9,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2020년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 41,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "투자관리규정(2014년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "투자관리규정(2019년 10월 개정).pdf",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "특정직관리요령(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 4.0,
+      "error": null
+    },
+    {
+      "filename": "피복관리지침(2015년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "피복관리지침(2017년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "피복관리지침(2018년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "피복관리지침(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "피복관리지침(2019년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "피복관리지침(2020년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "학자금지원운영지침(2016년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "학자금지원운영지침(2018년 11월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "해외근무자복리후생관리지침(2014년 2월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "해외근무자복리후생관리지침(2019년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "현장정비책임자 운영지침(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "협상에의한 계약제안서 평가지침(2022년 12월 개정).pdf",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "회계감사인선임위원회 운영지침(2019년 1월 개정).pdf",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "회계규정(2014년 9월 개정).pdf",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "회계규정(2018년 6월 개정).pdf",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "회계규정(2018년 8월 개정).pdf",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 3.7,
+      "error": null
+    },
+    {
+      "filename": "ESG위원회 운영규정(2021년 12월 제정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "ESG위원회 운영규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "ESG위원회 운영규정(2025년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "[별지]보안업무규정(2023년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 1,
+      "elapsed_s": 0.3,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2021년12월 개정).hwp",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 4.0,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2022년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.9,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2023년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "감사규정(2025년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2021년12월 개정).hwp",
+      "status": "completed",
+      "chunks": 37,
+      "elapsed_s": 3.9,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2022년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 38,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2023년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 41,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2024년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 42,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2024년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 4.2,
+      "error": null
+    },
+    {
+      "filename": "감사규정시행세칙(2025년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.9,
+      "error": null
+    },
+    {
+      "filename": "감사자문위원회 운영지침(2020년 3월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "감사자문위원회 운영지침(2022년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "감사자문위원회 운영지침(2022년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "감사자문위원회 운영지침(2025년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "갑질 예방지침(2024년 8월 제정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "개방형직위운영지침(2020년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "개방형직위운영지침(2021년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "개방형직위운영지침(2023년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "건설업 안전보건관리지침(2022년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 99,
+      "elapsed_s": 9.4,
+      "error": null
+    },
+    {
+      "filename": "건설업 안전보건관리지침(2022년 2월 제정).hwp",
+      "status": "completed",
+      "chunks": 95,
+      "elapsed_s": 9.1,
+      "error": null
+    },
+    {
+      "filename": "경력개발 및 전보지침(2023년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "경영관리규정(2024년 3월 제정).hwp",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "경영관리규정(2025년도 10월 22일 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "경영혁신규정(2021년 4월 제정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "경영혁신규정(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "경영혁신규정(2023년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "경영혁신규정(2024년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "경영혁신규정(2025년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 68,
+      "elapsed_s": 8.2,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 68,
+      "elapsed_s": 7.3,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2021년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 70,
+      "elapsed_s": 6.8,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 71,
+      "elapsed_s": 6.7,
+      "error": null
+    },
+    {
+      "filename": "계약업무관리지침(2025년도 09월 29일 개정).hwp",
+      "status": "completed",
+      "chunks": 72,
+      "elapsed_s": 6.8,
+      "error": null
+    },
+    {
+      "filename": "공공건축 운영규정(2024년 1월 제정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2021년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 46,
+      "elapsed_s": 5.1,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2021년12월 개정).hwp",
+      "status": "completed",
+      "chunks": 46,
+      "elapsed_s": 5.0,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2022년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 57,
+      "elapsed_s": 7.6,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 58,
+      "elapsed_s": 6.7,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 58,
+      "elapsed_s": 6.0,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2025년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 59,
+      "elapsed_s": 6.0,
+      "error": null
+    },
+    {
+      "filename": "공사 및 용역 관리규정(2025년도 10월 13일 개정).hwp",
+      "status": "completed",
+      "chunks": 61,
+      "elapsed_s": 6.3,
+      "error": null
+    },
+    {
+      "filename": "공익신고처리 및 신고자보호 등에 관한 지침(2022년 3월개정).hwp",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "공익신고처리 및 신고자보호 등에 관한 지침(2022년 8월개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "공익신고처리 및 신고자보호 등에 관한 지침(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "공익신고처리 및 신고자보호 등에 관한 지침(2025년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 4.0,
+      "error": null
+    },
+    {
+      "filename": "교육훈련규정(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "교육훈련규정(2023년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "교육훈련규정(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "교육훈련규정(2025년도 09월 25일 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "교육훈련지침(2022년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "교육훈련지침(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "교육훈련지침(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "교육훈련지침(2025년도 09월 25일 개정).hwp",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "규제입증위원회 운영지침(2020년 10월 제정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "근로자 안전신고(Safety Call) 운영지침(2020년 11월 제정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "근로자 안전신고(Safety Call) 운영지침(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "근로자 안전울림(Safety Call) 운영지침(2023년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "근로자 안전울림(Safety Call) 운영지침(2024년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "근로자 안전울림(Safety Call) 운영지침(2025년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "금융자산 운용지침(2022년 4월 제정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "금융자산 운용지침(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "기업비밀보호규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "내부통제 운영규정(2024년 10월 제정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "내부회계관리규정(2023년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "내부회계관리규정(2025년도 12월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "당직및비상근무규정(2024년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "대외파견 및 해외근무자 관리지침(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "대학생 자녀학자금 대부지침(2021년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "데이터기반행정 활성화 지침(2024년 11월 제정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "리스크관리규정(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "리스크관리규정(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "리스크관리규정(2022년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "리스크관리규정(2024년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "문서규정(2024년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 42,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "민원사무처리지침(2023년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "반장운영지침(2022년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "법무업무처리지침(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "법인신용카드관리지침(2021년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "법인신용카드관리지침(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "법인신용카드관리지침(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "법인신용카드관리지침(2024년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "법인콘도운영지침(2023년 6월 제정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2022년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2023년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2024년 11월 개정.).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "별정직관리요령(2025년도 12월 29일 개정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2020년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2022년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2023년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정(2025년도 12월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2020년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2021년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2021년12월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2022년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 29,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2023년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "보수규정시행세칙(2025년도 12월 29일 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "보안업무규정(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 63,
+      "elapsed_s": 5.5,
+      "error": null
+    },
+    {
+      "filename": "보안업무규정(2022년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 63,
+      "elapsed_s": 5.1,
+      "error": null
+    },
+    {
+      "filename": "보안업무규정(2023년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 64,
+      "elapsed_s": 5.4,
+      "error": null
+    },
+    {
+      "filename": "보안업무규정(2024년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 63,
+      "elapsed_s": 5.1,
+      "error": null
+    },
+    {
+      "filename": "복리후생관리규정(2021년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "부정청탁 및 금품등 수수의 신고사무 처리지침(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "사규관리규정(2021년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "사내벤처운영규정(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 37,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "사업 내 MBB 자격검정 실시지침(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "사업 내 자격검정 실시지침(2020년 9월 제정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "사업실명제 운영지침(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "사업실명제 운영지침(2022년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "사택및생활안정자금관리지침(2018년 8월 개정).hwp",
+      "status": "failed",
+      "chunks": 0,
+      "elapsed_s": 43.5,
+      "error": "Failed to load HWP file: data/uploads/한국가스기술공사_내부규정/한국가스기술공사_내부규정/사택및생활안정자금관리지침(2018년 8월 개정).hwp. hwp5txt, olefile, LibreOffice all failed. Error: LibreOffice conversion produced no output"
+    },
+    {
+      "filename": "사택운영지침(2021년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "사택운영지침(2023년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "사택운영지침(2024년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "사택운영지침(2025년도 12월 5일 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "사회공헌활동지침(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2020년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2021년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2021년 3월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2022년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "상벌규정(2025년도 11월 12일 개정).hwp",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "상임이사 선임에 관한 지침(2020년 7월 제정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "상임이사 선임에 관한 지침(2021년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "상임이사 선임에 관한 지침(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "상임이사 선임에 관한 지침(2023년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "상품권 관리지침(2025년도 12월 5일 개정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "성과공유제규정(2020년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "성과공유제규정(2021년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 54,
+      "elapsed_s": 33.3,
+      "error": null
+    },
+    {
+      "filename": "성과공유제규정(2022년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "성과공유제규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "소액구매업무처리지침(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "스토킹 예방지침(2024년 6월 제정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "시간선택제채용직원운용지침(2023년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "신규사업선정평가지침(2023년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "신규사업선정평가지침(2024년 6월 개정.).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정 (2021년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 80,
+      "elapsed_s": 5.4,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2020년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 76,
+      "elapsed_s": 4.7,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2021년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 95,
+      "elapsed_s": 6.5,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 103,
+      "elapsed_s": 7.0,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 102,
+      "elapsed_s": 6.7,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2023년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 103,
+      "elapsed_s": 6.6,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2023년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 96,
+      "elapsed_s": 6.6,
+      "error": null
+    },
+    {
+      "filename": "안전보건관리규정(2025년도 12월 5일 개정).hwp",
+      "status": "completed",
+      "chunks": 97,
+      "elapsed_s": 6.8,
+      "error": null
+    },
+    {
+      "filename": "안전사고에 관한 임원 문책규정(2020년 10월 제정) .hwp",
+      "status": "completed",
+      "chunks": 4,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "안전사고에 관한 임원 문책규정(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2020년도 07월 16일 개정).hwp",
+      "status": "completed",
+      "chunks": 33,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2020년도 10월 20일 개정).hwp",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2021년도 07월 09일 개정).hwp",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2023년도 10월 ① 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2023년도 10월 ② 개정).hwp",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2024년도 01월 02일 개정).hwp",
+      "status": "completed",
+      "chunks": 36,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2024년도 09월 12일 개정).hwp",
+      "status": "completed",
+      "chunks": 40,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2024년도 11월 15일 개정).hwp",
+      "status": "completed",
+      "chunks": 40,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2025년도 09월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "여비규정(2026년도 01월 19일 개정).hwp",
+      "status": "completed",
+      "chunks": 43,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2020년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 21,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2023년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 23,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리규정(2025년도 09월 24일 개정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리지침(2020년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리지침(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 3.3,
+      "error": null
+    },
+    {
+      "filename": "연구개발관리지침(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "연구노트관리지침(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "연구수당지급지침(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2021년12월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2022년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "연봉제규정(2025년도 12월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "외자계약지침(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "위임전결규정(2022년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "위임전결규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "위임전결규정(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "위촉연구원관리지침(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "이사회규정(2021년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "이사회규정(2022년 8월 개정) .hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "이사회규정(2025년도 12월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "이해충돌 방지제도 운영지침(2022년 4월 제정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "이해충돌 방지제도 운영지침(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 3.0,
+      "error": null
+    },
+    {
+      "filename": "익명신고처리지침(2021년 3월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "익명신고처리지침(2021년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "익명신고처리지침(2023년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "인권경영규정(2025년도 12월 31일 제정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2020년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2020년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2021년 3월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2021년11월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2022년10월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2023년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 24,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2024년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "인사규정(2025년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙 전문1(2025.6.18).hwp",
+      "status": "completed",
+      "chunks": 66,
+      "elapsed_s": 5.4,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙 전문2(2025.6.18).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 56,
+      "elapsed_s": 4.5,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 58,
+      "elapsed_s": 4.5,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2021년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 57,
+      "elapsed_s": 4.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 60,
+      "elapsed_s": 4.6,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2022년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 58,
+      "elapsed_s": 4.7,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 60,
+      "elapsed_s": 712.2,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙1(2025.11.12).hwp",
+      "status": "completed",
+      "chunks": 68,
+      "elapsed_s": 8.9,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2021년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2022년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "인사규정시행세칙2(2025.11.12).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 3.6,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2020년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 29,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2021년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.6,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2021년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2022년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.7,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2022년1월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2023년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.9,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2024년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2025년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 33,
+      "elapsed_s": 4.0,
+      "error": null
+    },
+    {
+      "filename": "인사평정지침(2025년도 11월 27일 개정).hwp",
+      "status": "completed",
+      "chunks": 34,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "인장관리지침(2021년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "인장관리지침(2022년 7월 개정) .hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "인장관리지침(2023년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "인장관리지침(2025년도 09월 29일 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "임금피크제운영규정(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "임시조직운영지침(2022년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "임원보수규정(2021년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "임원복무등에관한규정(2020년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "임원추천위원회운영규정(2021년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "임원추천위원회운영규정(2022년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 22,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2020년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 51,
+      "elapsed_s": 5.5,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2022년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 46,
+      "elapsed_s": 4.8,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 48,
+      "elapsed_s": 4.2,
+      "error": null
+    },
+    {
+      "filename": "임직원행동강령(2025년도 09월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 50,
+      "elapsed_s": 3.8,
+      "error": null
+    },
+    {
+      "filename": "자기개발휴직운영지침(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.6,
+      "error": null
+    },
+    {
+      "filename": "적극 행정 면책 등 감사소명제도 운영 지침(2022년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "적극행정 운영규정(2022년 9월 제정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "적극행정 운영규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "전략경영규정(2021년 4월 제정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "전임직운용지침(2023년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "정관(2021년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "정관(2022년11월 개정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "정년 후 재고용 운영지침(2022년 12월 제정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "정년 후 재고용 운영지침(2023년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2020년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 25,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2021년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2021년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 33,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "정보공개운영지침(2025년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 3.3,
+      "error": null
+    },
+    {
+      "filename": "정보관리규정(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.4,
+      "error": null
+    },
+    {
+      "filename": "정보관리규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "정보관리규정(2025년도 12월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "제안규정(2021년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 2.1,
+      "error": null
+    },
+    {
+      "filename": "제안규정(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "제안규정(2023년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "제안규정(2024년 3월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "제안규정(2025년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "지식재산권관리규정(2020년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "지식재산권관리규정(2021년 6월 개정) .hwp",
+      "status": "completed",
+      "chunks": 28,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "지식재산권관리규정(2022년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 3.4,
+      "error": null
+    },
+    {
+      "filename": "지식재산권관리규정(2026년도 1월 7일 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "지원직 관리지침(2025년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "지원직관리요령(2020년 6월 제정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "지원직관리요령(2020년 9월 제정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "지원직관리지침(2022년 3월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "지원직관리지침(2024년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "직무관련범죄고발지침(2021년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.7,
+      "error": null
+    },
+    {
+      "filename": "직무관리시행세칙(2020년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "직무관리시행세칙(2024년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "직무관리시행세칙(2025년도 10월 21일 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "직장 내 괴롭힘 등 인권침해 구제지침(2025년도 12월 31일 제정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "직장 내 성희롱·성폭력 예방 지침(2021년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "직장 내 성희롱·성폭력 예방 지침(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "직장 내 성희롱·성폭력 예방 지침(2022년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "직장 내 성희롱·성폭력 예방 지침(2024년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 15,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "직장 내 성희롱·성폭력 예방지침(2024년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2020년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2020년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2022년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2023년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2024년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 6,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2025년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2025년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "직제규정(2025년도 12월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2020년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2020년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2020년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2022년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2023년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2023년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "직제규정시행세칙(2025년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "차량법인신용카드관리지침(2024년 12월 제정).hwp",
+      "status": "completed",
+      "chunks": 5,
+      "elapsed_s": 0.8,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2020년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2021년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 1.8,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2021년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2021년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 2.5,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2023년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 32,
+      "elapsed_s": 4.0,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2024년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "채용절차에 관한 지침(2025년 7월 개정).hwp",
+      "status": "completed",
+      "chunks": 35,
+      "elapsed_s": 2.9,
+      "error": null
+    },
+    {
+      "filename": "천연가스설비 솔루션 협의체 운영지침(2020년 5월 제정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "천연가스설비 솔루션 협의체 운영지침(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "청렴계약입찰특별유의서(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 17,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "청렴옴부즈만의 설치 및 운영에 관한 지침(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.1,
+      "error": null
+    },
+    {
+      "filename": "청렴옴부즈만의 설치 및 운영에 관한 지침(2024년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.3,
+      "error": null
+    },
+    {
+      "filename": "청렴윤리경영 및 부패방지·규범준수 경영시스템 통합운영지침(2026년도 01월 15일 제정).hwp",
+      "status": "completed",
+      "chunks": 19,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "출납업무처리지침(2020년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 18,
+      "elapsed_s": 2.0,
+      "error": null
+    },
+    {
+      "filename": "출납업무처리지침(2025년 4월 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "출자회사관리규정(2020년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "출자회사관리규정(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 16,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "출자회사관리규정(2024년 2월 개정).hwp",
+      "status": "completed",
+      "chunks": 20,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2020년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 39,
+      "elapsed_s": 4.2,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2021년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 40,
+      "elapsed_s": 3.1,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2022년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 46,
+      "elapsed_s": 4.1,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2022년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 46,
+      "elapsed_s": 3.6,
+      "error": null
+    },
+    {
+      "filename": "취업규칙(2025년도 12월 31일 개정).hwp",
+      "status": "completed",
+      "chunks": 48,
+      "elapsed_s": 4.0,
+      "error": null
+    },
+    {
+      "filename": "투자관리규정(2020년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "투자관리규정(2021년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 2.7,
+      "error": null
+    },
+    {
+      "filename": "투자관리규정(2022년 8월 개정).hwp",
+      "status": "completed",
+      "chunks": 31,
+      "elapsed_s": 3.5,
+      "error": null
+    },
+    {
+      "filename": "투자관리규정(2024년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 30,
+      "elapsed_s": 2.6,
+      "error": null
+    },
+    {
+      "filename": "특정직관리요령(2022년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "특정직관리요령(2022년 3월 제정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "특정직관리요령(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 2.3,
+      "error": null
+    },
+    {
+      "filename": "특정직관리요령(2023년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 12,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "특정직관리요령(2024년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 14,
+      "elapsed_s": 2.2,
+      "error": null
+    },
+    {
+      "filename": "특정직관리요령(2024년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "특정직관리요령(2025년도 12월 29일 개정).hwp",
+      "status": "completed",
+      "chunks": 13,
+      "elapsed_s": 1.7,
+      "error": null
+    },
+    {
+      "filename": "피복관리지침(2024년 1월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "해외근무자복리후생관리지침(2020년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "해외근무자복리후생관리지침(2022년 10월 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "해외근무자복리후생관리지침(2025년도 12월 30일 개정).hwp",
+      "status": "completed",
+      "chunks": 7,
+      "elapsed_s": 0.9,
+      "error": null
+    },
+    {
+      "filename": "현장정비책임자 운영지침(2022년 5월 개정).hwp",
+      "status": "completed",
+      "chunks": 9,
+      "elapsed_s": 1.5,
+      "error": null
+    },
+    {
+      "filename": "현장정비책임자 운영지침(2023년 12월 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.6,
+      "error": null
+    },
+    {
+      "filename": "협상에의한 계약제안서 평가지침(2021년 6월 제정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.0,
+      "error": null
+    },
+    {
+      "filename": "협상에의한 계약제안서 평가지침(2025년도 09월 29일 개정).hwp",
+      "status": "completed",
+      "chunks": 11,
+      "elapsed_s": 1.9,
+      "error": null
+    },
+    {
+      "filename": "회계감사인선임위원회 운영지침(2017년 6월 제정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.4,
+      "error": null
+    },
+    {
+      "filename": "회계감사인선임위원회 운영지침(2025년도 12월 28일 개정).hwp",
+      "status": "completed",
+      "chunks": 10,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "회계규정(2020년 6월 개정).hwp",
+      "status": "completed",
+      "chunks": 26,
+      "elapsed_s": 3.2,
+      "error": null
+    },
+    {
+      "filename": "회계규정(2022년 9월 개정).hwp",
+      "status": "completed",
+      "chunks": 27,
+      "elapsed_s": 2.8,
+      "error": null
+    },
+    {
+      "filename": "휴직자복무관리지침(2020년 6월 제정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.2,
+      "error": null
+    },
+    {
+      "filename": "휴직자복무관리지침(2024년 11월 개정).hwp",
+      "status": "completed",
+      "chunks": 8,
+      "elapsed_s": 1.3,
+      "error": null
+    }
+  ]
+}

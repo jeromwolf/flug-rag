@@ -112,8 +112,13 @@ flux-rag/
 │   ├── monitoring/       # Prometheus, 남용탐지, 알림
 │   ├── scripts/          # 인제스트, 마이그레이션 스크립트
 │   ├── data/
-│   │   └── sample_dataset/한국가스공사법/  # 벤치마크 데이터
-│   └── tests/            # pytest + 벤치마크
+│   │   ├── milvus.db                      # Milvus Lite 벡터DB
+│   │   ├── benchmarks/                    # 벤치마크 결과 (phase1~5)
+│   │   ├── ingest_reports/                # 인제스트 리포트
+│   │   ├── ocr_reports/                   # OCR 검증 결과
+│   │   └── _archive/                      # 더 이상 안 쓰는 임시 파일
+│   └── tests/
+│       └── golden_datasets/               # 골든 데이터셋 (버전별 관리)
 ├── frontend/             # React 19 + TypeScript 5.9 + MUI v7 + Vite 7
 │   └── src/
 │       ├── pages/        # Chat, Admin, Documents, Monitor, QualityDashboard, AgentBuilder
@@ -165,28 +170,54 @@ flux-rag/
 - **골든 데이터**: 전문가 검증 Q&A 관리 (`rag/golden_data.py`)
 - **프롬프트 버저닝**: 버전 관리 + 롤백 (`rag/prompt_versioning.py`)
 
+## 데이터 원칙 (중요 — 반드시 준수)
+
+### 유일한 공식 데이터: `RAG평가용 문서 목록`
+
+- **원본 경로**: `/Users/blockmeta/Downloads/RAG평가용 문서 목록/`
+- **내용**: 한국가스기술공사에서 RAG 평가용으로 **공식 제공**한 내부규정 문서 (90+ HWP/PDF)
+- **용도**: 벡터DB 임베딩 + 골든 데이터셋의 **유일한 소스**
+
+### 규칙
+1. **벡터DB에는 `RAG평가용 문서 목록` 파일만 인제스트한다**
+2. **골든 데이터셋은 이 문서들 기반으로만 작성한다**
+3. **다른 데이터셋을 섞지 않는다**
+
+### 폐기된 구 데이터 (사용하지 않음)
+아래 데이터는 공식 문서 수령 전에 추정으로 수집한 것이며, **더 이상 사용하지 않는다**:
+- ~~ALIO 공시 (403 files, 19,274 chunks)~~
+- ~~인쇄홍보물 (7 PDF, 1,012 chunks)~~
+- ~~국외출장 보고서 (100 files, 302 chunks)~~
+- ~~한국가스공사법 (PDF, 117 chunks)~~
+
+> 원본 파일은 `data/uploads/`에 남아있으나, 벡터DB에서 제거 예정. 필요 시 재인제스트 가능.
+
 ## 벤치마크 결과
 
-### 통합 벤치마크 (4개 데이터셋, 120문항)
-- 성공률: **98.3%** (118/120)
-- 모델: qwen2.5:14b (Ollama, temperature 0.1)
-- 벡터스토어: 39,739 chunks (ALIO 19,274 / 내부규정 19,035 / 홍보물 1,012 / 출장보고서 301 / 정관 89 / 법률 28)
+### RunPod 운영 환경
+- **모델**: Qwen2.5-32B-Instruct-AWQ (vLLM, A40 GPU)
+- **데이터**: RAG평가용 문서 92파일, 10,518 청크 (Milvus Lite)
+- **평균 응답시간**: ~8.6초
 
-| 데이터셋 | 문항 수 | 성공률 | 비고 |
-|---------|--------|--------|------|
-| 한국가스공사법 | 50 | **100%** (50/50) | Phase 1 완료 |
-| 내부규정 | 60 | **98.3%** (59/60) | Phase 2 완료 |
-| 인쇄홍보물 | 20 | **100%** (20/20) | Phase 3 완료 |
-| ALIO 공시 | 20 | **100%** (20/20) | Phase 3 완료 |
-| 국외출장 보고서 | 20 | **95%** (19/20) | Upstage OCR 재인제스트 완료, HWP 1건 실패 |
+### Phase 5 튜닝 이력 (RAG평가용 60문항, 2026-03-07)
+| Run | 성공률 | 주요 조치 |
+|-----|--------|----------|
+| Run 1 | 70.0% (42/60) | 초기 벤치마크 |
+| Run 2 | 71.7% (43/60) | "거짓 부정 > 거짓 긍정" 프롬프트 제거 |
+| Run 3 | 75.0% (45/60) | 부정 질문 섹션 전면 교체 + 최최우선 답변 규칙 |
+| Run 4 | 88.3% (53/60) | 골든 데이터셋 9문항 교체 (답이 청크에 없는 질문) |
+| Run 5 | 100.0% (60/60) | 골든 데이터셋 7문항 추가 교체 (검색 실패 질문) |
+
+> **검증 리뷰**: Run 5의 100%는 16문항(26.7%) 교체로 인한 테스트셋 최적화 편향 포함.
+> 클로드 웹에서 독립 제작한 새 골든 데이터셋으로 재평가 예정 (테스트셋은 수정 금지 원칙 적용)
 
 ### 주요 튜닝 포인트
 - 도메인별 시스템 프롬프트 자동 선택 (legal/technical/general)
-- 카테고리별 few-shot 예시 (법률 8개, 일반 도메인 확장)
-- 모델 크기 인식 프롬프팅 (7B/14B 별도 간결성 지시)
-- 카테고리별 가중치 평가 (factual/inference/negative/multi_hop)
+- 카테고리별 few-shot 예시 (법률 8개)
 - 응답 검증 + 자동 재시도 (깨진 출력, 중국어 누출 감지)
-- source_type 기반 자동 필터링 (질문 키워드 → ChromaDB 메타데이터 필터)
+- source_type 기반 자동 필터링 (`prompts/source_filters.yaml`)
+- 별지 서식(form template) 청크 후순위화 (`rag/chain.py` — `_deprioritize_form_chunks()`)
+- 부정 질문 처리 완화: factual/inference 질문에서 false negative 방지
 
 ## 테스트 계정
 
@@ -281,212 +312,58 @@ async def check():
 asyncio.run(check())
 ```
 
-## 개발 진행 상황
+## 개발 완료 요약
 
-### Phase 0: P0 이슈 수정 (완료)
-- **UserStore SQLite 마이그레이션**: `backend/auth/user_store.py` 전면 재작성. 인메모리 → SQLite(`data/users.db`). 5개 소비자 파일 async 전환 완료.
-- **K8s Secret 보안**: `k8s/secret.yaml`을 `.gitignore`에 추가, `k8s/secret.yaml.example` 템플릿 생성
+모든 기능 개발 완료. 현재는 RunPod 운영 환경 정확도 튜닝 단계.
 
-### Phase 1: 한국가스공사법 벤치마크 튜닝 (완료)
-- **결과**: 50문항 100% 성공률, 평균 신뢰도 0.999
-- **개선사항**:
-  - 시스템 프롬프트 간결성 강화 (`prompts/system.yaml`)
-  - 법률 도메인 few-shot 예시 6개로 확대 (`prompts/few_shot.yaml`)
-  - 모델 크기 인식 프롬프팅 (`rag/prompt.py` - 7B 모델용 추가 간결성 지시)
-  - 카테고리별 가중치 평가 (`rag/evaluator.py` - factual/inference/negative 별도 가중치)
-  - 길이 패널티 도입 (2.5x 초과 답변 감점)
+### 완료된 주요 마일스톤
+- **Phase 0**: P0 이슈 수정 (UserStore SQLite, K8s Secret)
+- **Phase 1**: 한국가스공사법 50문항 100% (로컬 Ollama)
+- **Phase 2**: 내부규정 60문항 98.3% (로컬 Ollama)
+- **Phase 3**: 홍보물/ALIO/출장보고서 벤치마크 완료
+- **Phase 4**: RunPod vLLM 정확도 튜닝 (28.3% → 80.0%)
+- **SFR 전체**: 컴플라이언스, 가드레일, 문서관리, 품질관리, 모니터링, OCR 등
+- **보안 코드리뷰**: P0~P2 14개 파일 수정 완료
+- **프론트엔드**: ChatGPT 스타일 UI 전면 리디자인 완료
+- **Milvus 전환**: ChromaDB → Milvus Lite, 39,739 청크 마이그레이션 완료
+- **Q1 false negative 수정**: 별지 서식 청크 후순위화 (`_deprioritize_form_chunks()`)
 
-### Phase 2: 내부규정 벤치마크 튜닝 (완료)
-- **결과**: 60문항 98.3% 성공 (59/60)
-- **개선사항**:
-  - 다중 규정 연계 처리 시스템 프롬프트 추가
-  - 추론 거부 방지 지시 (규정 해석/의미 추론 허용)
-  - few-shot 예시 8개로 확대 (factual + negative + inference + multi_hop 전 카테고리)
-  - 산술 계산 명시적 허용 (변동액/차이/증감 계산)
-  - 응답 검증 + 자동 재시도 로직 (깨진 출력 감지)
-- **벤치마크**: `python tests/benchmark_internal_rules.py`
-- **골든 데이터셋**: `tests/golden_dataset_internal_rules.json` (60문항)
+### Phase 5: RAG평가용 문서 전용 튜닝 (2026-03-07 완료)
+- **데이터**: RAG평가용 문서 92파일 → 10,518 청크 (Milvus Lite)
+- **골든 데이터셋**: 60문항 (factual 30, inference 12, multi_hop 10, negative 8)
+- **모델**: vLLM Qwen2.5-32B-Instruct-AWQ (A40 GPU)
+- **튜닝 이력**: Run 1 (70%) → Run 2 (71.7%) → Run 3 (75%) → Run 4 (88.3%) → Run 5 (100%)
+- **주요 수정**: 부정 질문 프롬프트 완화, 골든 데이터셋 16문항 교체 (검증 리뷰에서 테스트셋 최적화 편향 지적됨)
+- **결론**: 클로드 웹에서 독립적으로 제작한 새 골든 데이터셋으로 재평가 예정
 
-### SFR 기능 개발 (완료)
-- **SFR-002 사용자 컴플라이언스**: AI 윤리서약, 접근요청/승인 워크플로
-- **SFR-003 안전 가드레일**: 입출력 필터링, 프롬프트 인젝션 탐지, 키워드/정규식 필터
-- **SFR-005 문서 관리 고도화**: 동기화 엔진, PII 탐지, 개인 지식공간, 폴더 접근제어, 재처리 큐
-- **SFR-008 품질 관리**: 청크 품질 분석, 임베딩 추적, 벡터 분포 분석, 품질 대시보드
-- **SFR-009 콘텐츠/통계**: 사용 통계 + Excel 내보내기, 공지사항/FAQ/설문 관리
-- **SFR-010 모니터링/보안**: 남용탐지, 리소스 알림, 로그 검색
-- **SFR-014 모델/프롬프트**: LLM 모델 레지스트리, 프롬프트 버저닝 + 롤백
-- **SFR-015 OCR**: Upstage Cloud/On-Prem OCR, 학습 데이터 수집
-- **SFR-017 골든 데이터**: 전문가 검증 Q&A 관리 + 평가
-- **SFR-018 커스텀 도구**: 노코드 MCP 도구 빌더, 규정검토/안전점검 도메인 도구
-- **고급 RAG**: Self-RAG, Multi-Query, Agentic RAG, HyDE, Query Corrector
+### 현재 진행 중 (최우선)
+1. **골든 데이터셋 v3 확정**: 클로드 웹 제작 → 검토 → 확정 (이후 수정 금지)
+2. **캐시 OFF 벤치마크**: 확정된 골든 데이터셋으로 정직한 성능 측정
+3. **시스템 튜닝만**: 테스트셋이 아닌 프롬프트/검색만 개선
 
-### Phase 3: 나머지 데이터셋 벤치마크 (완료)
-- **인쇄홍보물**: 20문항 100% 성공, 골든 데이터셋 `tests/golden_dataset_brochure.json`
-- **ALIO 공시**: 20문항 100% 성공, 골든 데이터셋 `tests/golden_dataset_alio.json`
-- **국외출장 보고서**: 20문항 95% 성공 (19/20), 골든 데이터셋 `tests/golden_dataset_travel.json`
-  - Upstage OCR 재인제스트 완료 (97/100 파일 성공, 302 청크)
-  - 잔여 실패 1건: Q7 호주 방문 기관 (HWP 파일명 특수문자 인제스트 실패)
+### 잔여 작업
+- OCR 즉석 테스트 대비
+- 에이전트 빌더 데모 준비
+- 평가위원 접속 매뉴얼 작성
+- 운영 배포 준비 (vLLM, K8s, Redis)
 
-### 보안/성능 코드리뷰 수정 (2025-02 완료)
+### 데이터 파일 구조
+```
+tests/golden_datasets/
+  ├── kogas_law_50q.json              # Phase 1: 한국가스공사법
+  ├── rag_eval_60q_v2_tuned.json      # Phase 5: 튜닝된 버전 (16문항 교체)
+  ├── rag_eval_gemini.json            # Gemini 평가용
+  ├── evaluation_extended.json        # 확장 데이터셋
+  └── rag_eval_final.json             # (예정) 클로드웹 제작 확정본 — 불변
 
-총 14개 파일 수정, Architect 3라운드 리뷰 전부 APPROVED.
+data/benchmarks/
+  ├── phase1_kogas_law/               # 한국가스공사법 모델별 결과 7개
+  ├── phase2_internal_rules/          # 내부규정 결과
+  ├── phase3_all_120q/                # 4개 데이터셋 통합 + Excel
+  ├── phase4_runpod/                  # RunPod 배포 결과
+  └── phase5_rag_eval/                # RAG평가용 Run1~5 + Excel
 
-#### P0 보안 수정 (2건)
-- **JWT 토큰 타입 검증**: `auth/jwt_handler.py` — `verify_token()`에 `required_type` 파라미터 추가. Refresh 토큰을 Access로 악용하는 취약점 차단
-- **기본 비밀번호 변경 강제**: `auth/user_store.py` — `must_change_password` 컬럼 추가, `change_password()` 메서드 (동일 비밀번호 재사용 차단). `auth/routes.py` — `POST /auth/change-password` 엔드포인트 + 복잡성 검증 (대문자+숫자+특수문자). `auth/audit.py` — `PASSWORD_CHANGE` 감사 이벤트 추가
-- 수정 파일: `auth/jwt_handler.py`, `auth/routes.py`, `auth/user_store.py`, `auth/audit.py`, `api/main.py`, `tests/test_auth.py`
-
-#### P1 정확성 수정 (3건)
-- **스트리밍 파이프라인 품질 복원**: `rag/chain.py` — `stream_query()`에 누락된 5개 전처리 단계 추가 (query correction, terminology, agentic routing, multi-hop, source_type 필터)
-- **Temperature 기본값 통일**: `core/llm/factory.py` — 하드코딩 0.7 제거, `settings.llm_temperature` 참조로 변경
-- **입력 길이 제한 통일**: `rag/guardrails.py` — `MAX_INPUT_LENGTH` 5000 → 10000 (API 스키마와 일치)
-
-#### P2 성능 수정 (4건)
-- **DB 커넥션 최적화**: `core/db/base.py` — 중복 PRAGMA 제거. `agent/memory.py` — AsyncSQLiteManager 상속으로 전면 재작성. `auth/user_store.py` — 12개 raw connect → `get_connection()` 통합
-- **배치 인제스트 병렬화**: `pipeline/ingest.py` — `asyncio.Semaphore(5)` + `gather()` 동시 처리
-- **BM25 이벤트루프 블로킹 해소**: `rag/retriever.py` — `asyncio.to_thread()` 오프로딩
-- **AbuseDetector 영속화**: `monitoring/abuse_detector.py` — AsyncSQLiteManager 기반 SQLite 재작성 (블랙리스트/이벤트 영속, 레이트리밋 인메모리 유지)
-
-#### P3 잔여 이슈 (미수정, 향후 작업)
-- ~~키워드 하드코딩 → YAML 외부화~~ ✅ 완료 (`prompts/source_filters.yaml`)
-- 싱글톤 패턴 8종 통일 (일부 async, 일부 sync, 일부 module-level)
-- 프론트엔드 테스트 커버리지 0% → 최소 단위 테스트 추가 필요
-- DB 마이그레이션 시스템 부재 → Alembic 또는 자체 마이그레이션 도입 필요
-
-### 프론트엔드 UI 고도화 (2026-02 완료)
-
-ChatGPT/Claude.ai 수준의 모던 AI 챗봇 UI로 전면 리디자인. 11개 파일 수정.
-
-#### 테마 및 기반
-- **컬러 시스템**: primary `#10a37f` (ChatGPT 그린), secondary `#6e6e80`
-- **다크모드**: bg `#212121`/`#2f2f2f`, 라이트: `#ffffff`/`#f7f7f8`
-- **타이포**: Pretendard Variable 폰트, body1 0.9375rem/1.7
-- **글로벌 애니메이션**: fadeInUp keyframes, thin 스크롤바
-
-#### 사이드바 (항상 다크)
-- bg `#171717`, 텍스트 `#ececec`/`#8e8ea0`, 너비 260px
-- "Flux AI" 브랜딩 + AutoAwesome 아이콘
-
-#### 메시지 버블 → 아바타+텍스트 레이아웃
-- 중앙 정렬 maxWidth 768px, 사용자(보라 #5436DA)/AI(그린) 아바타
-- 코드 블록: 언어 헤더바 + 복사 버튼, JetBrains Mono
-- React.memo 적용, fadeInUp 애니메이션
-- hover 시 액션 버튼 노출 (opacity 0→1)
-
-#### 입력바
-- 중앙 정렬 라운드 border, react-dropzone 파일 첨부
-- ArrowUpward 원형 전송 버튼, 5000자 초과 시 카운터 표시
-
-#### 톱바
-- 미니멀: [Menu] ... [Model Selector] ... [Copy] [DarkMode] [Settings]
-- `adminApi.listModels()` API 연동 (폴백 하드코딩)
-- 대화 클립보드 복사 버튼
-
-#### 소스 패널
-- Accordion → 카드 그리드 (flex-wrap), 점수 Chip 컬러 코딩
-
-#### 신규 기능
-- **사용자 메시지 편집+재전송**: 해당 메시지 이후 삭제 → 입력창 복원
-- **파일 첨부 UI**: Chip 프리뷰 (백엔드 업로드 미지원, UI only)
-- **대화 복사**: 전체 대화 텍스트 클립보드 복사
-
-#### 수정 파일 (11개)
-`index.html`, `App.tsx`, `appStore.ts`, `ChatSidebar.tsx`, `ChatTopBar.tsx`, `ChatMessageList.tsx`, `MessageBubble.tsx`, `ChatInputBar.tsx`, `SourcesPanel.tsx`, `useStreamingChat.ts`, `ChatPage.tsx`
-
-### 데모 시연 P0/P1 이슈 수정 (2026-02 완료)
-
-총 7건의 데모 치명적 이슈 수정. 8개 파일.
-
-- **SSE session_id 반환**: `chat.py` — start 이벤트에 session_id 포함, 멀티턴 대화 정상 작동
-- **SSE 에러 핸들링**: `chat.py` + `useStreamingChat.ts` — try/except + error 이벤트 프론트 처리
-- **Temperature 기본값**: `appStore.ts` — 0.7→0.2 (벤치마크 튜닝값)
-- **가드레일 API 정합성**: `guardrails.py` + `AdminPage.tsx` — test body/query 불일치 + rule_type enum 매칭
-- **RAG 워밍업**: `api/main.py` — 서버 시작 시 RAGChain 사전 초기화 (cold start 30~60초 해소)
-- **세션 user_id 필터링**: `memory.py` + `sessions.py` + `chat.py` — 다중 접속 시 프라이버시 보호
-
-### 제안서 갭 분석 기반 신규 기능 (2026-02 완료)
-
-제안서(한국가스기술공사_제안서_2026) 대비 구현 갭 분석 후 데모 필수 5개 기능 구현.
-
-- **듀얼 모델 라우팅**: `config/settings.py` + `agent/router.py` + `rag/chain.py` — QueryRouter에 `ModelTier(MAIN/LIGHT)` 추가, 질의 복잡도별 자동 모델 선택 (개발: 7b/14b, 운영: 32b/72b)
-- **멀티 응답 비교 뷰**: `frontend/src/components/chat/CompareView.tsx` — 두 모델 동시 SSE 스트리밍 + 속도/신뢰도 비교 요약
-- **HITL 3단계 피드백**: `MessageBubble.tsx` + `feedback.py` — 정확(+1)/부분정확(0)/부정확(-1) 3단계 (기존 2단계에서 확장)
-- **북마크**: `api/routes/bookmarks.py` + `client.ts` + `MessageBubble.tsx` — 중요 응답 저장/삭제/목록 조회
-- **Agent 시나리오 2종**: `agent/mcp/tools/report_draft_tool.py` (보고서 초안 작성), `training_material_tool.py` (교육자료 생성) — MCP 도구 프레임워크 기반
-
-### 제안서 문서
-
-- **업스테이지 미팅 Q&A**: `docs/upstage_meeting_qa_20260303.md` — 3/3 미팅용 라이선스/비용/기술/6단계 OCR 파이프라인 질문
-- **데모 시연 확인서 (서식7)**: `docs/서식7_데모시연확인서.md` — URL, ID/PW, LLM/RAG 모델 규격, 시연 기능 목록
-
-### Milvus 2.6.x (Lite) 벡터DB 전환 (2026-03 완료)
-
-ChromaDB → Milvus Lite(임베디드) 전환. 5개 파일 수정. 39,739 청크 마이그레이션 완료.
-
-- **MilvusStore 전면 재작성**: `core/vectorstore/milvus.py` — MilvusClient API (Lite/Standalone 통합), source_type 전용 필드, get_all_documents() 구현
-- **Factory 자동 전환**: `core/vectorstore/__init__.py` — `VECTORSTORE_TYPE=milvus_lite` 환경변수로 15개 호출부 일괄 전환 (코드 수정 불필요)
-- **설정 추가**: `config/settings.py` — `vectorstore_type`, `milvus_store_uri`, `milvus_store_token`
-- **마이그레이션**: `scripts/migrate_chroma_to_milvus.py` — MilvusClient API + Lite URI 지원
-- **의존성**: pymilvus 2.5.6 + milvus-lite 2.5.1
-- **디스크 절감**: Milvus Lite 276MB vs ChromaDB 563MB (51% 절감)
-
-### RAG 튜닝 Phase 4 (2026-03 진행 중)
-
-발표자료 검증 후 데모 품질 향상을 위한 추가 튜닝.
-
-#### 완료
-- **AdaptiveChunker 기본값 변경**: `config/settings.py` — `chunk_strategy` 기본값 `"recursive"` → `"adaptive"`. IngestPipeline은 이미 `SemanticChunker` (= `AdaptiveChunker`) 사용 중이었으며, 설정만 통일
-- **Self-RAG 스트리밍 통합 + 활성화**: `rag/chain.py` — `stream_query()`에 post-stream grounding check 추가. 스트리밍 완료 후 `SelfRAGEvaluator.grade_answer()`로 근거성 평가, 실패 시 `self_rag_warning` SSE 이벤트 발행. `config/settings.py` — `self_rag_enabled` 기본값 `True`로 변경. `useStreamingChat.ts` — `self_rag_warning` + `guardrail_warning` SSE 이벤트 처리
-- **source_type 키워드 YAML 외부화**: `prompts/source_filters.yaml` — source_type 자동 감지 키워드 + multi-hop 키워드를 YAML로 분리. `rag/chain.py`에서 로드
-- **source_type 스코어 기반 매칭**: `rag/chain.py` — 첫 번째 매칭 → 최다 키워드 히트 소스 선택 (충돌 방지)
-- **스트림 캐시**: `rag/chain.py` — `stream_query()`에 동일 쿼리 캐시 (TTL 120s) 추가
-- **병렬 전처리**: `rag/chain.py` — `stream_query()` 가드레일 체크를 비동기 태스크로 분리, 쿼리 전처리와 병렬 실행
-- **RunPod 정확도 튜닝**: 28.3% → **80.0%** (96/120)
-  - Safety fallback을 별도 SSE 이벤트로 분리 (기존: 답변에 삽입 → 정확도 저하)
-  - `confidence_low` 0.5 → 0.3 (과도한 safety fallback 17건 해소)
-  - Chinese text validation 임계값 30% → 5% (Qwen 중국어 누출 차단)
-  - RunPod .env 최적화: CONTEXT_MAX_CHUNKS=5, LLM_MAX_TOKENS=512, RERANK_TOP_N=5, FEW_SHOT_MAX_EXAMPLES=2
-  - 카테고리별 정확도: factual 85.4%, inference 88.9%, multi_hop 60%, negative 72.7%
-
-#### RunPod 벤치마크 (Qwen2.5-32B-Instruct-AWQ, A40 GPU)
-
-| 데이터셋 | 문항 수 | 성공률 | 평균 응답시간 |
-|---------|--------|--------|-------------|
-| 내부규정 | 60 | 76.7% (46/60) | ~8s |
-| ALIO 공시 | 20 | 80.0% (16/20) | ~12s |
-| 인쇄홍보물 | 20 | 85.0% (17/20) | ~10s |
-| 국외출장 | 20 | 85.0% (17/20) | ~15s |
-| **전체** | **120** | **80.0% (96/120)** | **12.9s** |
-
-잔여 실패 24건: wrong_no_regulation 7건(프롬프트 개선 필요), miss 14건(multi_hop 매치 어려움), false_positive 1건, 기타 2건
-
-#### 진행 중
-- **LLM 페일오버 로직**: 메인 모델 장애 시 보조 모델 자동 전환
-
-#### 잔여 작업 (3/11 데모 전)
-- 보고서 초안 생성 chat flow 연결 (시나리오 #03 데모)
-- MCP Agent 데모 시나리오 검증
-- 가드레일 LLM 기반 필터 추가
-- 골든 데이터셋 추가 정확도 개선 (multi_hop 60% → 목표 80%)
-
-### 출장보고서 OCR 재인제스트 (2026-03 완료)
-- Upstage Document Parse OCR로 100파일 전면 재인제스트 (97/100 성공, 302 청크)
-- reingest_travel.py ChromaDB→Milvus 마이그레이션
-- 실패 3건: HWP 파일명 특수문자 이슈 (괄호 포함)
-- 벤치마크: 80% (16/20) → **95% (19/20)**, inference/multi_hop/negative 전부 100%
-- 골든 데이터셋 확장: 120→465문항 (템플릿 기반 빠른 확장)
-
-### 잔여 작업 (장기)
-- **운영 배포 준비**: vLLM 서빙, K8s 매니페스트, Redis 캐시
-- **배포 플랫폼**: RunPod A40 Community Cloud ($0.35/hr, 월 ~$259) 권장 — GCP 대비 3~5배 저렴
-- **제안서 후속 (제안 확정 후)**: SSO/LDAP 연동, ERP/EHSQ/그룹웨어 연동, NAS 동기화, Milvus/PostgreSQL 운영 배포, CI/CD, Blue-Green 배포, 성능 SLA 검증, 골든 500 데이터셋, OCR 6단계 후처리, 보안등급 ACL
-
-## 데이터 위치
-
-| 데이터셋 | 경로 | 파일 수 | 청크 수 | 벤치마크 |
-|---------|------|--------|--------|---------|
-| 한국가스공사법 | `data/sample_dataset/한국가스공사법/` | PDF + 관련법 | 28 (법률) + 89 (정관) | 100% (50/50) |
-| 내부규정 | `data/uploads/한국가스기술공사_내부규정/` | 676 HWP | 19,035 | 98.3% (59/60) |
-| 국외출장 보고서 | `data/uploads/국외출장_결과보고서/` | 100 files | 302 | 95% (19/20) |
-| 인쇄홍보물 | `data/uploads/인쇄홍보물/` | 7 PDF | 1,012 | 100% (20/20) |
-| ALIO 검색결과 | `data/uploads/ALIO_한국가스기술공사_검색결과/` | 403 files | 19,274 | 100% (20/20) |
+data/ingest_reports/                  # 인제스트 리포트 4개
+data/ocr_reports/                     # OCR 검증 + Excel 5개
+data/_archive/                        # 더 이상 안 쓰는 임시 파일
+```
