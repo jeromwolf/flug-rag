@@ -78,7 +78,7 @@ import type {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Layout from "../components/Layout";
-import { workflowsApi } from "../api/client";
+import { workflowsApi, mcpApi } from "../api/client";
 import type { WorkflowListItem } from "../api/client";
 
 // ---------------------------------------------------------------------------
@@ -143,243 +143,92 @@ interface PresetDef {
 }
 
 const PRESETS: PresetDef[] = [
+  // 1. 기술문서 검색·요약
   {
-    id: "simple_rag",
-    name: "간단 RAG",
-    description: "질문 → 문서 검색 → 답변 생성",
-    badge: "RAG",
+    id: "tech_doc_summary",
+    name: "기술문서 검색·요약",
+    description: "기술문서를 검색하고 신뢰도를 검증한 뒤 핵심 내용을 구조화된 요약 보고서로 생성",
+    badge: "SEARCH",
     nodes: [
       {
         id: "start",
         type: "workflow",
-        position: { x: 80, y: 180 },
-        data: { nodeType: "start", label: "시작", config: {} },
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "검색어 입력", config: { description: "요약할 기술문서 주제를 입력하세요 (예: 배관 용접 검사 기준)" } },
       },
       {
         id: "retrieve",
         type: "workflow",
-        position: { x: 340, y: 180 },
-        data: { nodeType: "retrieval", label: "문서 검색", config: { top_k: 5 } },
+        position: { x: 260, y: 220 },
+        data: { nodeType: "retrieval", label: "기술문서 검색", config: { top_k: 7, description: "관련 기술문서 검색 (top_k=7)" } },
       },
       {
-        id: "output",
+        id: "confidence_check",
         type: "workflow",
-        position: { x: 600, y: 180 },
-        data: { nodeType: "output", label: "출력", config: {} },
-      },
-    ],
-    edges: [
-      { id: "e-start-retrieve", source: "start", target: "retrieve", animated: true, type: "workflow" },
-      { id: "e-retrieve-output", source: "retrieve", target: "output", animated: true, type: "workflow" },
-    ],
-  },
-  {
-    id: "regulation_review",
-    name: "규정 검토 에이전트",
-    description: "문서를 사내 규정과 대조 검토",
-    badge: "AGENT",
-    nodes: [
-      {
-        id: "start",
-        type: "workflow",
-        position: { x: 80, y: 180 },
-        data: { nodeType: "start", label: "문서 입력", config: { description: "검토할 문서를 입력하세요" } },
-      },
-      {
-        id: "regulation_search",
-        type: "workflow",
-        position: { x: 340, y: 180 },
+        position: { x: 480, y: 220 },
         data: {
-          nodeType: "tool",
-          label: "규정 검토",
-          config: {
-            tool_name: "regulation_review",
-            arguments_template: {
-              document_text: "{{input}}",
-              regulation_category: "전체",
-              review_depth: "standard",
-            },
-          }
+          nodeType: "condition",
+          label: "검색 품질 확인",
+          config: { condition_type: "confidence", threshold: 0.3 },
         },
       },
       {
-        id: "output",
+        id: "summarize",
         type: "workflow",
-        position: { x: 600, y: 180 },
-        data: { nodeType: "output", label: "검토 보고서", config: { format: "markdown" } },
-      },
-    ],
-    edges: [
-      { id: "e-start-regulation", source: "start", target: "regulation_search", animated: true, type: "workflow" },
-      { id: "e-regulation-output", source: "regulation_search", target: "output", animated: true, type: "workflow" },
-    ],
-  },
-  {
-    id: "safety_checklist",
-    name: "안전 체크리스트",
-    description: "설비별 안전 점검 체크리스트 + 규정 매핑",
-    badge: "SAFETY",
-    nodes: [
-      {
-        id: "start",
-        type: "workflow",
-        position: { x: 80, y: 180 },
-        data: { nodeType: "start", label: "설비 유형 선택", config: { description: "점검 대상 설비 유형을 입력하세요" } },
-      },
-      {
-        id: "checklist_gen",
-        type: "workflow",
-        position: { x: 340, y: 180 },
-        data: {
-          nodeType: "tool",
-          label: "체크리스트 생성",
-          config: {
-            tool_name: "safety_checklist",
-            arguments_template: {
-              equipment_type: "{{input}}",
-              output_format: "markdown",
-            },
-          }
-        },
-      },
-      {
-        id: "output",
-        type: "workflow",
-        position: { x: 600, y: 180 },
-        data: { nodeType: "output", label: "체크리스트 출력", config: { format: "markdown" } },
-      },
-    ],
-    edges: [
-      { id: "e-start-checklist", source: "start", target: "checklist_gen", animated: true, type: "workflow" },
-      { id: "e-checklist-output", source: "checklist_gen", target: "output", animated: true, type: "workflow" },
-    ],
-  },
-  {
-    id: "routing",
-    name: "라우팅 워크플로우",
-    description: "질문 분류 → 문서검색/직접답변 분기 → 출력",
-    badge: "ROUTER",
-    nodes: [
-      {
-        id: "start",
-        type: "workflow",
-        position: { x: 40, y: 200 },
-        data: { nodeType: "start", label: "시작", config: {} },
-      },
-      {
-        id: "classify",
-        type: "workflow",
-        position: { x: 240, y: 200 },
+        position: { x: 700, y: 120 },
         data: {
           nodeType: "llm",
-          label: "질문 분류",
+          label: "요약 보고서 생성",
           config: {
-            system_prompt: "사용자 질문을 분류하세요: document_search 또는 general_query",
+            system_prompt: "당신은 한국가스기술공사의 기술문서 분석 전문가입니다.\n검색된 기술문서를 바탕으로 다음 구조로 요약하세요:\n\n## 핵심 요약\n- 3줄 이내 핵심 내용\n\n## 주요 사항\n- 번호 매겨서 핵심 포인트 나열\n\n## 관련 규정\n- 적용되는 내부규정 및 조항 명시\n\n## 참고 사항\n- 추가 확인이 필요한 부분",
             temperature: 0.1,
           },
         },
       },
       {
-        id: "rag",
+        id: "fallback",
         type: "workflow",
-        position: { x: 480, y: 90 },
-        data: { nodeType: "retrieval", label: "문서 검색", config: { top_k: 5 } },
-      },
-      {
-        id: "direct",
-        type: "workflow",
-        position: { x: 480, y: 310 },
+        position: { x: 700, y: 340 },
         data: {
-          nodeType: "llm",
-          label: "직접 답변",
-          config: { system_prompt: "한국어로 친절하게 답변하세요." },
+          nodeType: "transform",
+          label: "검색 결과 부족 안내",
+          config: { template: "검색된 문서의 신뢰도가 낮습니다.\n\n검색 결과:\n{input}\n\n더 구체적인 키워드로 다시 검색하거나, 관련 문서가 등록되어 있는지 확인해 주세요." },
         },
       },
       {
         id: "output",
         type: "workflow",
-        position: { x: 720, y: 200 },
-        data: { nodeType: "output", label: "출력", config: {} },
-      },
-    ],
-    edges: [
-      { id: "e1", source: "start", target: "classify", animated: true, type: "workflow" },
-      { id: "e2", source: "classify", target: "rag", animated: true, label: "문서 질문", type: "workflow" },
-      { id: "e3", source: "classify", target: "direct", animated: true, label: "일반 질문", type: "workflow" },
-      { id: "e4", source: "rag", target: "output", animated: true, type: "workflow" },
-      { id: "e5", source: "direct", target: "output", animated: true, type: "workflow" },
-    ],
-  },
-  {
-    id: "quality_check",
-    name: "품질 검증 워크플로우",
-    description: "문서 검색 → 신뢰도 확인 → 조건부 출력",
-    badge: "QA",
-    nodes: [
-      {
-        id: "start",
-        type: "workflow",
-        position: { x: 40, y: 200 },
-        data: { nodeType: "start", label: "시작", config: {} },
+        position: { x: 940, y: 120 },
+        data: { nodeType: "output", label: "요약 보고서", config: { format: "markdown" } },
       },
       {
-        id: "retrieve",
+        id: "output_low",
         type: "workflow",
-        position: { x: 240, y: 200 },
-        data: { nodeType: "retrieval", label: "문서 검색", config: { top_k: 5 } },
-      },
-      {
-        id: "check",
-        type: "workflow",
-        position: { x: 440, y: 200 },
-        data: {
-          nodeType: "condition",
-          label: "신뢰도 확인",
-          config: { condition_type: "confidence", threshold: 0.5 },
-        },
-      },
-      {
-        id: "high_output",
-        type: "workflow",
-        position: { x: 680, y: 90 },
-        data: { nodeType: "output", label: "정상 출력", config: {} },
-      },
-      {
-        id: "low_transform",
-        type: "workflow",
-        position: { x: 680, y: 310 },
-        data: {
-          nodeType: "transform",
-          label: "안전장치 적용",
-          config: { template: "확인이 필요한 답변입니다.\n\n{input}" },
-        },
-      },
-      {
-        id: "low_output",
-        type: "workflow",
-        position: { x: 940, y: 310 },
-        data: { nodeType: "output", label: "경고 출력", config: {} },
+        position: { x: 940, y: 340 },
+        data: { nodeType: "output", label: "안내 출력", config: { format: "markdown" } },
       },
     ],
     edges: [
       { id: "e1", source: "start", target: "retrieve", animated: true, type: "workflow" },
-      { id: "e2", source: "retrieve", target: "check", animated: true, type: "workflow" },
-      { id: "e3", source: "check", target: "high_output", animated: true, label: "신뢰도 높음", type: "workflow" },
-      { id: "e4", source: "check", target: "low_transform", animated: true, label: "신뢰도 낮음", type: "workflow" },
-      { id: "e5", source: "low_transform", target: "low_output", animated: true, type: "workflow" },
+      { id: "e2", source: "retrieve", target: "confidence_check", animated: true, type: "workflow" },
+      { id: "e3", source: "confidence_check", target: "summarize", animated: true, label: "신뢰도 충분", type: "workflow" },
+      { id: "e4", source: "confidence_check", target: "fallback", animated: true, label: "신뢰도 부족", type: "workflow" },
+      { id: "e5", source: "summarize", target: "output", animated: true, type: "workflow" },
+      { id: "e6", source: "fallback", target: "output_low", animated: true, type: "workflow" },
     ],
   },
+  // 2. 규정 비교 분석
   {
     id: "regulation_comparison",
     name: "규정 비교 분석",
-    description: "두 규정 문서를 나란히 검색하여 LLM이 비교 분석",
+    description: "두 규정 문서를 병렬 검색하고 공통점·차이점·충돌 사항을 분석한 뒤 컴플라이언스 리뷰 수행",
     badge: "COMPARE",
     nodes: [
       {
         id: "start",
         type: "workflow",
         position: { x: 40, y: 220 },
-        data: { nodeType: "start", label: "비교 요청", config: { description: "비교할 두 규정 항목을 입력하세요" } },
+        data: { nodeType: "start", label: "비교 요청 입력", config: { description: "비교할 두 규정 항목을 입력하세요 (예: 안전관리규정 vs 시설관리규정)" } },
       },
       {
         id: "retrieve_a",
@@ -388,7 +237,7 @@ const PRESETS: PresetDef[] = [
         data: {
           nodeType: "retrieval",
           label: "규정 A 검색",
-          config: { top_k: 5, collection: "regulation_a", description: "첫 번째 규정 검색" },
+          config: { top_k: 5, description: "첫 번째 규정 검색" },
         },
       },
       {
@@ -398,18 +247,18 @@ const PRESETS: PresetDef[] = [
         data: {
           nodeType: "retrieval",
           label: "규정 B 검색",
-          config: { top_k: 5, collection: "regulation_b", description: "두 번째 규정 검색" },
+          config: { top_k: 5, description: "두 번째 규정 검색" },
         },
       },
       {
         id: "compare_llm",
         type: "workflow",
-        position: { x: 560, y: 220 },
+        position: { x: 540, y: 220 },
         data: {
           nodeType: "llm",
           label: "비교 분석",
           config: {
-            system_prompt: "두 규정의 공통점, 차이점, 충돌 사항을 표 형식으로 비교 분석하세요.",
+            system_prompt: "당신은 한국가스기술공사 규정 분석 전문가입니다.\n두 규정을 다음 형식으로 비교 분석하세요:\n\n## 규정 개요\n| 항목 | 규정 A | 규정 B |\n\n## 공통점\n- 두 규정이 동일하게 규정하는 사항\n\n## 차이점\n| 비교 항목 | 규정 A | 규정 B | 비고 |\n\n## 충돌 사항\n- 두 규정 간 상충되는 내용 (있을 경우)\n\n## 적용 시 유의사항\n- 실무에서 두 규정을 동시 적용 시 주의점",
             temperature: 0.1,
           },
         },
@@ -417,8 +266,8 @@ const PRESETS: PresetDef[] = [
       {
         id: "output",
         type: "workflow",
-        position: { x: 820, y: 220 },
-        data: { nodeType: "output", label: "비교 보고서", config: { format: "markdown" } },
+        position: { x: 780, y: 220 },
+        data: { nodeType: "output", label: "비교 분석 보고서", config: { format: "markdown" } },
       },
     ],
     edges: [
@@ -429,283 +278,301 @@ const PRESETS: PresetDef[] = [
       { id: "e5", source: "compare_llm", target: "output", animated: true, type: "workflow" },
     ],
   },
+  // 3. 설비 점검이력 조회 및 리포팅
   {
-    id: "safety_inspection",
-    name: "안전 점검 워크플로",
-    description: "체크리스트 생성 → LLM 검토 → 위험도 판단 → 보고서 출력",
+    id: "equipment_inspection",
+    name: "설비 점검이력 조회 및 리포팅",
+    description: "EHSQ 시스템에서 설비 점검이력을 조회하고 안전 규정과 대조 분석하여 점검 리포트 자동 생성",
     badge: "SAFETY",
     nodes: [
       {
         id: "start",
         type: "workflow",
         position: { x: 40, y: 220 },
-        data: { nodeType: "start", label: "점검 시작", config: { description: "점검 대상 설비 및 현장 정보를 입력하세요" } },
+        data: { nodeType: "start", label: "설비 정보 입력", config: { description: "조회할 설비명 또는 시설을 입력하세요 (예: 인천 LNG 기지 배관)" } },
       },
       {
-        id: "checklist_tool",
+        id: "ehsq_lookup",
         type: "workflow",
-        position: { x: 260, y: 220 },
+        position: { x: 270, y: 100 },
         data: {
           nodeType: "tool",
-          label: "안전 체크리스트",
+          label: "EHSQ 점검이력 조회",
           config: {
-            tool_name: "safety_checklist",
-            arguments_template: { equipment_type: "{{input}}", output_format: "json" },
+            tool_name: "ehsq_lookup",
+            arguments_template: { action: "incident_report", facility: "{input}" },
           },
         },
       },
       {
-        id: "review_llm",
+        id: "retrieve_safety",
         type: "workflow",
-        position: { x: 480, y: 220 },
+        position: { x: 270, y: 340 },
+        data: {
+          nodeType: "retrieval",
+          label: "안전 규정 검색",
+          config: { top_k: 5, description: "관련 안전 규정 검색" },
+        },
+      },
+      {
+        id: "analyze_llm",
+        type: "workflow",
+        position: { x: 520, y: 220 },
         data: {
           nodeType: "llm",
-          label: "위험도 검토",
+          label: "점검이력 분석",
           config: {
-            system_prompt: "안전 체크리스트 결과를 분석하여 위험 항목을 식별하고 위험도(고/중/저)를 판정하세요.",
+            system_prompt: "당신은 한국가스기술공사의 설비 안전 분석 전문가입니다.\nEHSQ 점검이력과 관련 안전 규정을 종합하여 분석하세요:\n\n## 점검 현황 요약\n- 총 점검 횟수, 최근 점검일, 점검 주기 준수 여부\n\n## 주요 결함 유형\n- 발견된 결함을 유형별로 분류하고 빈도 표시\n\n## 재발 패턴 분석\n- 동일 결함의 반복 발생 여부 및 원인 추정\n\n## 규정 대조 결과\n- 관련 안전 규정 준수 여부\n\n## 권고 조치사항\n- 즉시 조치, 단기(1개월), 중기(분기) 구분",
             temperature: 0.1,
-          },
-        },
-      },
-      {
-        id: "risk_condition",
-        type: "workflow",
-        position: { x: 700, y: 220 },
-        data: {
-          nodeType: "condition",
-          label: "위험도 판단",
-          config: { condition_type: "keyword", keywords: ["고위험", "즉시조치"], description: "고위험 여부 분기" },
-        },
-      },
-      {
-        id: "urgent_output",
-        type: "workflow",
-        position: { x: 940, y: 100 },
-        data: { nodeType: "output", label: "긴급 보고서", config: { format: "markdown", priority: "urgent" } },
-      },
-      {
-        id: "normal_output",
-        type: "workflow",
-        position: { x: 940, y: 340 },
-        data: { nodeType: "output", label: "일반 보고서", config: { format: "markdown", priority: "normal" } },
-      },
-    ],
-    edges: [
-      { id: "e1", source: "start", target: "checklist_tool", animated: true, type: "workflow" },
-      { id: "e2", source: "checklist_tool", target: "review_llm", animated: true, type: "workflow" },
-      { id: "e3", source: "review_llm", target: "risk_condition", animated: true, type: "workflow" },
-      { id: "e4", source: "risk_condition", target: "urgent_output", animated: true, label: "고위험", type: "workflow" },
-      { id: "e5", source: "risk_condition", target: "normal_output", animated: true, label: "저위험", type: "workflow" },
-    ],
-  },
-  {
-    id: "rag_agent_hybrid",
-    name: "RAG + Agent 하이브리드",
-    description: "질의 분류 후 문서 검색과 보고서 도구를 결합한 복합 처리",
-    badge: "HYBRID",
-    nodes: [
-      {
-        id: "start",
-        type: "workflow",
-        position: { x: 40, y: 220 },
-        data: { nodeType: "start", label: "질의 입력", config: { description: "복합 질의를 입력하세요" } },
-      },
-      {
-        id: "classify",
-        type: "workflow",
-        position: { x: 240, y: 220 },
-        data: {
-          nodeType: "condition",
-          label: "질의 분류",
-          config: {
-            condition_type: "keyword",
-            keywords: ["보고서", "분석", "비교", "요약"],
-            description: "보고서 생성 필요 여부 판단",
-          },
-        },
-      },
-      {
-        id: "retrieve",
-        type: "workflow",
-        position: { x: 460, y: 120 },
-        data: { nodeType: "retrieval", label: "문서 검색", config: { top_k: 7 } },
-      },
-      {
-        id: "answer_llm",
-        type: "workflow",
-        position: { x: 680, y: 120 },
-        data: {
-          nodeType: "llm",
-          label: "답변 생성",
-          config: {
-            system_prompt: "검색된 문서를 바탕으로 정확하고 상세한 답변을 작성하세요.",
-            temperature: 0.2,
           },
         },
       },
       {
         id: "report_tool",
         type: "workflow",
-        position: { x: 680, y: 340 },
+        position: { x: 770, y: 220 },
         data: {
           nodeType: "tool",
-          label: "보고서 초안",
+          label: "점검보고서 생성",
           config: {
             tool_name: "report_draft",
-            arguments_template: { query: "{{input}}", format: "structured" },
+            arguments_template: { topic: "{input}", report_type: "점검보고서" },
           },
         },
       },
       {
         id: "output",
         type: "workflow",
-        position: { x: 920, y: 220 },
-        data: { nodeType: "output", label: "최종 출력", config: { format: "markdown" } },
+        position: { x: 1010, y: 220 },
+        data: { nodeType: "output", label: "점검 리포트", config: { format: "markdown" } },
       },
     ],
     edges: [
-      { id: "e1", source: "start", target: "classify", animated: true, type: "workflow" },
-      { id: "e2", source: "classify", target: "retrieve", animated: true, label: "RAG 처리", type: "workflow" },
-      { id: "e3", source: "classify", target: "report_tool", animated: true, label: "보고서 생성", type: "workflow" },
-      { id: "e4", source: "retrieve", target: "answer_llm", animated: true, type: "workflow" },
-      { id: "e5", source: "answer_llm", target: "output", animated: true, type: "workflow" },
+      { id: "e1", source: "start", target: "ehsq_lookup", animated: true, label: "EHSQ", type: "workflow" },
+      { id: "e2", source: "start", target: "retrieve_safety", animated: true, label: "규정", type: "workflow" },
+      { id: "e3", source: "ehsq_lookup", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e4", source: "retrieve_safety", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e5", source: "analyze_llm", target: "report_tool", animated: true, type: "workflow" },
       { id: "e6", source: "report_tool", target: "output", animated: true, type: "workflow" },
     ],
   },
+  // 4. 경영평가 자료 자동 수집
   {
-    id: "qa_quality_assessment",
-    name: "QA 품질 평가",
-    description: "답변 검색 → LLM 평가 → 데이터 분석 → 품질 리포트",
-    badge: "QA",
+    id: "management_evaluation",
+    name: "경영평가 자료 자동 수집",
+    description: "ERP 시스템의 예산·실적 데이터와 내부규정을 결합하여 경영평가 자료를 자동으로 수집·분석",
+    badge: "EVAL",
     nodes: [
       {
         id: "start",
         type: "workflow",
         position: { x: 40, y: 220 },
-        data: { nodeType: "start", label: "평가 시작", config: { description: "평가할 질문과 답변을 입력하세요" } },
+        data: { nodeType: "start", label: "평가 항목 입력", config: { description: "수집할 경영평가 항목을 입력하세요 (예: 2026년 상반기 안전관리 실적)" } },
       },
       {
-        id: "retrieve_ref",
+        id: "erp_budget",
         type: "workflow",
-        position: { x: 260, y: 220 },
-        data: {
-          nodeType: "retrieval",
-          label: "참조 답변 검색",
-          config: { top_k: 3, description: "골든 데이터셋에서 참조 답변 검색" },
-        },
-      },
-      {
-        id: "eval_llm",
-        type: "workflow",
-        position: { x: 500, y: 220 },
-        data: {
-          nodeType: "llm",
-          label: "품질 평가",
-          config: {
-            system_prompt: "제출된 답변을 참조 답변과 비교하여 정확성(0-10), 완결성(0-10), 가독성(0-10)을 평가하고 JSON으로 출력하세요.",
-            temperature: 0.0,
-          },
-        },
-      },
-      {
-        id: "analyze_tool",
-        type: "workflow",
-        position: { x: 740, y: 220 },
+        position: { x: 280, y: 100 },
         data: {
           nodeType: "tool",
-          label: "데이터 분석",
+          label: "ERP 예산·실적 조회",
           config: {
-            tool_name: "data_analyzer",
-            arguments_template: { data: "{{input}}", analysis_type: "quality_metrics" },
+            tool_name: "erp_lookup",
+            arguments_template: { query_type: "budget", keyword: "{input}" },
           },
         },
       },
       {
-        id: "output",
+        id: "retrieve_regulation",
         type: "workflow",
-        position: { x: 980, y: 220 },
-        data: { nodeType: "output", label: "품질 리포트", config: { format: "markdown" } },
-      },
-    ],
-    edges: [
-      { id: "e1", source: "start", target: "retrieve_ref", animated: true, type: "workflow" },
-      { id: "e2", source: "retrieve_ref", target: "eval_llm", animated: true, type: "workflow" },
-      { id: "e3", source: "eval_llm", target: "analyze_tool", animated: true, type: "workflow" },
-      { id: "e4", source: "analyze_tool", target: "output", animated: true, type: "workflow" },
-    ],
-  },
-  {
-    id: "intelligent_routing",
-    name: "지능형 라우팅",
-    description: "의도 분류 → RAG 답변 또는 직접 LLM 답변으로 자동 분기",
-    badge: "ROUTER",
-    nodes: [
-      {
-        id: "start",
-        type: "workflow",
-        position: { x: 40, y: 220 },
-        data: { nodeType: "start", label: "질문 입력", config: {} },
-      },
-      {
-        id: "intent",
-        type: "workflow",
-        position: { x: 260, y: 220 },
+        position: { x: 280, y: 340 },
         data: {
-          nodeType: "condition",
-          label: "의도 분류",
-          config: {
-            condition_type: "keyword",
-            keywords: ["규정", "절차", "기준", "조항", "법령", "지침", "문서"],
-            description: "문서 기반 질의 여부 판단",
-          },
+          nodeType: "retrieval",
+          label: "평가 기준 규정 검색",
+          config: { top_k: 5, description: "경영평가 기준 및 관련 규정 검색" },
         },
       },
       {
-        id: "retrieve",
+        id: "analyze_llm",
         type: "workflow",
-        position: { x: 500, y: 100 },
-        data: { nodeType: "retrieval", label: "문서 검색", config: { top_k: 5 } },
-      },
-      {
-        id: "rag_llm",
-        type: "workflow",
-        position: { x: 740, y: 100 },
+        position: { x: 540, y: 220 },
         data: {
           nodeType: "llm",
-          label: "RAG 답변",
+          label: "종합 분석",
           config: {
-            system_prompt: "검색된 사내 문서를 근거로 정확한 답변을 한국어로 제공하세요. 출처를 명시하세요.",
+            system_prompt: "당신은 한국가스기술공사의 경영평가 분석 전문가입니다.\nERP에서 수집한 경영 데이터와 내부규정을 종합하여 분석하세요:\n\n## 평가 항목 개요\n- 해당 경영평가 항목의 배경과 목적\n\n## 정량 실적\n| 지표 | 목표 | 실적 | 달성률 |\n- ERP 데이터 기반 수치 근거 명시\n\n## 정성 실적\n- 주요 추진 사항 및 성과\n\n## 규정 근거\n- 각 실적의 내부규정 근거 조항\n\n## 개선 과제\n- 미달 항목에 대한 개선 방안",
             temperature: 0.1,
           },
         },
       },
       {
-        id: "direct_llm",
+        id: "report_tool",
         type: "workflow",
-        position: { x: 500, y: 340 },
+        position: { x: 780, y: 220 },
         data: {
-          nodeType: "llm",
-          label: "직접 답변",
+          nodeType: "tool",
+          label: "현황보고서 생성",
           config: {
-            system_prompt: "일반 지식을 바탕으로 친절하고 명확하게 한국어로 답변하세요.",
-            temperature: 0.3,
+            tool_name: "report_draft",
+            arguments_template: { topic: "{input}", report_type: "현황보고서" },
           },
         },
       },
       {
         id: "output",
         type: "workflow",
-        position: { x: 980, y: 220 },
-        data: { nodeType: "output", label: "출력", config: {} },
+        position: { x: 1020, y: 220 },
+        data: { nodeType: "output", label: "경영평가 자료", config: { format: "markdown" } },
       },
     ],
     edges: [
-      { id: "e1", source: "start", target: "intent", animated: true, type: "workflow" },
-      { id: "e2", source: "intent", target: "retrieve", animated: true, label: "문서 질의", type: "workflow" },
-      { id: "e3", source: "intent", target: "direct_llm", animated: true, label: "일반 질의", type: "workflow" },
-      { id: "e4", source: "retrieve", target: "rag_llm", animated: true, type: "workflow" },
-      { id: "e5", source: "rag_llm", target: "output", animated: true, type: "workflow" },
-      { id: "e6", source: "direct_llm", target: "output", animated: true, type: "workflow" },
+      { id: "e1", source: "start", target: "erp_budget", animated: true, label: "ERP", type: "workflow" },
+      { id: "e2", source: "start", target: "retrieve_regulation", animated: true, label: "규정", type: "workflow" },
+      { id: "e3", source: "erp_budget", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e4", source: "retrieve_regulation", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e5", source: "analyze_llm", target: "report_tool", animated: true, type: "workflow" },
+      { id: "e6", source: "report_tool", target: "output", animated: true, type: "workflow" },
+    ],
+  },
+  // 5. 신규직원 온보딩 가이드 생성
+  {
+    id: "onboarding_guide",
+    name: "신규직원 온보딩 가이드 생성",
+    description: "내부규정을 검색하여 핵심 내용을 정리하고 신규직원 맞춤형 온보딩 가이드를 자동 생성",
+    badge: "ONBOARD",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "부서·직무 입력", config: { description: "신규직원의 부서 및 직무를 입력하세요 (예: 시설안전부 배관검사)" } },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 260, y: 220 },
+        data: {
+          nodeType: "retrieval",
+          label: "내부규정 검색",
+          config: { top_k: 7, description: "온보딩 관련 내부규정 및 절차 검색" },
+        },
+      },
+      {
+        id: "organize_llm",
+        type: "workflow",
+        position: { x: 480, y: 220 },
+        data: {
+          nodeType: "llm",
+          label: "핵심 규정 정리",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 인사교육 담당자입니다.\n검색된 내부규정 중 신규직원이 반드시 알아야 할 핵심 내용을 정리하세요:\n\n1. 조직 및 직무 관련 규정\n2. 안전 관련 필수 규정\n3. 복무 및 근태 규정\n4. 보안 및 정보보호 규정\n\n각 항목에 해당 규정의 조항 번호를 명시하세요.",
+            temperature: 0.2,
+          },
+        },
+      },
+      {
+        id: "training_tool",
+        type: "workflow",
+        position: { x: 720, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "온보딩 교육자료 생성",
+          config: {
+            tool_name: "training_material",
+            arguments_template: { topic: "{input}", level: "신입", format: "종합" },
+          },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 960, y: 220 },
+        data: { nodeType: "output", label: "온보딩 가이드", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "retrieve", animated: true, type: "workflow" },
+      { id: "e2", source: "retrieve", target: "organize_llm", animated: true, type: "workflow" },
+      { id: "e3", source: "organize_llm", target: "training_tool", animated: true, type: "workflow" },
+      { id: "e4", source: "training_tool", target: "output", animated: true, type: "workflow" },
+    ],
+  },
+  // 6. ISO 인증 대응 문서 초안
+  {
+    id: "iso_compliance",
+    name: "ISO 인증 대응 문서 초안",
+    description: "EHSQ 준수 현황과 ISO 관련 내부규정을 결합하여 Gap 분석 및 대응 문서 초안을 자동 생성",
+    badge: "ISO",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "ISO 항목 입력", config: { description: "대응이 필요한 ISO 인증 항목을 입력하세요 (예: ISO 14001 환경경영 4.4 운영 계획)" } },
+      },
+      {
+        id: "ehsq_compliance",
+        type: "workflow",
+        position: { x: 280, y: 100 },
+        data: {
+          nodeType: "tool",
+          label: "준수 현황 조회",
+          config: {
+            tool_name: "ehsq_lookup",
+            arguments_template: { action: "compliance_check", facility: "{input}" },
+          },
+        },
+      },
+      {
+        id: "retrieve_iso",
+        type: "workflow",
+        position: { x: 280, y: 340 },
+        data: {
+          nodeType: "retrieval",
+          label: "ISO 관련 규정 검색",
+          config: { top_k: 5, description: "ISO 인증 관련 내부규정 검색" },
+        },
+      },
+      {
+        id: "gap_analysis",
+        type: "workflow",
+        position: { x: 540, y: 220 },
+        data: {
+          nodeType: "llm",
+          label: "Gap 분석",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 ISO 인증 심사 대응 전문가입니다.\nEHSQ 준수 현황과 내부규정을 대조하여 Gap 분석을 수행하세요:\n\n## ISO 요건 요약\n- 해당 ISO 조항의 핵심 요구사항\n\n## 현재 준수 현황\n| 요구사항 | 현황 | 적합/부적합 |\n\n## Gap 분석\n- 미충족 항목과 원인 분석\n\n## 개선 계획\n| 개선 항목 | 담당부서 | 목표일 | 조치 내용 |\n\n## 필요 증적 자료 목록\n- 심사 시 제출해야 할 증빙 문서",
+            temperature: 0.1,
+          },
+        },
+      },
+      {
+        id: "report_tool",
+        type: "workflow",
+        position: { x: 800, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "공식 대응 문서 생성",
+          config: {
+            tool_name: "report_draft",
+            arguments_template: { topic: "{input}", report_type: "분석보고서" },
+          },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 1040, y: 220 },
+        data: { nodeType: "output", label: "ISO 대응 문서", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "ehsq_compliance", animated: true, label: "EHSQ", type: "workflow" },
+      { id: "e2", source: "start", target: "retrieve_iso", animated: true, label: "규정", type: "workflow" },
+      { id: "e3", source: "ehsq_compliance", target: "gap_analysis", animated: true, type: "workflow" },
+      { id: "e4", source: "retrieve_iso", target: "gap_analysis", animated: true, type: "workflow" },
+      { id: "e5", source: "gap_analysis", target: "report_tool", animated: true, type: "workflow" },
+      { id: "e6", source: "report_tool", target: "output", animated: true, type: "workflow" },
     ],
   },
 ];
@@ -1219,6 +1086,27 @@ function PropertiesPanel({
   onWorkflowNameChange,
   onWorkflowDescriptionChange,
 }: PropertiesPanelProps) {
+  // Fetch MCP tools list for tool node dropdown
+  const [mcpTools, setMcpTools] = useState<{ name: string; description: string }[]>([]);
+  useEffect(() => {
+    mcpApi.listTools().then((res) => {
+      const tools = (res.data as { tools?: { name: string; description: string }[] })?.tools ?? [];
+      setMcpTools(tools);
+    }).catch(() => {
+      // Backend may be offline — use hardcoded fallback
+      setMcpTools([
+        { name: "search_documents", description: "문서 검색" },
+        { name: "regulation_review", description: "규정 검토" },
+        { name: "safety_checklist", description: "안전 체크리스트" },
+        { name: "erp_lookup", description: "ERP 조회" },
+        { name: "summarizer", description: "요약 생성" },
+        { name: "translator", description: "번역" },
+        { name: "report_draft", description: "보고서 초안" },
+        { name: "calculator", description: "계산기" },
+      ]);
+    });
+  }, []);
+
   const panelSx = {
     width: PROPERTIES_WIDTH,
     borderLeft: "1px solid rgba(80,100,140,0.25)",
@@ -1495,16 +1383,55 @@ function PropertiesPanel({
 
       {data.nodeType === "tool" && (
         <>
-          <StyledField label="도구 이름">
-            <TextField
+          <StyledField label="도구 선택">
+            <Select
               value={(config.tool_name as string) || ""}
-              onChange={(e) => updateConfig("tool_name", e.target.value)}
+              onChange={(e: SelectChangeEvent) => updateConfig("tool_name", e.target.value)}
               fullWidth
               size="small"
-              placeholder="calculator, search, ..."
-            />
+              displayEmpty
+              sx={{
+                bgcolor: "rgba(20,30,50,0.8)",
+                "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(80,100,140,0.3)" },
+                "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(100,130,200,0.5)" },
+                "& .MuiSelect-select": { fontSize: "0.8rem", color: "#c8d4e8" },
+                "& .MuiSvgIcon-root": { color: "rgba(120,150,200,0.6)" },
+              }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    bgcolor: "#0d1219",
+                    border: "1px solid rgba(80,100,140,0.35)",
+                    "& .MuiMenuItem-root": {
+                      fontSize: "0.8rem",
+                      color: "#c8d4e8",
+                      "&:hover": { bgcolor: "rgba(50,70,120,0.3)" },
+                      "&.Mui-selected": { bgcolor: "rgba(50,70,120,0.5)" },
+                    },
+                  },
+                },
+              }}
+            >
+              <MenuItem value="" disabled>
+                <Typography sx={{ fontSize: "0.8rem", color: "rgba(100,130,180,0.5)" }}>
+                  도구를 선택하세요
+                </Typography>
+              </MenuItem>
+              {mcpTools.map((tool) => (
+                <MenuItem key={tool.name} value={tool.name}>
+                  <Box sx={{ display: "flex", flexDirection: "column" }}>
+                    <Typography sx={{ fontSize: "0.8rem", fontWeight: 600 }}>
+                      {tool.name}
+                    </Typography>
+                    <Typography sx={{ fontSize: "0.65rem", color: "rgba(120,150,200,0.6)" }}>
+                      {tool.description}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
           </StyledField>
-          <StyledField label="인수 템플릿">
+          <StyledField label="인수 템플릿 (JSON)">
             <TextField
               value={
                 typeof config.arguments_template === "object"
@@ -1522,7 +1449,7 @@ function PropertiesPanel({
               size="small"
               multiline
               rows={3}
-              placeholder='{"arg1": "{input}"}'
+              placeholder='{"arg1": "{{input}}"}'
             />
           </StyledField>
         </>
@@ -1731,6 +1658,18 @@ function AgentBuilderCanvas() {
   const [savedWorkflows, setSavedWorkflows] = useState<WorkflowListItem[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // -- Run dialog (query input + result) --
+  const [runDialogOpen, setRunDialogOpen] = useState(false);
+  const [runQuery, setRunQuery] = useState("");
+  const [resultDialogOpen, setResultDialogOpen] = useState(false);
+  const [runResult, setRunResult] = useState<{
+    final_output: string;
+    status: string;
+    total_duration_ms: number;
+    node_results: { node_id: string; status: string; duration_ms: number }[];
+    error: string | null;
+  } | null>(null);
 
   // -- Hidden file input for import --
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -2080,15 +2019,29 @@ function AgentBuilderCanvas() {
     showSnackbar("캔버스가 초기화되었습니다.", "info");
   }, [setNodes, setEdges, showSnackbar]);
 
-  // -- Run workflow --
-  const runWorkflow = useCallback(async () => {
+  // -- Run workflow: open query input dialog --
+  const runWorkflow = useCallback(() => {
     if (nodes.length === 0) {
       showSnackbar("실행할 노드가 없습니다.", "error");
       return;
     }
+    const startNode = nodes.find((n) => n.data.nodeType === "start");
+    if (!startNode) {
+      showSnackbar("시작 노드가 없습니다.", "error");
+      return;
+    }
+    setRunQuery("");
+    setRunDialogOpen(true);
+  }, [nodes, showSnackbar]);
 
+  // -- Execute workflow after query input --
+  const handleRunConfirm = useCallback(async () => {
+    if (!runQuery.trim()) return;
+    setRunDialogOpen(false);
     setIsRunning(true);
+    setRunResult(null);
 
+    // Reset all nodes to pending
     setNodes((nds) =>
       nds.map((n) => ({
         ...n,
@@ -2096,29 +2049,23 @@ function AgentBuilderCanvas() {
       })),
     );
 
-    try {
-      const startNode = nodes.find((n) => n.data.nodeType === "start");
-      if (!startNode) {
-        showSnackbar("시작 노드가 없습니다.", "error");
-        setIsRunning(false);
-        return;
-      }
+    // Build adjacency for animation
+    const adj = new Map<string, string[]>();
+    for (const e of edges) {
+      const existing = adj.get(e.source) || [];
+      existing.push(e.target);
+      adj.set(e.source, existing);
+    }
 
-      const adj = new Map<string, string[]>();
-      for (const e of edges) {
-        const existing = adj.get(e.source) || [];
-        existing.push(e.target);
-        adj.set(e.source, existing);
-      }
-
+    // Animate nodes in order (BFS)
+    const startNode = nodes.find((n) => n.data.nodeType === "start");
+    if (startNode) {
       const queue = [startNode.id];
       const visited = new Set<string>();
-
       while (queue.length > 0) {
         const currentId = queue.shift()!;
         if (visited.has(currentId)) continue;
         visited.add(currentId);
-
         setNodes((nds) =>
           nds.map((n) =>
             n.id === currentId
@@ -2126,38 +2073,58 @@ function AgentBuilderCanvas() {
               : n,
           ),
         );
-
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === currentId
-              ? { ...n, data: { ...n.data, executionStatus: "completed" as ExecutionStatus } }
-              : n,
-          ),
-        );
-
+        await new Promise((resolve) => setTimeout(resolve, 600));
         const neighbors = adj.get(currentId) || [];
         for (const neighbor of neighbors) {
-          if (!visited.has(neighbor)) {
-            queue.push(neighbor);
-          }
+          if (!visited.has(neighbor)) queue.push(neighbor);
         }
       }
+    }
 
-      try {
-        await workflowsApi.run(selectedPreset, { query: "테스트 실행" });
-      } catch {
-        // Backend may not be available
+    // Call backend
+    try {
+      const runOpts = currentWorkflowId
+        ? { workflowId: currentWorkflowId }
+        : { preset: selectedPreset };
+      const res = await workflowsApi.run({ query: runQuery.trim() }, runOpts);
+      const data = res.data;
+
+      // Update node statuses from backend result
+      const nodeStatusMap = new Map<string, string>();
+      for (const nr of data.node_results || []) {
+        nodeStatusMap.set(nr.node_id, nr.status);
       }
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: {
+            ...n.data,
+            executionStatus: (nodeStatusMap.get(n.id) || (data.status === "completed" ? "completed" : "failed")) as ExecutionStatus,
+          },
+        })),
+      );
 
-      showSnackbar("워크플로우 실행이 완료되었습니다.", "success");
+      setRunResult(data);
+      setResultDialogOpen(true);
+      showSnackbar(
+        data.status === "completed"
+          ? `실행 완료 (${(data.total_duration_ms / 1000).toFixed(1)}초)`
+          : "워크플로우 실행 중 오류가 발생했습니다.",
+        data.status === "completed" ? "success" : "error",
+      );
     } catch {
-      showSnackbar("워크플로우 실행 중 오류가 발생했습니다.", "error");
+      // Mark all as completed anyway (animation only)
+      setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          data: { ...n.data, executionStatus: "completed" as ExecutionStatus },
+        })),
+      );
+      showSnackbar("백엔드 연결 실패 — 애니메이션만 실행되었습니다.", "info");
     } finally {
       setIsRunning(false);
     }
-  }, [nodes, edges, selectedPreset, setNodes, showSnackbar]);
+  }, [runQuery, nodes, edges, selectedPreset, currentWorkflowId, setNodes, showSnackbar]);
 
   // -- Export workflow --
   const exportWorkflow = useCallback(() => {
@@ -2757,6 +2724,229 @@ function AgentBuilderCanvas() {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setLoadDialogOpen(false)}
+            sx={{ fontSize: "0.8rem", color: "rgba(120,150,200,0.7)" }}
+          >
+            닫기
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Run Query Input Dialog                                             */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={runDialogOpen}
+        onClose={() => setRunDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: "#0d1219",
+            border: "1px solid rgba(80,100,140,0.35)",
+            borderRadius: "12px",
+            backgroundImage: "none",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontSize: "0.95rem",
+            fontWeight: 700,
+            color: "rgba(160,190,240,0.9)",
+            borderBottom: "1px solid rgba(80,100,140,0.2)",
+            pb: 1.5,
+          }}
+        >
+          워크플로우 실행
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.5 }}>
+          <Typography sx={{ fontSize: "0.8rem", color: "rgba(120,150,200,0.7)", mb: 2 }}>
+            워크플로우에 전달할 입력 쿼리를 입력하세요.
+          </Typography>
+          <TextField
+            value={runQuery}
+            onChange={(e) => setRunQuery(e.target.value)}
+            placeholder="예: 가스시설 안전점검 절차를 알려주세요"
+            fullWidth
+            multiline
+            rows={3}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && runQuery.trim()) {
+                e.preventDefault();
+                handleRunConfirm();
+              }
+            }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                bgcolor: "rgba(20,30,50,0.8)",
+                "& fieldset": { borderColor: "rgba(80,100,140,0.35)" },
+                "&:hover fieldset": { borderColor: "rgba(100,130,200,0.5)" },
+                "&.Mui-focused fieldset": { borderColor: "rgba(34,197,94,0.7)" },
+                "& textarea": { fontSize: "0.85rem", color: "#c8d4e8" },
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button
+            onClick={() => setRunDialogOpen(false)}
+            sx={{ fontSize: "0.8rem", color: "rgba(120,150,200,0.7)" }}
+          >
+            취소
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleRunConfirm}
+            disabled={!runQuery.trim()}
+            startIcon={<RunIcon sx={{ fontSize: 15 }} />}
+            sx={{
+              fontSize: "0.8rem",
+              fontWeight: 700,
+              bgcolor: "rgba(20,90,55,0.85)",
+              color: "#4ade80",
+              border: "1px solid rgba(40,160,90,0.4)",
+              "&:hover": { bgcolor: "rgba(30,110,65,0.9)" },
+              "&:disabled": { opacity: 0.4 },
+            }}
+          >
+            실행
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Execution Result Dialog                                            */}
+      {/* ------------------------------------------------------------------ */}
+      <Dialog
+        open={resultDialogOpen}
+        onClose={() => setResultDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            bgcolor: "#0d1219",
+            border: "1px solid rgba(80,100,140,0.35)",
+            borderRadius: "12px",
+            backgroundImage: "none",
+            maxHeight: "80vh",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontSize: "0.95rem",
+            fontWeight: 700,
+            color: "rgba(160,190,240,0.9)",
+            borderBottom: "1px solid rgba(80,100,140,0.2)",
+            pb: 1.5,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          {runResult?.status === "completed" ? (
+            <CompletedIcon sx={{ fontSize: 18, color: "#22c55e" }} />
+          ) : (
+            <FailedIcon sx={{ fontSize: 18, color: "#ef4444" }} />
+          )}
+          실행 결과
+          {runResult && (
+            <Chip
+              label={`${(runResult.total_duration_ms / 1000).toFixed(1)}초`}
+              size="small"
+              sx={{
+                ml: "auto",
+                height: 20,
+                fontSize: "0.68rem",
+                fontWeight: 700,
+                bgcolor: "rgba(40,70,130,0.6)",
+                color: "rgba(120,170,255,0.85)",
+                border: "1px solid rgba(80,130,220,0.3)",
+                "& .MuiChip-label": { px: 0.75 },
+              }}
+            />
+          )}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {runResult?.error && (
+            <Alert
+              severity="error"
+              sx={{
+                mb: 2,
+                bgcolor: "rgba(239,68,68,0.1)",
+                color: "#fca5a5",
+                border: "1px solid rgba(239,68,68,0.3)",
+                "& .MuiAlert-icon": { color: "#ef4444" },
+              }}
+            >
+              {runResult.error}
+            </Alert>
+          )}
+
+          {/* Node execution timeline */}
+          {runResult?.node_results && runResult.node_results.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, color: "rgba(120,150,200,0.7)", mb: 1 }}>
+                노드 실행 타임라인
+              </Typography>
+              <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
+                {runResult.node_results.map((nr) => (
+                  <Chip
+                    key={nr.node_id}
+                    icon={
+                      nr.status === "completed" ? (
+                        <CompletedIcon sx={{ fontSize: 13, color: "#22c55e !important" }} />
+                      ) : (
+                        <FailedIcon sx={{ fontSize: 13, color: "#ef4444 !important" }} />
+                      )
+                    }
+                    label={`${nr.node_id} (${nr.duration_ms}ms)`}
+                    size="small"
+                    sx={{
+                      height: 22,
+                      fontSize: "0.68rem",
+                      bgcolor: nr.status === "completed" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                      color: nr.status === "completed" ? "rgba(120,220,160,0.9)" : "rgba(255,160,160,0.9)",
+                      border: `1px solid ${nr.status === "completed" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+                      "& .MuiChip-label": { px: 0.5 },
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Final output */}
+          <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, color: "rgba(120,150,200,0.7)", mb: 1 }}>
+            실행 출력
+          </Typography>
+          <Box
+            sx={{
+              bgcolor: "rgba(15,22,35,0.9)",
+              border: "1px solid rgba(80,100,140,0.25)",
+              borderRadius: "8px",
+              p: 2,
+              maxHeight: 360,
+              overflow: "auto",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              fontSize: "0.82rem",
+              lineHeight: 1.7,
+              color: "#c8d4e8",
+              fontFamily: "'Noto Sans KR', sans-serif",
+            }}
+          >
+            {typeof runResult?.final_output === "string"
+              ? runResult.final_output
+              : runResult?.final_output
+                ? JSON.stringify(runResult.final_output, null, 2)
+                : "출력 없음"}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setResultDialogOpen(false)}
             sx={{ fontSize: "0.8rem", color: "rgba(120,150,200,0.7)" }}
           >
             닫기

@@ -295,6 +295,8 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
         }
 
         full_content = ""
+        end_metadata = {}
+        source_list = []
         try:
             if routing and routing.category.value in ("complex_task", "tool_required"):
                 # ── Agent pipeline: plan → execute steps → stream final ──
@@ -414,6 +416,10 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
                         continue
                     if event["event"] == "chunk":
                         full_content += event["data"].get("content", "")
+                    if event["event"] == "end":
+                        end_metadata = event["data"]
+                    if event["event"] == "source":
+                        source_list.append(event["data"])
                     yield {
                         "event": event["event"],
                         "data": json.dumps(event["data"], ensure_ascii=False),
@@ -430,7 +436,14 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
 
         # Save assistant message after streaming (only if content was produced)
         if full_content:
-            await _get_memory().add_message(session_id, "assistant", full_content)
+            msg_meta = {}
+            if end_metadata:
+                msg_meta["confidence"] = end_metadata.get("confidence_score")
+                msg_meta["latency_ms"] = end_metadata.get("latency_ms")
+                msg_meta["model"] = end_metadata.get("model_tier")
+            if source_list:
+                msg_meta["sources"] = source_list
+            await _get_memory().add_message(session_id, "assistant", full_content, metadata=msg_meta if msg_meta else None)
 
         # Generate follow-up question suggestions (best-effort, non-blocking)
         if full_content and request.message:

@@ -57,6 +57,7 @@ import {
   Settings as SettingsIcon,
   Share as ShareIcon,
   Summarize as SummarizeIcon,
+  Logout as LogoutIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
@@ -175,9 +176,10 @@ interface UserSettingsDialogProps {
   open: boolean;
   onClose: () => void;
   user: AuthUserLike | null;
+  onLogout: () => Promise<void>;
 }
 
-function UserSettingsDialog({ open, onClose, user }: UserSettingsDialogProps) {
+function UserSettingsDialog({ open, onClose, user, onLogout }: UserSettingsDialogProps) {
   const {
     themeMode,
     setThemeMode,
@@ -186,7 +188,6 @@ function UserSettingsDialog({ open, onClose, user }: UserSettingsDialogProps) {
     notificationsEnabled,
     setNotificationsEnabled,
   } = useAppStore();
-
   const { language, setLanguage, t } = useLanguage();
 
   // Password section
@@ -678,7 +679,18 @@ function UserSettingsDialog({ open, onClose, user }: UserSettingsDialogProps) {
           </Box>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions sx={{ px: 3, py: 2, justifyContent: "space-between" }}>
+          <Button
+            color="error"
+            size="small"
+            onClick={async () => {
+              onClose();
+              await onLogout();
+              window.location.href = "/login";
+            }}
+          >
+            로그아웃
+          </Button>
           <Button onClick={handleClose} variant="outlined" size="small">
             {t("settings.close")}
           </Button>
@@ -968,7 +980,7 @@ function ShareDialog({ open, onClose, sessionId }: ShareDialogProps) {
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2.5, gap: 1 }}>
+      <DialogActions sx={{ px: 3, py: 2.5, gap: 1, flexDirection: "column" }}>
         <Button
           variant="contained"
           fullWidth
@@ -1023,7 +1035,7 @@ export function ChatTopBar({
   const isMobile = useMediaQuery(muiTheme.breakpoints.down("sm"));
   const { language, setLanguage, t } = useLanguage();
 
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { isOnline } = useNetworkStatus();
 
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
@@ -1472,6 +1484,18 @@ export function ChatTopBar({
           </IconButton>
         </Tooltip>
 
+        {/* Logout button — always visible */}
+        <Tooltip title="로그아웃">
+          <IconButton
+            onClick={logout}
+            size="small"
+            aria-label="로그아웃"
+            sx={{ color: "error.main" }}
+          >
+            <LogoutIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
         {/* AI Settings popover content */}
         <Popover
           open={settingsOpen}
@@ -1621,6 +1645,7 @@ export function ChatTopBar({
         open={settingsDialogOpen}
         onClose={() => setSettingsDialogOpen(false)}
         user={user}
+        onLogout={logout}
       />
 
       {/* Share Dialog */}

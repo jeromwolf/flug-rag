@@ -99,6 +99,7 @@ class Settings(BaseSettings):
     # RAG - LLM control
     llm_max_tokens: int = 2048  # Optimized via parametric grid search
     llm_temperature: float = 0.3  # Benchmark-optimized
+    vllm_max_model_len: int = 4096  # vLLM --max-model-len for token budget
 
     # LLM Failover
     llm_failover_enabled: bool = False
@@ -124,6 +125,9 @@ class Settings(BaseSettings):
 
     # RAG - Reranker
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
+
+    # RAG - Source type auto-filter
+    source_type_filter_enabled: bool = True  # Auto-detect source_type from question keywords
 
     # RAG - Few-shot
     few_shot_max_examples: int = 8

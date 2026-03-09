@@ -141,38 +141,34 @@ export default function Layout({ children, title, noPadding, headerActions }: La
         </List>
 
         {/* User info + logout at bottom */}
-        {user && (
-          <>
-            <Divider />
-            <Box sx={{ p: open ? 1.5 : 1, display: "flex", alignItems: "center", gap: 1 }}>
-              {open ? (
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
-                    {user.full_name || user.username}
+        <Divider />
+        <Box sx={{ p: open ? 1.5 : 1, display: "flex", alignItems: "center", gap: 1 }}>
+          {open && user ? (
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                {user.full_name || user.username}
+              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <Chip
+                  label={ROLE_LABELS[user.role] || user.role}
+                  size="small"
+                  color={user.role === "admin" ? "error" : user.role === "manager" ? "warning" : user.role === "expert" ? "info" : "default"}
+                  sx={{ height: 20, fontSize: "0.7rem" }}
+                />
+                {user.department && (
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {user.department}
                   </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <Chip
-                      label={ROLE_LABELS[user.role] || user.role}
-                      size="small"
-                      color={user.role === "admin" ? "error" : user.role === "manager" ? "warning" : user.role === "expert" ? "info" : "default"}
-                      sx={{ height: 20, fontSize: "0.7rem" }}
-                    />
-                    {user.department && (
-                      <Typography variant="caption" color="text.secondary" noWrap>
-                        {user.department}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-              ) : null}
-              <Tooltip title="로그아웃" placement="right">
-                <IconButton size="small" onClick={handleLogout}>
-                  <LogoutIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+                )}
+              </Box>
             </Box>
-          </>
-        )}
+          ) : null}
+          <Tooltip title="로그아웃" placement="right">
+            <IconButton size="small" onClick={handleLogout}>
+              <LogoutIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Drawer>
 
       <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>

@@ -80,6 +80,7 @@ def create_default_registry() -> ToolRegistry:
     from agent.mcp.tools.calculator_tool import CalculatorTool
     from agent.mcp.tools.data_analyzer_tool import DataAnalyzerTool
     from agent.mcp.tools.database_tool import KnowledgeBaseTool
+    from agent.mcp.tools.db_query_tool import SystemDbQueryTool
     from agent.mcp.tools.ehsq_tool import EhsqTool
     from agent.mcp.tools.email_composer_tool import EmailComposerTool
     from agent.mcp.tools.erp_lookup_tool import ErpLookupTool
@@ -106,10 +107,12 @@ def create_default_registry() -> ToolRegistry:
     registry.register(SafetyChecklistTool())
     registry.register(ReportDraftTool())
     registry.register(TrainingMaterialTool())
-    # Enterprise system mock integrations
+    # Enterprise system integrations
     registry.register(ErpLookupTool())
     registry.register(EhsqTool())
     registry.register(GroupwareTool())
+    # System DB real-time query
+    registry.register(SystemDbQueryTool())
     return registry
 
 

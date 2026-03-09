@@ -422,23 +422,11 @@ async def update_user_role(
 
 class CreateUserRequest(BaseModel):
     username: str = Field(..., min_length=2)
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=1)
     email: str = ""
     full_name: str = ""
     department: str = ""
     role: str = "user"
-
-    @field_validator("password")
-    @classmethod
-    def validate_password_complexity(cls, v: str) -> str:
-        import re
-        if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[0-9]", v):
-            raise ValueError("Password must contain at least one digit")
-        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?]", v):
-            raise ValueError("Password must contain at least one special character")
-        return v
 
 
 @router.post("/auth/users")

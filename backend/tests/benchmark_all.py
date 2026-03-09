@@ -214,10 +214,14 @@ async def run_benchmark(
     print(f"{'='*70}\n")
 
     # ---- Initialize RAG components ----
-    settings.default_llm_provider = "ollama"
+    # Use the configured provider (vLLM on RunPod, ollama on local)
+    provider = settings.default_llm_provider
     llm = create_llm(model=model_name) if model_name else create_llm()
-    actual_model = model_name or settings.ollama_model
-    print(f"사용 모델: {actual_model}")
+    if provider == "vllm":
+        actual_model = model_name or settings.vllm_model
+    else:
+        actual_model = model_name or settings.ollama_model
+    print(f"사용 모델: {actual_model} (provider: {provider})")
 
     retriever = HybridRetriever()
     rag_chain = RAGChain(retriever=retriever, llm=llm)

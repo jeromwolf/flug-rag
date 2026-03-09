@@ -1,13 +1,18 @@
 """Workflow endpoints for Agent Builder."""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from agent.builder import WorkflowEngine, get_preset, list_presets
+from agent.builder.models import Edge, NodeConfig, NodeType, Workflow, WorkflowNode, WorkflowStatus
 from agent.builder.workflow_store import get_workflow_store
 from api.schemas import WorkflowRunRequest
 from auth.dependencies import get_current_user
 from auth.models import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -21,6 +26,49 @@ class WorkflowSaveRequest(BaseModel):
     description: str = ""
     nodes: list = []
     edges: list = []
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _build_workflow_from_saved(data: dict) -> Workflow:
+    """Convert a saved workflow dict (from SQLite) into a Workflow model."""
+    nodes = []
+    for n in data.get("nodes", []):
+        node_type_str = n.get("type", "start")
+        try:
+            node_type = NodeType(node_type_str)
+        except ValueError:
+            node_type = NodeType.START
+        nodes.append(WorkflowNode(
+            id=n["id"],
+            config=NodeConfig(
+                node_type=node_type,
+                label=n.get("label", node_type_str),
+                config=n.get("config", {}),
+                position=n.get("position", {"x": 0, "y": 0}),
+            ),
+        ))
+
+    edges = []
+    for e in data.get("edges", []):
+        edges.append(Edge(
+            id=e.get("id", ""),
+            source=e.get("source", ""),
+            target=e.get("target", ""),
+            label=e.get("label", ""),
+            condition=e.get("condition"),
+        ))
+
+    return Workflow(
+        id=data.get("id", ""),
+        name=data.get("name", ""),
+        description=data.get("description", ""),
+        nodes=nodes,
+        edges=edges,
+        status=WorkflowStatus.ACTIVE,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -38,6 +86,12 @@ async def run_workflow(request: WorkflowRunRequest, current_user: User | None = 
         workflow = get_preset(request.preset)
         if not workflow:
             raise HTTPException(404, f"Preset not found: {request.preset}")
+    elif request.workflow_id:
+        store = await get_workflow_store()
+        saved = await store.get(request.workflow_id)
+        if not saved:
+            raise HTTPException(404, f"Workflow not found: {request.workflow_id}")
+        workflow = _build_workflow_from_saved(saved)
     else:
         raise HTTPException(400, "Either preset or workflow_id is required")
 

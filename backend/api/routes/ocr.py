@@ -95,7 +95,7 @@ async def process_document_ocr(
         raise HTTPException(status_code=400, detail="Filename is required")
 
     ext = Path(file.filename).suffix.lower()
-    if ext not in {".pdf", ".png", ".jpg", ".jpeg", ".tiff"}:
+    if ext not in {".pdf", ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".bmp"}:
         raise HTTPException(
             status_code=400,
             detail=f"Unsupported file type for OCR: {ext}"

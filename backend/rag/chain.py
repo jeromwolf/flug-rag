@@ -27,6 +27,17 @@ _RE_SOURCE_TAG = re.compile(r'\[출[처처][^\]]*\]')
 _RE_CJK_LEAKAGE = re.compile(r'[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]+[^\n]*$', re.MULTILINE)
 _RE_WHITESPACE = re.compile(r'[\s\-\n•·]')
 _RE_CHINESE = re.compile(r'[\u4e00-\u9fff]')
+# Form template detection: 별지 서식, checkboxes, form fields
+_RE_FORM_TEMPLATE = re.compile(
+    r'별지\s*(?:제?\s*\d+호?\s*)?서식|'
+    r'[□☐■☑✓✔]{2,}|'           # 2+ consecutive checkboxes
+    r'접수번호\s*[:：]|'
+    r'처리기간\s*[:：]|'
+    r'작\s*성\s*일\s*[:：]|'
+    r'신\s*고\s*인|신\s*고\s*자|'
+    r'기\s*관\s*명\s*[:：]|'
+    r'담당부서\s*[:：]'
+)
 
 
 _source_filters_cache: dict | None = None
@@ -71,6 +82,92 @@ class RAGChain:
         self.llm = llm or get_default_llm()
         self.prompt_manager = prompt_manager or PromptManager()
         self.quality = quality or QualityController()
+
+    @staticmethod
+    def _deprioritize_form_chunks(results: list) -> list:
+        """Deprioritize form template chunks (별지 서식) by moving them to the end.
+
+        Form template chunks contain checkboxes, form fields, and layout markers
+        that are not useful for answering factual questions. When mixed with
+        actual article content, they dilute the context quality.
+        """
+        if not results or len(results) <= 1:
+            return results
+
+        substantive = []
+        form_chunks = []
+        for r in results:
+            content = r.content if hasattr(r, 'content') else r.get('content', '')
+            if _RE_FORM_TEMPLATE.search(content):
+                form_chunks.append(r)
+            else:
+                substantive.append(r)
+
+        if not substantive:
+            # All chunks are form templates — keep original order
+            return results
+
+        if form_chunks:
+            logger.debug(
+                "Deprioritized %d form template chunk(s) out of %d total",
+                len(form_chunks), len(results),
+            )
+
+        return substantive + form_chunks
+
+    async def _expand_appendix_refs(self, results: list, retriever) -> list:
+        """Promote appendix (별표) table chunks to top of results.
+
+        When regulation articles reference '별표X에 따른...', the actual
+        table chunk with amounts/grades may be ranked low. This method
+        finds table chunks in the results and promotes them to the top
+        so the LLM can provide concrete answers.
+        """
+        if not results or len(results) <= 3:
+            return results
+
+        import re as _re
+        from config.settings import settings as _settings
+        check_limit = _settings.context_max_chunks if _settings.context_max_chunks > 0 else 10
+
+        # Find 별표 references in top results
+        byulpyo_refs = set()
+        for r in results[:check_limit]:
+            content = r.content if hasattr(r, "content") else ""
+            matches = _re.findall(r"별표\s*(\d+(?:의\d+)?)", content)
+            for m in matches:
+                byulpyo_refs.add(m)
+
+        if not byulpyo_refs:
+            return results
+
+        # Find table chunks in ALL results (including those beyond context_max_chunks)
+        table_chunks = []
+        non_table_chunks = []
+        for r in results:
+            content = r.content if hasattr(r, "content") else ""
+            # Check if this is an actual appendix table (has header + table format)
+            is_table = (
+                ("【별표" in content or "별표 " in content.split("\n")[0] if content else False) and
+                (content.count("|") >= 3 or "기준표" in content or "단위" in content)
+            )
+            if is_table:
+                table_chunks.append(r)
+            else:
+                non_table_chunks.append(r)
+
+        if not table_chunks:
+            return results
+
+        logger.info(
+            "Promoted %d appendix table chunk(s) to top for references: %s",
+            len(table_chunks), byulpyo_refs,
+        )
+
+        # Put table chunks at position 2 (after most relevant result)
+        promoted = non_table_chunks[:1] + table_chunks + non_table_chunks[1:]
+        return promoted
+
 
     @staticmethod
     def _auto_detect_filters(question: str, filters: dict | None) -> dict | None:
@@ -306,11 +403,20 @@ class RAGChain:
             # Determine per-request overrides from agentic routing
             agentic_use_multi_query = False
             agentic_top_k = None
+            agentic_use_hyde: bool | None = None
+            agentic_use_self_rag: bool | None = None
+            agentic_max_tokens: int | None = None
             if agentic_meta:
                 agentic_use_multi_query = bool(agentic_meta.get("strategy") == "multi_query_rag")
                 params = agentic_meta.get("_params", {})
                 if params.get("top_k"):
                     agentic_top_k = params["top_k"]
+                if "use_hyde" in params:
+                    agentic_use_hyde = params["use_hyde"]
+                if "use_self_rag" in params:
+                    agentic_use_self_rag = params["use_self_rag"]
+                if params.get("max_tokens"):
+                    agentic_max_tokens = params["max_tokens"]
 
             # Auto-detect multi-hop questions for multi-query retrieval
             if not agentic_use_multi_query and self._detect_multi_hop(question):
@@ -320,7 +426,7 @@ class RAGChain:
                 logger.info("Multi-hop query detected, forcing multi-query retrieval (top_k=%d)", agentic_top_k)
 
             # Auto-detect source_type filter from question
-            if mode != "direct":
+            if mode != "direct" and settings.source_type_filter_enabled:
                 filters = self._auto_detect_filters(question, filters)
                 if filters and filters.get("source_type"):
                     logger.info("Auto-detected source_type filter: %s", filters["source_type"])
@@ -332,6 +438,8 @@ class RAGChain:
                     question, llm, filters, start_time, user_id, correction_info, temperature,
                     force_multi_query=agentic_use_multi_query, override_top_k=agentic_top_k,
                     search_query=search_query, terminology_info=terminology_info,
+                    use_hyde=agentic_use_hyde, use_self_rag=agentic_use_self_rag,
+                    override_max_tokens=agentic_max_tokens,
                 )
 
             # Add agentic routing metadata (exclude internal _params)
@@ -369,6 +477,9 @@ class RAGChain:
         override_top_k: int | None = None,
         search_query: str | None = None,
         terminology_info: dict | None = None,
+        use_hyde: bool | None = None,
+        use_self_rag: bool | None = None,
+        override_max_tokens: int | None = None,
     ) -> RAGResponse:
         """RAG mode: retrieve documents then generate."""
         # Use expanded search query if provided, else fall back to question
@@ -384,7 +495,9 @@ class RAGChain:
         effective_rerank_top_n = 8 if force_multi_query else None
 
         # Generate HyDE embedding if enabled
-        if settings.query_expansion_enabled:
+        # Per-query routing override; fall back to global setting
+        effective_use_hyde = use_hyde if use_hyde is not None else settings.query_expansion_enabled
+        if effective_use_hyde:
             try:
                 from .query_expander import QueryExpander
                 expander = QueryExpander(llm=llm)
@@ -424,11 +537,21 @@ class RAGChain:
                 rerank_top_n=effective_rerank_top_n,
             )
 
+        # Deprioritize form template chunks (별지 서식)
+        retrieval_results = self._deprioritize_form_chunks(retrieval_results)
+
+        # Step 2.5: Expand appendix references (별표 cross-reference)
+        retrieval_results = await self._expand_appendix_refs(retrieval_results, self.retriever)
+
         # Step 2: Calculate confidence
         chunk_scores = [r.score for r in retrieval_results]
         confidence = self.quality.calculate_confidence(chunk_scores)
 
-        # Step 3: Build sources
+        # Step 3: Limit retrieval results to context_max_chunks BEFORE building sources
+        # This ensures sources shown to user match what the LLM actually uses
+        if settings.context_max_chunks > 0:
+            retrieval_results = retrieval_results[:settings.context_max_chunks]
+
         sources = [
             {
                 "chunk_id": r.id,
@@ -450,12 +573,25 @@ class RAGChain:
             for r in retrieval_results
         ]
 
-        # Limit context chunks for LLM (if configured)
-        if settings.context_max_chunks > 0:
-            context_chunks = context_chunks[:settings.context_max_chunks]
-
         # Determine model name for model-aware prompting
         model_name = getattr(llm, 'model', None)
+
+        # Token budget: trim context to fit model context window
+        max_ctx = getattr(settings, 'vllm_max_model_len', 4096)
+        max_out = settings.llm_max_tokens
+        # Reserve tokens for system prompt + few-shot + query + safety margin
+        budget = max_ctx - max_out - 2500
+        if budget > 0:
+            total_chars = 0
+            trimmed = []
+            for chunk in context_chunks:
+                est_tokens = len(chunk["content"]) / 1.3  # Korean+Qwen: ~1.3 chars per token
+                if total_chars + est_tokens > budget:
+                    logger.info("Trimming context: %d chunks → %d (token budget %d)", len(context_chunks), len(trimmed), budget)
+                    break
+                total_chars += est_tokens
+                trimmed.append(chunk)
+            context_chunks = trimmed if trimmed else context_chunks[:1]
 
         system_prompt, user_prompt = self.prompt_manager.build_rag_prompt(
             query=question,
@@ -464,6 +600,7 @@ class RAGChain:
         )
 
         # Step 5: Generate (with validation retry for garbled/wrong-language output)
+        effective_max_tokens = override_max_tokens or settings.llm_max_tokens
         max_retries = 2
         response = None
         for attempt in range(max_retries + 1):
@@ -471,7 +608,7 @@ class RAGChain:
                 prompt=user_prompt,
                 system=system_prompt,
                 temperature=temperature,
-                max_tokens=settings.llm_max_tokens,
+                max_tokens=effective_max_tokens,
             )
             if self._is_valid_response(response.content):
                 break
@@ -491,7 +628,8 @@ class RAGChain:
 
         # Self-RAG: evaluate groundedness and retry if needed
         self_rag_meta = None
-        if settings.self_rag_enabled:
+        effective_use_self_rag = use_self_rag if use_self_rag is not None else settings.self_rag_enabled
+        if effective_use_self_rag:
             try:
                 from .self_rag import SelfRAGEvaluator
                 # Build context string for grading
@@ -788,6 +926,9 @@ class RAGChain:
             agentic_meta = None
             agentic_use_multi_query = False
             agentic_top_k = None
+            agentic_use_hyde: bool | None = None
+            agentic_use_self_rag: bool | None = None
+            agentic_max_tokens: int | None = None
             if settings.agentic_rag_enabled and mode == "rag":
                 try:
                     from .agentic import AgenticRAGRouter
@@ -806,6 +947,12 @@ class RAGChain:
                     agentic_use_multi_query = bool(decision.strategy == "multi_query_rag")
                     if decision.params.get("top_k"):
                         agentic_top_k = decision.params["top_k"]
+                    if "use_hyde" in decision.params:
+                        agentic_use_hyde = decision.params["use_hyde"]
+                    if "use_self_rag" in decision.params:
+                        agentic_use_self_rag = decision.params["use_self_rag"]
+                    if decision.params.get("max_tokens"):
+                        agentic_max_tokens = decision.params["max_tokens"]
                 except Exception as e:
                     logger.warning("Stream: Agentic RAG routing failed: %s", e)
 
@@ -817,7 +964,7 @@ class RAGChain:
                 logger.info("Stream: Multi-hop query detected, forcing multi-query retrieval")
 
             # Auto-detect source_type filter from question
-            if mode != "direct":
+            if mode != "direct" and settings.source_type_filter_enabled:
                 filters = self._auto_detect_filters(question, filters)
                 if filters and filters.get("source_type"):
                     logger.info("Stream: Auto-detected source_type filter: %s", filters["source_type"])
@@ -858,7 +1005,8 @@ class RAGChain:
             # RAG mode with streaming
             # Step 0: HyDE query expansion (optional)
             hyde_embedding = None
-            if settings.query_expansion_enabled:
+            effective_use_hyde = agentic_use_hyde if agentic_use_hyde is not None else settings.query_expansion_enabled
+            if effective_use_hyde:
                 try:
                     from .query_expander import QueryExpander
                     expander = QueryExpander(llm=llm)
@@ -892,6 +1040,16 @@ class RAGChain:
             if not multi_query_stream_used:
                 results = await self.retriever.retrieve(query=search_query, filters=filters, hyde_embedding=hyde_embedding)
 
+            # Deprioritize form template chunks (별지 서식)
+            results = self._deprioritize_form_chunks(results)
+
+            # Expand appendix references (별표 cross-reference)
+            results = await self._expand_appendix_refs(results, self.retriever)
+
+            # Limit results to context_max_chunks (match sources to what LLM uses)
+            if settings.context_max_chunks > 0:
+                results = results[:settings.context_max_chunks]
+
             chunk_scores = [r.score for r in results]
             confidence = self.quality.calculate_confidence(chunk_scores)
 
@@ -915,6 +1073,24 @@ class RAGChain:
             # Limit context chunks for LLM (if configured)
             if settings.context_max_chunks > 0:
                 context_chunks = context_chunks[:settings.context_max_chunks]
+
+            # Token budget: trim context to fit model context window
+            max_ctx = getattr(settings, 'vllm_max_model_len', 4096)
+            max_out = settings.llm_max_tokens
+            # Reserve tokens for system prompt + few-shot + query + safety margin
+            budget = max_ctx - max_out - 2500
+            if budget > 0:
+                total_chars = 0
+                trimmed_s = []
+                for chunk in context_chunks:
+                    est_tokens = len(chunk["content"]) / 1.3  # Korean+Qwen: ~1.3 chars/token
+                    if total_chars + est_tokens > budget:
+                        logger.info("Stream: trimming context %d→%d chunks (budget %d)", len(context_chunks), len(trimmed_s), budget)
+                        break
+                    total_chars += est_tokens
+                    trimmed_s.append(chunk)
+                context_chunks = trimmed_s if trimmed_s else context_chunks[:1]
+
             model_name = getattr(llm, 'model', None)
             system, user_prompt = self.prompt_manager.build_rag_prompt(
                 query=question, context_chunks=context_chunks,
@@ -927,47 +1103,64 @@ class RAGChain:
 
             # Stream LLM response with post-stream guardrails
             # Buffer initial tokens to strip "답변:" / "A:" prefix
+            effective_max_tokens = agentic_max_tokens or settings.llm_max_tokens
             accumulated = []
             prefix_stripped = False
             prefix_buffer = ""
             ttft_ms: int | None = None
             generation_start_time = time.time()
-            async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
-                if not prefix_stripped:
-                    prefix_buffer += token
-                    # Wait until we have enough chars to check for prefix
-                    if len(prefix_buffer) < 5:
-                        continue
-                    # Strip common prefixes
-                    stripped = _RE_A_PREFIX.sub('', prefix_buffer.lstrip())
-                    prefix_stripped = True
-                    if stripped:
-                        if ttft_ms is None:
-                            ttft_ms = int((time.time() - start_time) * 1000)
-                        accumulated.append(stripped)
-                        yield {"event": "chunk", "data": {"content": stripped}}
-                    continue
-                if ttft_ms is None:
-                    ttft_ms = int((time.time() - start_time) * 1000)
-                accumulated.append(token)
-                yield {"event": "chunk", "data": {"content": token}}
-
-            # Post-stream output guardrails
-            full_response = "".join(accumulated)
-            guardrail_triggered = False
+            llm_error_occurred = False
             try:
-                from .guardrails import get_guardrails_manager
-                guard = await get_guardrails_manager()
-                out_result = await guard.check_output(full_response, user_id=user_id)
-                if not out_result.passed and out_result.action == "block":
-                    guardrail_triggered = True
-                    yield {"event": "guardrail_warning", "data": {"message": out_result.message or "응답이 안전 필터에 의해 차단되었습니다.", "triggered_rules": out_result.triggered_rules}}
-            except Exception as e:
-                logger.debug("Streaming guardrails output check skipped: %s", e)
+                async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=effective_max_tokens):
+                    if not prefix_stripped:
+                        prefix_buffer += token
+                        # Wait until we have enough chars to check for prefix
+                        if len(prefix_buffer) < 5:
+                            continue
+                        # Strip common prefixes
+                        stripped = _RE_A_PREFIX.sub('', prefix_buffer.lstrip())
+                        prefix_stripped = True
+                        if stripped:
+                            if ttft_ms is None:
+                                ttft_ms = int((time.time() - start_time) * 1000)
+                            accumulated.append(stripped)
+                            yield {"event": "chunk", "data": {"content": stripped}}
+                        continue
+                    if ttft_ms is None:
+                        ttft_ms = int((time.time() - start_time) * 1000)
+                    accumulated.append(token)
+                    yield {"event": "chunk", "data": {"content": token}}
+            except Exception as llm_err:
+                logger.error("LLM stream error: %s", llm_err)
+                llm_error_occurred = True
+                yield {"event": "error", "data": {"message": "LLM 응답 생성 중 오류가 발생했습니다. 다시 시도해 주세요."}}
+
+            # Post-stream: detect Chinese leakage (Qwen model issue)
+            full_response = "".join(accumulated)
+            if full_response and not llm_error_occurred:
+                chinese_chars = len(_RE_CHINESE.findall(full_response))
+                chinese_ratio = chinese_chars / max(len(full_response.strip()), 1)
+                if chinese_ratio > 0.05:
+                    logger.warning("Chinese leakage detected (%.1f%%), sending warning", chinese_ratio * 100)
+                    yield {"event": "chinese_warning", "data": {"message": "중국어가 포함된 응답이 감지되었습니다. 재시도해주세요.", "ratio": round(chinese_ratio, 3)}}
+
+            # Post-stream output guardrails (skip if LLM errored)
+            guardrail_triggered = False
+            if not llm_error_occurred:
+                try:
+                    from .guardrails import get_guardrails_manager
+                    guard = await get_guardrails_manager()
+                    out_result = await guard.check_output(full_response, user_id=user_id)
+                    if not out_result.passed and out_result.action == "block":
+                        guardrail_triggered = True
+                        yield {"event": "guardrail_warning", "data": {"message": out_result.message or "응답이 안전 필터에 의해 차단되었습니다.", "triggered_rules": out_result.triggered_rules}}
+                except Exception as e:
+                    logger.debug("Streaming guardrails output check skipped: %s", e)
 
             # Self-RAG: post-stream grounding check
             self_rag_meta = None
-            if settings.self_rag_enabled and full_response and not guardrail_triggered:
+            effective_use_self_rag = agentic_use_self_rag if agentic_use_self_rag is not None else settings.self_rag_enabled
+            if not llm_error_occurred and effective_use_self_rag and full_response and not guardrail_triggered:
                 try:
                     from .self_rag import SelfRAGEvaluator
                     context_str = "\n\n".join(c["content"] for c in context_chunks)
@@ -1027,9 +1220,11 @@ class RAGChain:
                 end_data["model_tier"] = selected_model_tier.value
             if self_rag_meta:
                 end_data["self_rag"] = self_rag_meta
+            if llm_error_occurred:
+                end_data["llm_error"] = True
 
             # Store in cache for future identical queries (TTL: 120s)
-            if stream_cache is not None and not guardrail_triggered:
+            if stream_cache is not None and not guardrail_triggered and not llm_error_occurred:
                 try:
                     source_data = [
                         {

@@ -2,14 +2,19 @@
 
 Analyzes user intent and selects the optimal RAG strategy:
 - standard_rag: Simple fact-finding questions
-- multi_query_rag: Complex/comparison questions needing multiple perspectives
+- deep_retrieval: Complex/multi-document questions needing thorough search
 - direct_llm: General knowledge or chitchat (no retrieval needed)
-- deep_retrieval: Detailed/expert questions needing thorough search
+
+Routing is driven by `prompts/routing_rules.yaml` — no code changes needed
+to adjust rules.  The rules file is hot-reloaded on modification.
 """
 
-import json
 import logging
+import re
 from dataclasses import dataclass
+from pathlib import Path
+
+import yaml
 
 from config.settings import settings
 from core.llm import BaseLLM, create_llm
@@ -17,63 +22,86 @@ from rag.prompt import PromptManager
 
 logger = logging.getLogger(__name__)
 
+_RULES_PATH = Path(__file__).parent.parent / "prompts" / "routing_rules.yaml"
+
+# Module-level cache so rules survive individual route() calls
+_rules_cache: dict | None = None
+_rules_mtime: float = 0.0
+
+# Pattern for detecting Korean regulation names (e.g. "여비업무처리지침", "안전관리규정")
+_REGULATION_PATTERN = re.compile(
+    r"[가-힣]{2,15}(?:지침|규정|규칙|세칙|요령|매뉴얼|운영규정|관리규정|처리지침)"
+)
+
+
+def _load_rules() -> dict:
+    """Load routing rules from YAML, hot-reloading when the file changes."""
+    global _rules_cache, _rules_mtime
+    try:
+        mtime = _RULES_PATH.stat().st_mtime
+        if _rules_cache is None or mtime > _rules_mtime:
+            with open(_RULES_PATH, encoding="utf-8") as f:
+                _rules_cache = yaml.safe_load(f)
+            _rules_mtime = mtime
+            logger.info("Routing rules loaded/reloaded from %s", _RULES_PATH)
+    except Exception as e:
+        logger.warning("Failed to load routing rules: %s", e)
+        if _rules_cache is None:
+            _rules_cache = {"strategies": {}, "rules": []}
+    return _rules_cache  # type: ignore[return-value]
+
+
+def _count_regulations(query: str) -> int:
+    """Count the number of distinct regulation names mentioned in the query."""
+    return len(set(_REGULATION_PATTERN.findall(query)))
+
+
+def _match_rule(rule: dict, query: str, query_len: int, reg_count: int) -> bool:
+    """Return True if *query* satisfies all conditions in *rule*."""
+    conditions = rule.get("conditions", {})
+    if not conditions:
+        return True  # catch-all
+
+    if "max_length" in conditions and query_len > conditions["max_length"]:
+        return False
+    if "min_length" in conditions and query_len < conditions["min_length"]:
+        return False
+    if "min_regulation_count" in conditions and reg_count < conditions["min_regulation_count"]:
+        return False
+    if "patterns" in conditions:
+        if not any(re.search(p, query, re.IGNORECASE) for p in conditions["patterns"]):
+            return False
+    return True
+
 
 @dataclass
 class RoutingDecision:
     """Result of agentic routing analysis."""
-    strategy: str  # standard_rag, multi_query_rag, direct_llm, deep_retrieval
+
+    strategy: str  # standard_rag, deep_retrieval, direct_llm, …
     confidence: float
     reasoning: str
-    params: dict  # Dynamic parameter overrides (top_k, temperature, etc.)
+    params: dict  # Strategy parameters (mode, use_hyde, use_self_rag, top_k, temperature, …)
 
 
 class AgenticRAGRouter:
     """Analyzes questions and routes to optimal RAG strategy.
 
-    Strategies:
-    - standard_rag: Default vector+BM25 hybrid search
-    - multi_query_rag: Generate alternative queries for better recall
-    - direct_llm: Skip retrieval, use LLM knowledge directly
-    - deep_retrieval: Increase top_k, use more context for detailed answers
-    """
+    Routing logic is entirely driven by `prompts/routing_rules.yaml`.
+    No LLM call is made — routing latency is ~0 ms.
 
-    # Default params for each strategy
-    STRATEGY_DEFAULTS = {
-        "standard_rag": {
-            "mode": "rag",
-            "top_k": None,  # Use default
-            "rerank_top_n": None,
-            "temperature": None,
-            "use_multi_query": False,
-        },
-        "multi_query_rag": {
-            "mode": "rag",
-            "top_k": None,
-            "rerank_top_n": None,
-            "temperature": 0.3,
-            "use_multi_query": True,
-        },
-        "direct_llm": {
-            "mode": "direct",
-            "top_k": 0,
-            "rerank_top_n": 0,
-            "temperature": 0.7,
-            "use_multi_query": False,
-        },
-        "deep_retrieval": {
-            "mode": "rag",
-            "top_k": 30,
-            "rerank_top_n": 7,
-            "temperature": 0.3,
-            "use_multi_query": False,
-        },
-    }
+    Strategies defined in the YAML:
+    - standard_rag: Default hybrid search, no HyDE/Self-RAG
+    - deep_retrieval: HyDE + Self-RAG enabled, higher top_k
+    - direct_llm:   Skip retrieval entirely
+    """
 
     def __init__(
         self,
         llm: BaseLLM | None = None,
         prompt_manager: PromptManager | None = None,
     ):
+        # llm / prompt_manager kept for backward-compatibility but not used for routing
         self._llm = llm
         self._prompt_manager = prompt_manager
 
@@ -90,7 +118,7 @@ class AgenticRAGRouter:
         return self._prompt_manager
 
     async def route(self, query: str) -> RoutingDecision:
-        """Analyze question and determine optimal strategy.
+        """Rule-based routing only (no LLM call, ~0 ms latency).
 
         Args:
             query: User's question.
@@ -98,109 +126,53 @@ class AgenticRAGRouter:
         Returns:
             RoutingDecision with strategy and parameter overrides.
         """
-        # Try LLM-based routing first
-        try:
-            return await self._llm_route(query)
-        except Exception as e:
-            logger.warning("Agentic LLM routing failed, using rule-based fallback: %s", e)
-            return self._rule_based_route(query)
-
-    async def _llm_route(self, query: str) -> RoutingDecision:
-        """Use LLM to analyze query and select strategy."""
-        prompt = self.prompt_manager.get_system_prompt("agentic_routing").format(query=query)
-
-        response = await self.llm.generate(
-            prompt=prompt,
-            temperature=0.1,
-            max_tokens=256,
-        )
-
-        content = response.content.strip()
-        start = content.find("{")
-        end = content.rfind("}") + 1
-
-        if start >= 0 and end > start:
-            data = json.loads(content[start:end])
-            strategy = data.get("strategy", "standard_rag")
-
-            # Validate strategy
-            if strategy not in self.STRATEGY_DEFAULTS:
-                strategy = "standard_rag"
-
-            # Merge LLM-suggested params with defaults
-            default_params = dict(self.STRATEGY_DEFAULTS[strategy])
-            llm_params = data.get("params", {})
-            if isinstance(llm_params, dict):
-                for key in ("top_k", "temperature"):
-                    if key in llm_params and llm_params[key] is not None:
-                        default_params[key] = llm_params[key]
-
-            return RoutingDecision(
-                strategy=strategy,
-                confidence=float(data.get("confidence", 0.8)),
-                reasoning=data.get("reasoning", ""),
-                params=default_params,
-            )
-
-        raise ValueError("Failed to parse routing response")
+        return self._rule_based_route(query)
 
     @staticmethod
     def _rule_based_route(query: str) -> RoutingDecision:
-        """Rule-based fallback routing using keyword patterns.
+        """Evaluate YAML rules in order and return first matching decision."""
+        rules_config = _load_rules()
+        strategies: dict = rules_config.get("strategies", {})
+        rules: list = rules_config.get("rules", [])
 
-        Used when LLM routing fails.
-        """
-        import re
+        query_stripped = query.strip()
+        query_len = len(query_stripped)
+        reg_count = _count_regulations(query_stripped)
 
-        query_lower = query.strip().lower()
-        query_len = len(query_lower)
+        for rule in rules:
+            if _match_rule(rule, query_stripped, query_len, reg_count):
+                strategy_name: str = rule["strategy"]
+                strategy_params = dict(strategies.get(strategy_name, {}))
+                strategy_params.pop("description", None)
 
-        # Chitchat / greeting detection
-        chitchat_patterns = r'^(안녕|하이|ㅎㅇ|감사|고마워|수고|반갑|잘\s*가)'
-        if re.search(chitchat_patterns, query_lower) and query_len < 20:
-            return RoutingDecision(
-                strategy="direct_llm",
-                confidence=0.9,
-                reasoning="Short greeting/chitchat detected",
-                params=dict(AgenticRAGRouter.STRATEGY_DEFAULTS["direct_llm"]),
+                logger.info(
+                    "Route: '%s' → %s (%s, regs=%d)",
+                    query_stripped[:40],
+                    strategy_name,
+                    rule["name"],
+                    reg_count,
+                )
+                return RoutingDecision(
+                    strategy=strategy_name,
+                    confidence=rule.get("confidence", 0.7),
+                    reasoning=rule["name"],
+                    params=strategy_params,
+                )
+
+        # Fallback — should never be reached because the YAML has a catch-all rule
+        logger.warning("No routing rule matched for query '%s', using standard_rag", query_stripped[:40])
+        fallback_params = dict(
+            strategies.get(
+                "standard_rag",
+                {"mode": "rag", "use_hyde": False, "use_self_rag": False},
             )
-
-        # Complex/comparison questions → multi-query
-        complex_patterns = r'(비교|차이|vs|대비|종합|정리|분석|요약|전체|모든|각각)'
-        if re.search(complex_patterns, query_lower):
-            return RoutingDecision(
-                strategy="multi_query_rag",
-                confidence=0.8,
-                reasoning="Complex/comparison question detected",
-                params=dict(AgenticRAGRouter.STRATEGY_DEFAULTS["multi_query_rag"]),
-            )
-
-        # Detailed/expert questions → deep retrieval
-        expert_patterns = r'(상세|자세|구체적|절차|과정|단계|방법|어떻게|세부)'
-        if re.search(expert_patterns, query_lower) and query_len > 20:
-            return RoutingDecision(
-                strategy="deep_retrieval",
-                confidence=0.75,
-                reasoning="Detailed/expert question detected",
-                params=dict(AgenticRAGRouter.STRATEGY_DEFAULTS["deep_retrieval"]),
-            )
-
-        # General knowledge (no document keywords)
-        document_patterns = r'(법|규정|조|항|호|시행|매뉴얼|지침|기준|표준|점검|설비|배관|가스|안전)'
-        if not re.search(document_patterns, query_lower):
-            return RoutingDecision(
-                strategy="direct_llm",
-                confidence=0.6,
-                reasoning="No document-related keywords found",
-                params=dict(AgenticRAGRouter.STRATEGY_DEFAULTS["direct_llm"]),
-            )
-
-        # Default: standard RAG
+        )
+        fallback_params.pop("description", None)
         return RoutingDecision(
             strategy="standard_rag",
-            confidence=0.7,
-            reasoning="Default routing to standard RAG",
-            params=dict(AgenticRAGRouter.STRATEGY_DEFAULTS["standard_rag"]),
+            confidence=0.5,
+            reasoning="No rule matched, default standard_rag",
+            params=fallback_params,
         )
 
     def get_strategy_params(self, decision: RoutingDecision) -> dict:

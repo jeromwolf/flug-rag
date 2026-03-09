@@ -183,6 +183,61 @@ _KB_TRIGGERS = [
     "청크 수", "등록된 문서", "인덱스 현황",
 ]
 
+# ── ERP lookup ────────────────────────────────────────────────────
+_ERP_TRIGGERS = [
+    "ERP 조회", "ERP조회", "예산 조회", "예산조회", "예산 현황", "예산현황",
+    "프로젝트 현황", "프로젝트현황", "프로젝트 조회", "협력업체 조회",
+    "협력업체 현황", "벤더 조회", "집행률", "예산 집행",
+]
+
+_ERP_TYPE_MAP = {
+    "예산": "budget", "집행": "budget",
+    "프로젝트": "project", "공사": "project",
+    "협력업체": "vendor", "벤더": "vendor", "업체": "vendor",
+}
+
+# ── EHSQ lookup ───────────────────────────────────────────────────
+_EHSQ_TRIGGERS = [
+    "EHSQ 조회", "EHSQ조회", "안전 사고", "안전사고", "사고 현황", "사고현황",
+    "안전 등급", "안전등급", "시설 안전", "컴플라이언스 현황", "준수 현황",
+    "안전 현황", "안전현황", "재해 현황", "무재해",
+]
+
+_EHSQ_ACTION_MAP = {
+    "사고": "incident_report", "재해": "incident_report", "무재해": "incident_report",
+    "등급": "safety_status", "시설": "safety_status",
+    "컴플라이언스": "compliance_check", "준수": "compliance_check",
+}
+
+# ── Groupware lookup ──────────────────────────────────────────────
+_GROUPWARE_TRIGGERS = [
+    "그룹웨어 조회", "그룹웨어조회", "일정 조회", "일정조회",
+    "결재 현황", "결재현황", "결재 조회", "공지사항 조회", "공지 조회",
+    "회의 일정", "회의일정", "오늘 일정", "금주 일정",
+]
+
+_GROUPWARE_TYPE_MAP = {
+    "일정": "schedule", "회의": "schedule",
+    "결재": "approval",
+    "공지": "notice",
+}
+
+# ── System DB query ───────────────────────────────────────────────
+_SYSTEM_DB_TRIGGERS = [
+    "시스템 현황", "시스템현황", "사용 현황", "사용현황",
+    "DB 조회", "DB조회", "데이터베이스 조회",
+    "질의 통계", "질의통계", "사용자 현황", "사용자현황",
+    "감사 로그 조회", "접속 현황", "접속현황",
+    "운영 현황", "운영현황", "시스템 통계", "시스템통계",
+]
+
+_SYSTEM_DB_TYPE_MAP = {
+    "사용자": "user_stats",
+    "질의": "query_stats", "통계": "query_stats",
+    "문서": "document_stats",
+    "감사": "audit_log", "로그": "audit_log", "접속": "audit_log",
+}
+
 
 # ── Public API ─────────────────────────────────────────────────────
 def select_tool(message: str) -> ToolSelection | None:
@@ -192,6 +247,19 @@ def select_tool(message: str) -> ToolSelection | None:
     Evaluation order: more-specific patterns first to avoid false matches.
     """
     msg = message.strip()
+
+    # Enterprise system integrations (highest priority for demo)
+    if any(kw in msg for kw in _SYSTEM_DB_TRIGGERS):
+        return _select_system_db(msg)
+
+    if any(kw in msg for kw in _ERP_TRIGGERS):
+        return _select_erp(msg)
+
+    if any(kw in msg for kw in _EHSQ_TRIGGERS):
+        return _select_ehsq(msg)
+
+    if any(kw in msg for kw in _GROUPWARE_TRIGGERS):
+        return _select_groupware(msg)
 
     # Higher-specificity triggers first
     if any(kw in msg for kw in _REPORT_GEN_TRIGGERS):
@@ -409,4 +477,60 @@ def _select_knowledge_base(msg: str) -> ToolSelection:
         tool_name="knowledge_base",
         arguments={"action": "count"},
         confidence=0.7,
+    )
+
+
+def _select_erp(msg: str) -> ToolSelection:
+    """Select ERP lookup tool with query type detection."""
+    query_type = "budget"  # default
+    for kw, qt in _ERP_TYPE_MAP.items():
+        if kw in msg:
+            query_type = qt
+            break
+    return ToolSelection(
+        tool_name="erp_lookup",
+        arguments={"query_type": query_type, "keyword": msg},
+        confidence=0.85,
+    )
+
+
+def _select_ehsq(msg: str) -> ToolSelection:
+    """Select EHSQ lookup tool with action detection."""
+    action = "safety_status"  # default
+    for kw, act in _EHSQ_ACTION_MAP.items():
+        if kw in msg:
+            action = act
+            break
+    return ToolSelection(
+        tool_name="ehsq_lookup",
+        arguments={"action": action, "facility": msg},
+        confidence=0.85,
+    )
+
+
+def _select_groupware(msg: str) -> ToolSelection:
+    """Select groupware lookup tool with type detection."""
+    query_type = "schedule"  # default
+    for kw, qt in _GROUPWARE_TYPE_MAP.items():
+        if kw in msg:
+            query_type = qt
+            break
+    return ToolSelection(
+        tool_name="groupware_lookup",
+        arguments={"query_type": query_type},
+        confidence=0.85,
+    )
+
+
+def _select_system_db(msg: str) -> ToolSelection:
+    """Select system DB query tool with type detection."""
+    query_type = "system_summary"  # default: 전체 요약
+    for kw, qt in _SYSTEM_DB_TYPE_MAP.items():
+        if kw in msg:
+            query_type = qt
+            break
+    return ToolSelection(
+        tool_name="system_db_query",
+        arguments={"query_type": query_type, "days": 7},
+        confidence=0.9,
     )

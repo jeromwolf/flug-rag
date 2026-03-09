@@ -24,6 +24,12 @@ import {
   ExpandLess as ExpandLessIcon,
   ExpandLess as ExpandUpIcon,
   DragIndicator as DragIndicatorIcon,
+  AccountBalance as AccountBalanceIcon,
+  School as SchoolIcon,
+  Payments as PaymentsIcon,
+  Lightbulb as LightbulbIcon,
+  Policy as PolicyIcon,
+  Shield as ShieldIcon,
 } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -41,28 +47,64 @@ const LOAD_MORE_STEP = 30;
 
 const SUGGESTION_CARDS = [
   {
-    label: "문서 내용을 요약해 주세요",
-    Icon: SummarizeIcon,
+    label: "여비규정에서 국내 출장 시 일비 지급 기준은?",
+    Icon: GavelIcon,
     color: "#10a37f",
     bg: "rgba(16, 163, 127, 0.08)",
   },
   {
-    label: "보고서 작성을 도와주세요",
-    Icon: EditNoteIcon,
+    label: "직장 내 갑질 행위의 정의와 금지 행위 유형은?",
+    Icon: AnalyticsIcon,
     color: "#5436da",
     bg: "rgba(84, 54, 218, 0.08)",
   },
   {
-    label: "데이터를 분석해 주세요",
-    Icon: AnalyticsIcon,
+    label: "업무상 재해가 발생했을 때 보상 절차는 어떻게 되나요?",
+    Icon: EditNoteIcon,
     color: "#d97706",
     bg: "rgba(217, 119, 6, 0.08)",
   },
   {
-    label: "규정에 대해 설명해 주세요",
-    Icon: GavelIcon,
+    label: "징계의 종류에는 어떤 것들이 있나요?",
+    Icon: AccountBalanceIcon,
     color: "#dc2626",
     bg: "rgba(220, 38, 38, 0.08)",
+  },
+  {
+    label: "신입사원 수습기간은 얼마인가요?",
+    Icon: SchoolIcon,
+    color: "#0891b2",
+    bg: "rgba(8, 145, 178, 0.08)",
+  },
+  {
+    label: "퇴직금 지급 기준은 어떻게 되나요?",
+    Icon: PaymentsIcon,
+    color: "#7c3aed",
+    bg: "rgba(124, 58, 237, 0.08)",
+  },
+  {
+    label: "직무발명에 대한 보상 규정이 있나요?",
+    Icon: LightbulbIcon,
+    color: "#ea580c",
+    bg: "rgba(234, 88, 12, 0.08)",
+  },
+  {
+    label: "부정청탁 금지 위반 시 처리 절차는?",
+    Icon: PolicyIcon,
+    color: "#be185d",
+    bg: "rgba(190, 24, 93, 0.08)",
+  },
+  {
+    label: "내부 고발자(공익신고자) 보호 규정이 있나요?",
+    Icon: ShieldIcon,
+    color: "#059669",
+    bg: "rgba(5, 150, 105, 0.08)",
+  },
+  {
+    label: "연차휴가는 어떻게 부여되나요?",
+    Icon: SummarizeIcon,
+    color: "#4f46e5",
+    bg: "rgba(79, 70, 229, 0.08)",
   },
 ];
 
@@ -997,13 +1039,13 @@ export function ChatMessageList({
             </Typography>
           </Box>
 
-          {/* 2x2 suggestion cards */}
+          {/* 2x5 suggestion cards */}
           <Box
             sx={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
-              gap: 1.5,
-              maxWidth: 560,
+              gap: 1.2,
+              maxWidth: 640,
               width: "100%",
               position: "relative",
               zIndex: 1,
@@ -1019,8 +1061,8 @@ export function ChatMessageList({
                 sx={{
                   border: "1px solid",
                   borderColor: "divider",
-                  borderRadius: "14px",
-                  p: 2,
+                  borderRadius: "12px",
+                  p: 1.5,
                   cursor: "pointer",
                   transition: "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease",
                   bgcolor: "background.paper",

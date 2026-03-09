@@ -46,10 +46,12 @@ import {
   Sort as SortIcon,
   StarBorder as StarBorderIcon,
   Star as StarIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bookmarksApi } from "../../api/client";
+import { useAuth } from "../../contexts/AuthContext";
 import { HelpDialog } from "./HelpDialog";
 import LoadingSkeleton from "../LoadingSkeleton";
 import { useSessionTags, PRESET_TAGS } from "../../hooks/useSessionTags";
@@ -1159,6 +1161,7 @@ export function ChatSidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const { logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [bookmarksOpen, setBookmarksOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -1886,6 +1889,29 @@ export function ChatSidebar({
           </ListItemIcon>
           <ListItemText
             primary="도움말 / 공지"
+            primaryTypographyProps={{ variant: "body2", fontSize: "0.85rem" }}
+          />
+        </ListItemButton>
+
+        {/* Logout button — always show (sidebar is behind PrivateRoute) */}
+        <ListItemButton
+          onClick={async () => {
+            await logout();
+            window.location.href = "/login";
+          }}
+          sx={{
+            borderRadius: 1,
+            mx: 1,
+            py: 0.5,
+            color: "#ff6b6b",
+            "&:hover": { bgcolor: "rgba(255,107,107,0.15)" },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 32, color: "inherit" }}>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText
+            primary="로그아웃"
             primaryTypographyProps={{ variant: "body2", fontSize: "0.85rem" }}
           />
         </ListItemButton>

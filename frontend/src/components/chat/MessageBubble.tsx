@@ -238,7 +238,7 @@ const ModelChip = ({ model }: { model: string }) => {
   );
 };
 
-// ── Performance Tooltip ───────────────────────────────────────────────────────
+// ── Performance Indicator (v3 - always visible, no tooltip needed) ────────────
 const PerfIndicator = ({
   ttftMs,
   tps,
@@ -248,54 +248,64 @@ const PerfIndicator = ({
   tps?: number;
   latencyMs?: number;
 }) => {
-  const ttftColor =
-    ttftMs == null
-      ? "text.secondary"
-      : ttftMs < 500
+  if (latencyMs == null && ttftMs == null && tps == null) return null;
+
+  // Primary display: total response time in seconds — ALWAYS visible
+  const latencyText = latencyMs != null ? `${(latencyMs / 1000).toFixed(1)}초` : null;
+
+  const latencyColor =
+    latencyMs == null
+      ? "#9e9e9e"
+      : latencyMs < 3000
         ? "#4caf50"
-        : ttftMs < 2000
+        : latencyMs < 8000
           ? "#ff9800"
           : "#f44336";
 
-  const tooltipLines: string[] = [];
-  if (ttftMs != null) tooltipLines.push(`첫 토큰: ${ttftMs}ms`);
-  if (tps != null) tooltipLines.push(`속도: ${tps.toFixed(1)} tok/s`);
-  if (latencyMs != null)
-    tooltipLines.push(`총 응답: ${(latencyMs / 1000).toFixed(1)}s`);
-
-  if (tooltipLines.length === 0) return null;
-
   return (
-    <Tooltip
-      title={
-        <Box>
-          {tooltipLines.map((line, i) => (
-            <Typography
-              key={i}
-              variant="caption"
-              sx={{ display: "block", lineHeight: 1.6 }}
-            >
-              {line}
-            </Typography>
-          ))}
-        </Box>
-      }
-      arrow
+    <Box
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "4px",
+        px: "8px",
+        py: "3px",
+        borderRadius: "999px",
+        border: "1px solid",
+        borderColor: latencyColor,
+        bgcolor: `${latencyColor}14`,
+        cursor: "default",
+      }}
     >
-      <Box
-        sx={{
-          display: "inline-flex",
-          alignItems: "center",
-          cursor: "default",
-          color: ttftColor,
-          opacity: 0.75,
-          "&:hover": { opacity: 1 },
-          transition: "opacity 0.15s",
-        }}
-      >
-        <SpeedIcon sx={{ fontSize: 15 }} />
-      </Box>
-    </Tooltip>
+      <SpeedIcon sx={{ fontSize: 14, color: latencyColor }} />
+      {latencyText && (
+        <Typography
+          variant="caption"
+          sx={{
+            fontSize: "0.78rem",
+            fontWeight: 700,
+            color: latencyColor,
+            lineHeight: 1,
+          }}
+        >
+          {latencyText}
+        </Typography>
+      )}
+      {tps != null && (
+        <Typography
+          variant="caption"
+          sx={{
+            fontSize: "0.68rem",
+            fontWeight: 500,
+            color: "text.secondary",
+            lineHeight: 1,
+            ml: "2px",
+          }}
+        >
+          {tps.toFixed(0)}t/s
+        </Typography>
+      )}
+    </Box>
   );
 };
 

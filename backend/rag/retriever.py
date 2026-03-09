@@ -283,7 +283,7 @@ class HybridRetriever:
     async def _rerank(
         self, query: str, results: list[RetrievalResult],
     ) -> list[RetrievalResult]:
-        """Re-rank results using cross-encoder model."""
+        """Re-rank results using bge-reranker-v2-m3 (CrossEncoder, GPU-accelerated)."""
         if not results:
             return results
 
@@ -291,30 +291,33 @@ class HybridRetriever:
         if reranker is None:
             return results
 
-        # Prepare (query, passage) pairs for re-ranking
-        pairs = [(query, r.content) for r in results]
+        pairs = [[query, r.content] for r in results]
 
-        # Get scores from CrossEncoder
         scores = await asyncio.to_thread(reranker.predict, pairs)
 
-        # Update results with rerank scores and sort by score descending
         for i, result in enumerate(results):
             score = float(scores[i])
             result.rerank_score = score
-            result.score = score  # Override with rerank score
+            result.score = score
 
-        # Sort by rerank score descending
         reranked_results = sorted(results, key=lambda r: r.score, reverse=True)
 
         return reranked_results
 
     def _get_reranker(self):
-        """Lazy-load sentence-transformers CrossEncoder reranker."""
+        """Lazy-load bge-reranker-v2-m3 CrossEncoder (GPU-accelerated, multilingual)."""
         if self._reranker is None:
             try:
                 from sentence_transformers import CrossEncoder
-                self._reranker = CrossEncoder(settings.reranker_model)
-            except ImportError:
+                import torch
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                self._reranker = CrossEncoder(
+                    settings.reranker_model,
+                    device=device,
+                )
+                logger.info("Loaded reranker %s on %s", settings.reranker_model, device)
+            except Exception as e:
+                logger.warning("Failed to load reranker: %s", e)
                 return None
         return self._reranker
 

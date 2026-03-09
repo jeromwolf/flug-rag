@@ -131,7 +131,7 @@ class ConversationMemory(AsyncSQLiteManager):
                               COUNT(m.id) as message_count
                        FROM sessions s
                        LEFT JOIN messages m ON m.session_id = s.id
-                       WHERE s.user_id = ? OR s.user_id = ''
+                       WHERE s.user_id = ?
                        GROUP BY s.id
                        ORDER BY s.updated_at DESC
                        LIMIT ? OFFSET ?""",

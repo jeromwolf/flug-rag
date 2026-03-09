@@ -34,11 +34,23 @@ class UpstageCloudOCR(BaseOCR):
 
         output_formats = '["text", "html"]' if enhanced else '["text"]'
 
+        # Detect MIME type from extension
+        mime_map = {
+            ".pdf": "application/pdf",
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".tiff": "image/tiff",
+            ".tif": "image/tiff",
+            ".bmp": "image/bmp",
+        }
+        mime_type = mime_map.get(path.suffix.lower(), "application/octet-stream")
+
         with open(path, "rb") as f:
             response = await self._client.post(
                 self.api_url,
                 headers={"Authorization": f"Bearer {self.api_key}"},
-                files={"document": (path.name, f, "application/pdf")},
+                files={"document": (path.name, f, mime_type)},
                 data={"output_formats": output_formats},
             )
 

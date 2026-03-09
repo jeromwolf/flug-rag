@@ -288,8 +288,12 @@ export const mcpApi = {
 export const workflowsApi = {
   // Presets (built-in)
   listPresets: () => api.get("/workflows/presets"),
-  run: (preset: string, inputData: Record<string, unknown>) =>
-    api.post("/workflows/run", { preset, input_data: inputData }),
+  run: (inputData: Record<string, unknown>, opts?: { preset?: string; workflowId?: string }) =>
+    api.post("/workflows/run", {
+      preset: opts?.preset ?? null,
+      workflow_id: opts?.workflowId ?? null,
+      input_data: inputData,
+    }),
 
   // User-saved workflows CRUD
   list: () => api.get<{ workflows: WorkflowListItem[] }>("/workflows"),
@@ -453,10 +457,13 @@ export const guardrailsApi = {
 // === OCR ===
 export const ocrApi = {
   health: () => api.get("/ocr/health"),
-  process: (file: File) => {
+  process: (file: File, provider?: string, enhanced?: boolean) => {
     const formData = new FormData();
     formData.append("file", file);
-    return api.post("/ocr/process", formData, { headers: { "Content-Type": "multipart/form-data" } });
+    const params: Record<string, string | boolean> = {};
+    if (provider) params.provider = provider;
+    if (enhanced !== undefined) params.enhanced = enhanced;
+    return api.post("/ocr/process", formData, { headers: { "Content-Type": "multipart/form-data" }, params });
   },
   switchProvider: (provider: string) => api.post("/ocr/switch-provider", { provider }),
   listTrainingData: (limit = 50, offset = 0) =>
