@@ -2083,10 +2083,13 @@ function AgentBuilderCanvas() {
 
     // Call backend
     try {
-      const runOpts = currentWorkflowId
-        ? { workflowId: currentWorkflowId }
-        : { preset: selectedPreset };
-      const res = await workflowsApi.run({ query: runQuery.trim() }, runOpts);
+      let res;
+      if (currentWorkflowId) {
+        res = await workflowsApi.run({ query: runQuery.trim() }, { workflowId: currentWorkflowId });
+      } else {
+        // Send full inline workflow data instead of preset ID
+        res = await workflowsApi.runInline({ query: runQuery.trim() }, nodes, edges);
+      }
       const data = res.data;
 
       // Update node statuses from backend result
@@ -2917,6 +2920,18 @@ function AgentBuilderCanvas() {
             </Box>
           )}
 
+          {/* Query display */}
+          {runQuery && (
+            <Box sx={{ mb: 2, p: 1.5, bgcolor: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: "8px" }}>
+              <Typography sx={{ fontSize: "0.72rem", fontWeight: 600, color: "rgba(34,197,94,0.7)", mb: 0.5 }}>
+                입력 질문
+              </Typography>
+              <Typography sx={{ fontSize: "0.85rem", color: "#c8d4e8" }}>
+                {runQuery}
+              </Typography>
+            </Box>
+          )}
+
           {/* Final output */}
           <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, color: "rgba(120,150,200,0.7)", mb: 1 }}>
             실행 출력
@@ -2927,22 +2942,29 @@ function AgentBuilderCanvas() {
               border: "1px solid rgba(80,100,140,0.25)",
               borderRadius: "8px",
               p: 2,
-              maxHeight: 360,
+              maxHeight: 400,
               overflow: "auto",
-              whiteSpace: "pre-wrap",
               wordBreak: "break-word",
-              fontSize: "0.82rem",
-              lineHeight: 1.7,
+              fontSize: "0.85rem",
+              lineHeight: 1.8,
               color: "#c8d4e8",
               fontFamily: "'Noto Sans KR', sans-serif",
+              "& strong": { color: "#93c5fd" },
             }}
-          >
-            {typeof runResult?.final_output === "string"
-              ? runResult.final_output
-              : runResult?.final_output
-                ? JSON.stringify(runResult.final_output, null, 2)
-                : "출력 없음"}
-          </Box>
+            dangerouslySetInnerHTML={{
+              __html: (() => {
+                const raw = typeof runResult?.final_output === "string"
+                  ? runResult.final_output
+                  : runResult?.final_output
+                    ? JSON.stringify(runResult.final_output, null, 2)
+                    : "출력 없음";
+                return raw
+                  .replace(/## (.+)/g, '<h3 style="margin:16px 0 8px;font-size:0.95rem;font-weight:700;color:#93c5fd">$1</h3>')
+                  .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+                  .replace(/\n/g, "<br/>");
+              })(),
+            }}
+          />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button

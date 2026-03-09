@@ -135,3 +135,5 @@ class WorkflowRunRequest(BaseModel):
     workflow_id: str | None = None
     preset: str | None = None
     input_data: dict
+    nodes: list | None = None  # inline workflow nodes from frontend
+    edges: list | None = None  # inline workflow edges from frontend

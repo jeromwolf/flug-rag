@@ -85,7 +85,9 @@ class WorkflowEngine:
             node_result.output = output
             node_result.status = ExecutionStatus.COMPLETED
             context["results"][node.id] = output
-            context["last_output"] = output
+            # Condition nodes should NOT overwrite last_output (keep retrieval data for LLM)
+            if node.config.node_type != NodeType.CONDITION:
+                context["last_output"] = output
         except Exception as e:
             node_result.status = ExecutionStatus.FAILED
             node_result.error = str(e)
@@ -96,8 +98,28 @@ class WorkflowEngine:
 
         # Traverse outgoing edges
         edges = workflow.get_outgoing_edges(node.id)
+
+        # For condition nodes: filter edges based on result (True/False)
+        if node.config.node_type == NodeType.CONDITION and isinstance(output, bool):
+            filtered = []
+            for edge in edges:
+                label_lower = (edge.label or "").lower().strip()
+                condition_lower = (edge.condition or "").lower().strip()
+                combined = label_lower + " " + condition_lower
+                # "신뢰도 충분", "true", "high" → True path
+                is_true_edge = any(k in combined for k in ["충분", "true", "high", "yes", "pass"])
+                # "신뢰도 부족", "false", "low" → False path
+                is_false_edge = any(k in combined for k in ["부족", "false", "low", "no", "fail"])
+                if output and is_true_edge:
+                    filtered.append(edge)
+                elif not output and is_false_edge:
+                    filtered.append(edge)
+                elif not is_true_edge and not is_false_edge:
+                    filtered.append(edge)  # unlabeled edges always pass
+            edges = filtered
+
         for edge in edges:
-            # Check condition if present
+            # Check condition if present (for non-condition nodes)
             if edge.condition and not self._evaluate_condition(edge.condition, context):
                 continue
 
@@ -144,18 +166,33 @@ class WorkflowEngine:
         prompt = cfg.get("prompt_template", "{input}")
 
         # Substitute context variables
-        input_text = str(context.get("last_output", context.get("input", {}).get("query", "")))
+        last_output = context.get("last_output", context.get("input", {}).get("query", ""))
+        # Extract content from retrieval dict result
+        if isinstance(last_output, dict) and "content" in last_output:
+            input_text = str(last_output["content"])
+        else:
+            input_text = str(last_output)
         prompt = prompt.replace("{input}", input_text)
 
         system = cfg.get("system_prompt", "")
+        if system:
+            system += "\n\n[중요] 반드시 한국어로만 답변하세요. 중국어(简体/繁體)를 절대 사용하지 마세요."
+        else:
+            system = "반드시 한국어로만 답변하세요. 중국어(简体/繁體)를 절대 사용하지 마세요."
         temperature = cfg.get("temperature", 0.7)
 
         response = await self.llm.generate(
             prompt=prompt,
-            system=system or None,
+            system=system,
             temperature=temperature,
         )
-        return response.content
+        # Strip CJK characters (Chinese leak from Qwen), preserve newlines
+        content = response.content
+        import re
+        content = re.sub(r'[\u4e00-\u9fff\u3400-\u4dbf]+', '', content)
+        content = re.sub(r'[^\S\n]+', ' ', content)  # collapse spaces but NOT newlines
+        content = re.sub(r'\n{3,}', '\n\n', content)  # max 2 consecutive newlines
+        return content.strip()
 
     async def _run_retrieval_node(self, config: NodeConfig, context: dict) -> dict:
         """Execute a RAG retrieval node."""

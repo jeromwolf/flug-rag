@@ -294,6 +294,21 @@ export const workflowsApi = {
       workflow_id: opts?.workflowId ?? null,
       input_data: inputData,
     }),
+  runInline: (inputData: Record<string, unknown>, nodes: any[], edges: any[]) =>
+    api.post("/workflows/run", {
+      input_data: inputData,
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        position: n.position,
+        data: n.data,
+      })),
+      edges: edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        label: e.label || e.data?.label || "",
+      })),
+    }),
 
   // User-saved workflows CRUD
   list: () => api.get<{ workflows: WorkflowListItem[] }>("/workflows"),

@@ -80,6 +80,21 @@ async def get_presets(current_user: User | None = Depends(get_current_user)):
     return {"presets": list_presets()}
 
 
+def _convert_frontend_nodes(frontend_nodes: list) -> list:
+    """Convert ReactFlow frontend node format to backend format."""
+    result = []
+    for n in frontend_nodes:
+        data = n.get("data", {})
+        result.append({
+            "id": n.get("id", ""),
+            "type": data.get("nodeType", "start"),
+            "label": data.get("label", ""),
+            "config": data.get("config", {}),
+            "position": n.get("position", {"x": 0, "y": 0}),
+        })
+    return result
+
+
 @router.post("/workflows/run")
 async def run_workflow(request: WorkflowRunRequest, current_user: User | None = Depends(get_current_user)):
     if request.preset:
@@ -92,8 +107,25 @@ async def run_workflow(request: WorkflowRunRequest, current_user: User | None = 
         if not saved:
             raise HTTPException(404, f"Workflow not found: {request.workflow_id}")
         workflow = _build_workflow_from_saved(saved)
+    elif request.nodes and request.edges is not None:
+        workflow = _build_workflow_from_saved({
+            "id": "inline",
+            "name": "Inline Workflow",
+            "description": "",
+            "nodes": _convert_frontend_nodes(request.nodes),
+            "edges": [
+                {
+                    "id": e.get("id", ""),
+                    "source": e.get("source", ""),
+                    "target": e.get("target", ""),
+                    "label": e.get("label", ""),
+                    "condition": e.get("condition"),
+                }
+                for e in request.edges
+            ],
+        })
     else:
-        raise HTTPException(400, "Either preset or workflow_id is required")
+        raise HTTPException(400, "Either preset, workflow_id, or nodes+edges is required")
 
     engine = WorkflowEngine()
     result = await engine.execute(workflow, request.input_data)
