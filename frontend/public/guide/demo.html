@@ -519,21 +519,58 @@
     </div>
 
     <div class="card">
-      <h3>워크플로우 실행 및 결과</h3>
+      <h3>프리셋 워크플로우 실행 결과</h3>
 
-      <h4>실행 입력</h4>
-      <div class="screenshot">
-        <img src="images/agent_builder_run.png" alt="실행" loading="lazy">
-        <div class="caption">워크플로우 실행 - 입력 쿼리 전달</div>
+      <h4>01. 기술문서 검색·요약</h4>
+      <p style="color:#666;margin:-4px 0 12px;">가스기술 도메인 문서를 자연어로 검색하고 출처 기반 요약 응답 생성</p>
+      <div class="screenshot-grid">
+        <div class="screenshot">
+          <img src="images/agent_builder_run.png" alt="실행 입력" loading="lazy">
+          <div class="caption">워크플로우 실행 — 입력 쿼리 전달</div>
+        </div>
+        <div class="screenshot">
+          <img src="images/agent_builder_result.png" alt="실행 결과" loading="lazy">
+          <div class="caption">실행 결과 — 조건 분기(신뢰도) 포함</div>
+        </div>
       </div>
 
-      <h4>실행 결과</h4>
+      <h4>02. 규정 / 기준 비교 분석</h4>
+      <p style="color:#666;margin:-4px 0 12px;">두 규정을 병렬 검색 → 공통점·차이점·충돌 사항 비교 보고서 생성 (61.9초)</p>
       <div class="screenshot">
-        <img src="images/agent_builder_result.png" alt="결과" loading="lazy">
-        <div class="caption">워크플로우 실행 결과</div>
+        <img src="images/regulation_compare_dag.png" alt="규정 비교 DAG" loading="lazy">
+        <div class="caption">규정 A + 규정 B 병렬 검색 → 비교 분석 LLM → 비교 분석 보고서</div>
+      </div>
+      <div class="screenshot-grid">
+        <div class="screenshot">
+          <img src="images/regulation_compare_input.png" alt="규정 비교 입력" loading="lazy">
+          <div class="caption">입력: 안전보건관리규정 vs 취업규칙</div>
+        </div>
+        <div class="screenshot">
+          <img src="images/regulation_compare_result.png" alt="규정 비교 결과" loading="lazy">
+          <div class="caption">실행 결과 — 규정 개요, 공통점, 차이점, 충돌 사항 (61.9초)</div>
+        </div>
       </div>
 
-      <h4 id="agent-video">워크플로우 빌드 과정 (영상)</h4>
+      <h4>03. 설비 점검이력 조회 및 리포팅</h4>
+      <p style="color:#666;margin:-4px 0 12px;">EHSQ 시스템 점검이력 + 안전 규정 병렬 조회 → 분석 → 점검보고서 자동 생성 (78.7초)</p>
+      <div class="screenshot">
+        <img src="images/equipment_inspect_dag.png" alt="설비 점검 DAG" loading="lazy">
+        <div class="caption">EHSQ 점검이력 조회(TOOL) + 안전 규정 검색(RAG) 병렬 → LLM 분석 → 보고서 생성</div>
+      </div>
+      <div class="screenshot-grid">
+        <div class="screenshot">
+          <img src="images/equipment_inspect_input.png" alt="설비 점검 입력" loading="lazy">
+          <div class="caption">입력: 인천 LNG 기지 배관</div>
+        </div>
+        <div class="screenshot">
+          <img src="images/equipment_inspect_result.png" alt="설비 점검 결과" loading="lazy">
+          <div class="caption">실행 결과 — 점검 현황, 결함 유형, 규정 대조 보고서 (78.7초)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 id="agent-video">워크플로우 빌드 과정 (영상)</h3>
       <div class="screenshot">
         <video src="images/agent_builder_demo.mp4" controls loop muted playsinline style="width:100%;border-radius:8px;"></video>
         <div class="caption">노드 드래그 → 연결 → 실행까지 전체 과정</div>
