@@ -377,16 +377,21 @@ function ChunkQualityTab() {
   if (metricsError) return <Alert severity="error">청크 메트릭을 불러올 수 없습니다.</Alert>;
   if (byDocError) return <Alert severity="error">문서별 청크 정보를 불러올 수 없습니다.</Alert>;
 
-  const metrics: ChunkMetrics = metricsData?.data ?? {
-    total_chunks: 0,
-    avg_length: 0,
-    duplicate_count: 0,
-    empty_count: 0,
-    table_count: 0,
-    semantic_completeness: 0,
-    length_histogram: {},
+  // Backend returns different field names — map them to frontend interface
+  const raw = metricsData?.data as Record<string, unknown> | undefined;
+  const lengthDist = (raw?.length_distribution ?? {}) as Record<string, unknown>;
+  const metrics: ChunkMetrics = {
+    total_chunks: (raw?.total_chunks as number) ?? 0,
+    avg_length: (lengthDist.avg as number) ?? 0,
+    duplicate_count: (raw?.duplicate_count as number) ?? 0,
+    empty_count: (raw?.empty_chunk_count as number) ?? 0,
+    table_count: (raw?.table_chunk_count as number) ?? 0,
+    semantic_completeness: (raw?.avg_semantic_completeness as number) ?? 0,
+    length_histogram: (lengthDist.histogram as Record<string, number>) ?? {},
   };
-  const docChunks: DocumentChunkStats[] = byDocData?.data?.documents ?? [];
+  // Backend returns documents as object (dict), convert to array
+  const rawDocs = (byDocData?.data?.documents ?? {}) as Record<string, DocumentChunkStats>;
+  const docChunks: DocumentChunkStats[] = Object.values(rawDocs);
   const previewChunks: ChunkPreviewItem[] = previewData?.data?.chunks ?? [];
 
   const metricCards = [

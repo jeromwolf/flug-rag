@@ -479,7 +479,10 @@
       <h3 id="workflow">에이전트 빌더 핵심 기능</h3>
 
       <div class="info-box">
-        평가요소 사전 공개: <a href="#workflow">멀티에이전트 워크플로우 구성</a>, <a href="#external">외부 데이터 연동</a>, <a href="#rbac">권한 제어</a> 및 <a href="#monitoring">모니터링 기능</a>을 포함합니다.
+        <strong>평가요소 사전 공개:</strong> <a href="#workflow">멀티에이전트 워크플로우 구성</a>, <a href="#external">외부 데이터 연동</a>, <a href="#rbac">권한 제어</a> 및 <a href="#monitoring">모니터링 기능</a>을 포함합니다.
+      </div>
+      <div class="info-box warn">
+        <strong>업체자유시연:</strong> <a href="#agent-video">에이전트빌더 만들기 영상</a>, <a href="#knowledge-convert">암묵지의 명시지 전환</a>, <a href="#hitl-feedback">관리자 포털 HITL 피드백</a>
       </div>
 
       <table>
@@ -530,7 +533,7 @@
         <div class="caption">워크플로우 실행 결과</div>
       </div>
 
-      <h4>워크플로우 빌드 과정 (영상)</h4>
+      <h4 id="agent-video">워크플로우 빌드 과정 (영상)</h4>
       <div class="screenshot">
         <video src="images/agent_builder_demo.mp4" controls loop muted playsinline style="width:100%;border-radius:8px;"></video>
         <div class="caption">노드 드래그 → 연결 → 실행까지 전체 과정</div>
@@ -673,6 +676,50 @@
           <img src="images/mcp_custom_tool.png" alt="커스텀 도구 추가" loading="lazy">
           <div class="caption">커스텀 도구 탭: 새 도구 추가 (API URL, 파라미터, HTTP 메소드 설정)</div>
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 id="knowledge-convert">암묵지의 명시지 전환</h3>
+      <p>조직 내 비정형 문서(HWP, PDF, XLSX 등)를 AI가 검색 가능한 구조화된 지식으로 자동 변환합니다.</p>
+      <table>
+        <tr><th>단계</th><th>처리</th><th>설명</th></tr>
+        <tr><td>1. 문서 업로드</td><td>OCR + 파싱</td><td>HWP/PDF/XLSX → 텍스트 추출 (Upstage Document Parse)</td></tr>
+        <tr><td>2. 청킹</td><td>적응형 분할</td><td>800자 단위 의미 기반 청킹 (오버랩 80자)</td></tr>
+        <tr><td>3. 임베딩</td><td>벡터화</td><td>bge-m3 (1024차원) 임베딩 생성</td></tr>
+        <tr><td>4. 인덱싱</td><td>저장</td><td>Milvus 벡터DB에 저장 → 즉시 검색 가능</td></tr>
+      </table>
+      <div class="screenshot">
+        <img src="images/document_ingest.png" alt="문서 인제스트" loading="lazy">
+        <div class="caption">문서 관리 — 92개 내부규정 문서 인제스트 완료, 10,518 청크 생성</div>
+      </div>
+      <div class="screenshot">
+        <img src="images/chunk_quality.png" alt="청크 품질" loading="lazy">
+        <div class="caption">청크 품질 분석 — 길이 분포, 중복/빈 청크, 의미완결성 30.7%</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 id="hitl-feedback">관리자 포털 HITL 피드백</h3>
+      <p>Human-in-the-Loop: 사용자 피드백을 수집하고 관리자가 분석하여 RAG 품질을 지속 개선합니다.</p>
+      <table>
+        <tr><th>단계</th><th>주체</th><th>내용</th></tr>
+        <tr><td>1. 피드백 수집</td><td>사용자</td><td>답변에 좋아요/싫어요 + 코멘트</td></tr>
+        <tr><td>2. 피드백 분석</td><td>관리자</td><td>부정 피드백 추이 확인, 실패 패턴 분석</td></tr>
+        <tr><td>3. 프롬프트 조치</td><td>관리자</td><td>시스템 프롬프트 수정, 버전 관리, 롤백</td></tr>
+        <tr><td>4. 가드레일 적용</td><td>관리자</td><td>PII 탐지, 키워드 필터, 프롬프트 인젝션 방어</td></tr>
+      </table>
+      <div class="screenshot">
+        <img src="images/feedback_analysis.png" alt="피드백 분석" loading="lazy">
+        <div class="caption">피드백 분석 — 긍정/부정 비율, 일별 추이</div>
+      </div>
+      <div class="screenshot">
+        <img src="images/prompt_management.png" alt="프롬프트 관리" loading="lazy">
+        <div class="caption">프롬프트 관리 — 시스템 프롬프트 버전 관리 및 수정</div>
+      </div>
+      <div class="screenshot">
+        <img src="images/guardrails.png" alt="가드레일" loading="lazy">
+        <div class="caption">가드레일 규칙 관리 — PII 탐지, 키워드 필터, 프롬프트 인젝션 방어 (5개 규칙)</div>
       </div>
     </div>
 

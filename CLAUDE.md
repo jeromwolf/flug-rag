@@ -349,13 +349,30 @@ asyncio.run(check())
 - **그룹웨어 파라미터 수정**: `query_type` → `action` + `keyword` 매핑 정상화
 - **프론트엔드 UI**: 파일첨부 UX 개선, 메시지 마크다운 렌더링 강화
 
-### 현재 진행 중 (최우선)
-1. **시연 최종 점검**: 에이전트 빌더 데모 준비
-2. **OCR 추가 수정사항**: 2단계 잔여 이슈 확인
-3. **평가위원 접속 매뉴얼**: 작성 및 배포
+### Phase 7: 시연 가이드 + 품질관리 UI 수정 (2026-03-10)
+- **시연 가이드 완성**: `frontend/public/guide/demo.html` 전면 업데이트
+  - 평가요소 사전 공개 앵커 링크 (#workflow, #external, #rbac, #monitoring)
+  - 업체자유시연 앵커 링크 (#agent-video, #knowledge-convert, #hitl-feedback)
+  - 에이전트 빌더 영상 (MP4), 외부 API 연동 스크린샷 3개
+  - RBAC 8열 권한 테이블, 모니터링 스크린샷 4개
+  - 암묵지→명시지 전환 섹션 (문서 인제스트 + 청크 품질)
+  - HITL 피드백 섹션 (피드백 분석 + 프롬프트 관리 + 가드레일)
+- **청크 품질 UI 수정**: `QualityDashboardPage.tsx` 백엔드 응답 필드 매핑 불일치 수정
+  - `empty_chunk_count`→`empty_count`, `table_chunk_count`→`table_count` 등
+  - `documents` dict→array 변환
+- **관리자 대시보드 수정**: `AdminPage.tsx` 오늘 질의 수 0 표시 버그 수정
+  - `daily[].count` → `daily_breakdown[].queries` 필드명 매핑
 
-### 잔여 작업
-- 에이전트 빌더 시각적 DAG 데모 확인
+### 현재 상태
+- **시연 준비 완료**: RunPod A40+A100 환경에서 전체 기능 동작 확인
+- **시연 가이드**: `/guide/demo.html` 에서 전체 기능 스크린샷 확인 가능
+
+### 시연 이후 작업
+- 청크 품질 로딩 시 "분석에 시간이 소요될 수 있습니다" 안내 메시지 추가
+- 프롬프트 시뮬레이터 구현
+- 피드백 드릴다운 (부정 피드백 클릭 → 쿼리/응답 상세)
+- 관리자 페이지 전반 개선
+- KGT-G09 메뉴 노출 이슈 수정 (사용자 역할에 관리 메뉴 표시)
 - 운영 배포 준비 (vLLM, K8s, Redis)
 
 ### 데이터 파일 구조
