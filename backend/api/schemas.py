@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 
 # --- Chat ---
 class ChatRequest(BaseModel):
-    message: str = Field(..., min_length=1, max_length=10000)
+    message: str = Field(..., min_length=1, max_length=50000)
     session_id: str | None = None
     mode: str = "auto"  # "auto", "rag", "direct"
     provider: str | None = None

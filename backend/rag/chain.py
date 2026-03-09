@@ -27,6 +27,8 @@ _RE_SOURCE_TAG = re.compile(r'\[출[처처][^\]]*\]')
 _RE_CJK_LEAKAGE = re.compile(r'[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]+[^\n]*$', re.MULTILINE)
 _RE_WHITESPACE = re.compile(r'[\s\-\n•·]')
 _RE_CHINESE = re.compile(r'[\u4e00-\u9fff]')
+# Strip Chinese/Japanese chars from streaming tokens (preserves Korean Hangul U+AC00-D7AF)
+_RE_STRIP_CJK = re.compile(r'[\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]')
 # Form template detection: 별지 서식, checkboxes, form fields
 _RE_FORM_TEMPLATE = re.compile(
     r'별지\s*(?:제?\s*\d+호?\s*)?서식|'
@@ -213,6 +215,27 @@ class RAGChain:
         config = _load_source_filters()
         multi_hop_keywords = config.get("multi_hop_keywords", [])
         return any(kw in q for kw in multi_hop_keywords)
+
+    @staticmethod
+    def _trim_direct_question(question: str) -> str:
+        """Trim question to fit model context window in direct mode.
+
+        Direct mode sends the full question (including OCR file content) to the LLM
+        without RAG retrieval. This ensures the input doesn't exceed the model's
+        context window. Only affects direct mode — RAG mode has its own budget logic.
+        """
+        max_ctx = getattr(settings, 'vllm_max_model_len', 4096)
+        max_out = settings.llm_max_tokens
+        # Direct mode system prompt is short (~200 tokens), use 500 token margin
+        budget_chars = int((max_ctx - max_out - 500) * 1.3)
+        if budget_chars > 0 and len(question) > budget_chars:
+            original_len = len(question)
+            question = question[:budget_chars]
+            logger.warning(
+                "Direct query trimmed: %d -> %d chars (budget %d tokens)",
+                original_len, budget_chars, max_ctx - max_out - 500,
+            )
+        return question
 
     @staticmethod
     def _make_cache_key(question: str, mode: str, filters: dict | None, provider: str | None, model: str | None) -> str:
@@ -712,6 +735,8 @@ class RAGChain:
         temperature: float | None = None,
     ) -> RAGResponse:
         """Direct mode: LLM only, no retrieval."""
+        # Token budget: trim question to fit model context window
+        question = self._trim_direct_question(question)
         system_prompt, user_prompt = self.prompt_manager.build_direct_prompt(question)
 
         response = await llm.generate(
@@ -970,6 +995,8 @@ class RAGChain:
                     logger.info("Stream: Auto-detected source_type filter: %s", filters["source_type"])
 
             if mode == "direct":
+                # Token budget: trim question to fit model context window
+                question = self._trim_direct_question(question)
                 system, user_prompt = self.prompt_manager.build_direct_prompt(question)
                 accumulated = []
                 async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
@@ -1110,6 +1137,7 @@ class RAGChain:
             ttft_ms: int | None = None
             generation_start_time = time.time()
             llm_error_occurred = False
+            cjk_consecutive = 0  # Track consecutive CJK-only tokens
             try:
                 async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=effective_max_tokens):
                     if not prefix_stripped:
@@ -1120,16 +1148,27 @@ class RAGChain:
                         # Strip common prefixes
                         stripped = _RE_A_PREFIX.sub('', prefix_buffer.lstrip())
                         prefix_stripped = True
+                        stripped = _RE_STRIP_CJK.sub('', stripped)
                         if stripped:
                             if ttft_ms is None:
                                 ttft_ms = int((time.time() - start_time) * 1000)
                             accumulated.append(stripped)
                             yield {"event": "chunk", "data": {"content": stripped}}
                         continue
+                    # Strip Chinese chars from token (Qwen leakage fix)
+                    clean_token = _RE_STRIP_CJK.sub('', token)
+                    if not clean_token:
+                        # Token was entirely Chinese — skip and count
+                        cjk_consecutive += 1
+                        if cjk_consecutive >= 3:
+                            logger.warning("Chinese leakage: 3+ consecutive CJK-only tokens, stopping stream")
+                            break
+                        continue
+                    cjk_consecutive = 0
                     if ttft_ms is None:
                         ttft_ms = int((time.time() - start_time) * 1000)
-                    accumulated.append(token)
-                    yield {"event": "chunk", "data": {"content": token}}
+                    accumulated.append(clean_token)
+                    yield {"event": "chunk", "data": {"content": clean_token}}
             except Exception as llm_err:
                 logger.error("LLM stream error: %s", llm_err)
                 llm_error_occurred = True

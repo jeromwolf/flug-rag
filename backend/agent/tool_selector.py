@@ -510,14 +510,14 @@ def _select_ehsq(msg: str) -> ToolSelection:
 
 def _select_groupware(msg: str) -> ToolSelection:
     """Select groupware lookup tool with type detection."""
-    query_type = "schedule"  # default
+    action = "schedule"  # default
     for kw, qt in _GROUPWARE_TYPE_MAP.items():
         if kw in msg:
-            query_type = qt
+            action = qt
             break
     return ToolSelection(
         tool_name="groupware_lookup",
-        arguments={"query_type": query_type},
+        arguments={"action": action, "keyword": ""},
         confidence=0.85,
     )
 

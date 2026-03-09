@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { sessionsApi, API_BASE, getAuthHeaders } from "../api/client";
+import { sessionsApi, ocrApi, API_BASE, getAuthHeaders } from "../api/client";
 import type { Message, Source } from "../types";
 
 interface UseStreamingChatOptions {
@@ -10,6 +10,8 @@ interface UseStreamingChatOptions {
   selectedModel: string;
   temperature: number;
   showSnackbar: (message: string, severity: "success" | "error" | "info") => void;
+  attachedFiles?: File[];
+  onFilesSent?: () => void;
 }
 
 export function useStreamingChat({
@@ -19,6 +21,8 @@ export function useStreamingChat({
   selectedModel,
   temperature,
   showSnackbar,
+  attachedFiles,
+  onFilesSent,
 }: UseStreamingChatOptions) {
   const queryClient = useQueryClient();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -26,11 +30,14 @@ export function useStreamingChat({
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [toolInProgress, setToolInProgress] = useState<string | null>(null);
+  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const streamingContentRef = useRef("");
   const skipNextReloadRef = useRef(false);
+  // OCR 텍스트를 세션 내에서 유지 (후속 질문에서도 사용)
+  const ocrContextRef = useRef("");
 
   // Load messages when session changes (skip if we just set it from streaming)
   useEffect(() => {
@@ -40,6 +47,7 @@ export function useStreamingChat({
     }
     if (!currentSessionId) {
       setMessages([]);
+      ocrContextRef.current = "";
       return;
     }
     sessionsApi.getMessages(currentSessionId).then((res) => {
@@ -93,10 +101,15 @@ export function useStreamingChat({
     setInputValue("");
     setIsEditing(false);
 
+    // Capture files before clearing
+    const filesToProcess = attachedFiles?.length ? [...attachedFiles] : [];
+    onFilesSent?.();
+
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content: text,
+      attachedFileNames: filesToProcess.length > 0 ? filesToProcess.map(f => f.name) : undefined,
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, userMsg]);
@@ -108,9 +121,46 @@ export function useStreamingChat({
     abortRef.current = abortController;
 
     try {
+      // Process OCR for newly attached files
+      let newOcrContext = "";
+      if (filesToProcess.length > 0) {
+        setIsOcrProcessing(true);
+        setToolInProgress("첨부파일 OCR 처리 중...");
+        for (const file of filesToProcess) {
+          try {
+            const res = await ocrApi.process(file);
+            const ocrText = res.data?.text || "";
+            if (ocrText) {
+              newOcrContext += `\n\n[첨부파일: ${file.name}]\n${ocrText}`;
+            } else {
+              showSnackbar(`${file.name}: OCR 결과가 비어있습니다.`, "info");
+            }
+          } catch {
+            showSnackbar(`${file.name} OCR 처리 실패`, "error");
+          }
+        }
+        setIsOcrProcessing(false);
+        setToolInProgress(null);
+        // 새 OCR 텍스트를 세션 컨텍스트에 누적 (최대 30,000자 — 초과 시 최신 파일만 유지)
+        const MAX_OCR_CHARS = 30000;
+        if (ocrContextRef.current.length + newOcrContext.length > MAX_OCR_CHARS) {
+          ocrContextRef.current = newOcrContext;
+        } else {
+          ocrContextRef.current += newOcrContext;
+        }
+      }
+
+      // 현재 세션에 OCR 컨텍스트가 있으면 사용 (새 파일 또는 이전 파일)
+      const activeOcrContext = ocrContextRef.current;
+      const hasOcr = activeOcrContext.length > 0;
+      const messageWithOcr = hasOcr
+        ? `다음은 사용자가 첨부한 문서의 OCR 텍스트입니다. 이 내용을 기반으로 질문에 답변하세요.\n\n--- 첨부파일 내용 ---${activeOcrContext}\n\n--- 사용자 질문 ---\n${text}`
+        : text;
+
       const body: Record<string, unknown> = {
-        message: text,
-        mode: responseMode === "direct" ? "direct" : "auto",
+        message: messageWithOcr,
+        // OCR 컨텍스트가 있으면 direct 모드 (벡터DB 검색 없이 OCR 텍스트만으로 답변)
+        mode: hasOcr ? "direct" : (responseMode === "direct" ? "direct" : "auto"),
       };
       if (currentSessionId) body.session_id = currentSessionId;
       if (selectedModel && selectedModel !== "default") {
@@ -309,6 +359,8 @@ export function useStreamingChat({
     setCurrentSessionId,
     queryClient,
     showSnackbar,
+    attachedFiles,
+    onFilesSent,
   ]);
 
   const handleStopGeneration = () => {
@@ -567,6 +619,7 @@ export function useStreamingChat({
     setInputValue,
     isStreaming,
     isEditing,
+    isOcrProcessing,
     streamingContent,
     messagesEndRef,
     handleSend,

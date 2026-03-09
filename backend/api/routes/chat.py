@@ -27,14 +27,258 @@ def _extract_tool_content(tool_name: str, result_data) -> str:
     if isinstance(result_data, str):
         return result_data
     if isinstance(result_data, dict):
-        for key in ("draft", "material", "report"):
+        # LLM 생성 도구: 텍스트 키 직접 추출
+        for key in ("draft", "material", "report", "checklist", "summary", "translation", "review"):
             if key in result_data:
                 return result_data[key]
+        # 이메일: 제목 + 본문 포맷팅
+        if "email" in result_data:
+            return _format_email(result_data)
+        # 계산기
         if "result" in result_data and "expression" in result_data:
             return f"계산 결과: {result_data['expression']} = {result_data['result']}"
+        # System DB query → 사람이 읽기 좋은 포맷
+        if tool_name == "system_db_query":
+            return _format_system_db(result_data)
+        # ERP/EHSQ/Groupware → 포맷팅
+        if tool_name in ("erp_lookup", "ehsq_lookup", "groupware_lookup"):
+            return _format_enterprise_tool(tool_name, result_data)
         import json as _json
         return _json.dumps(result_data, ensure_ascii=False, indent=2)
     return str(result_data)
+
+
+def _format_email(data: dict) -> str:
+    """Format email_composer result into readable markdown."""
+    email_body = data.get("email", "")
+    email_body = email_body.replace("\\n", "\n")
+    # 이메일 본문을 마크다운으로 자연스럽게 표시
+    lines = ["## ✉️ 이메일 초안\n"]
+    for line in email_body.split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            lines.append("")
+        elif stripped.startswith("수신자:") or stripped.startswith("제목:") or stripped.startswith("발신자:"):
+            lines.append(f"**{stripped}**")
+        elif stripped.startswith("-"):
+            lines.append(stripped)
+        else:
+            lines.append(stripped)
+    return "\n".join(lines)
+
+
+def _format_system_db(data: dict) -> str:
+    """Format system_db_query result into readable markdown."""
+    summary = data.get("시스템 현황 요약", {})
+    lines = ["## 📊 시스템 현황\n"]
+    if summary:
+        lines.append(f"- **사용자**: {summary.get('사용자', '-')}")
+        lines.append(f"- **세션**: {summary.get('세션', '-')}")
+        lines.append(f"- **메시지**: {summary.get('메시지', '-')}")
+        lines.append(f"- **세션당 평균 대화**: {summary.get('세션당 평균 대화', '-')}")
+        lines.append(f"- **감사 로그**: {summary.get('감사 로그', '-')}")
+        lines.append("")
+
+    daily = data.get("일별 질의 추이", [])
+    if daily:
+        lines.append("### 일별 질의 추이")
+        lines.append("| 날짜 | 질의 수 |")
+        lines.append("|------|---------|")
+        for d in daily:
+            lines.append(f"| {d.get('날짜', '')} | {d.get('질의 수', 0):,} |")
+        lines.append("")
+
+    users = data.get("최근 7일 사용자 활동", [])
+    if users:
+        lines.append("### 사용자 활동 (최근 7일)")
+        lines.append("| 사용자 | 활동 수 | 최근 활동 |")
+        lines.append("|--------|---------|----------|")
+        for u in users:
+            last = u.get("최근 활동", "")[:10]
+            lines.append(f"| {u.get('사용자', '')} | {u.get('활동 수', 0):,} | {last} |")
+        lines.append("")
+
+    query_time = data.get("조회 시간", "")
+    if query_time:
+        lines.append(f"*조회 시간: {query_time[:19]}*")
+
+    return "\n".join(lines)
+
+
+def _format_enterprise_tool(tool_name: str, data: dict) -> str:
+    """Format ERP/EHSQ/Groupware results into readable markdown."""
+    if tool_name == "erp_lookup":
+        return _format_erp(data)
+    if tool_name == "ehsq_lookup":
+        return _format_ehsq(data)
+    if tool_name == "groupware_lookup":
+        return _format_groupware(data)
+    import json as _json
+    return _json.dumps(data, ensure_ascii=False, indent=2)
+
+
+def _format_erp(data: dict) -> str:
+    """Format ERP lookup result."""
+    qtype = data.get("query_type", "")
+    keyword = data.get("keyword", "")
+    result = data.get("result", {})
+    lines = ["## 🏢 ERP 조회 결과\n"]
+
+    if qtype == "budget":
+        if isinstance(result, dict):
+            for k in ("회계연도", "총예산", "집행액", "잔액", "집행률", "부문", "비고"):
+                if k in result:
+                    lines.append(f"- **{k}**: {result[k]}")
+            items = result.get("부문별 현황") or result.get("세부항목") or []
+            if items:
+                lines.append("\n| 항목 | 예산 | 집행 | 집행률 |")
+                lines.append("|------|------|------|--------|")
+                for item in items:
+                    name = item.get("부문") or item.get("항목", "")
+                    lines.append(f"| {name} | {item.get('예산', '-')} | {item.get('집행', '-')} | {item.get('집행률', '-')} |")
+    elif qtype == "project":
+        items = result if isinstance(result, list) else []
+        lines.append(f"**검색 키워드**: {keyword} | **결과**: {len(items)}건\n")
+        for p in items:
+            lines.append(f"### {p.get('프로젝트명', '')}")
+            for k in ("프로젝트코드", "발주처", "계약금액", "진행률", "착공일", "준공예정일", "담당PM", "상태"):
+                if k in p:
+                    lines.append(f"- **{k}**: {p[k]}")
+            lines.append("")
+    elif qtype == "vendor":
+        items = result if isinstance(result, list) else []
+        lines.append(f"**검색 키워드**: {keyword} | **결과**: {len(items)}건\n")
+        if items:
+            lines.append("| 업체명 | 분류 | 등급 | 등록상태 | 누적계약액 |")
+            lines.append("|--------|------|------|----------|------------|")
+            for v in items:
+                lines.append(f"| {v.get('업체명', '')} | {v.get('분류', '')} | {v.get('평가등급', '')} | {v.get('등록상태', '')} | {v.get('누적계약액', '')} |")
+
+    return "\n".join(lines)
+
+
+def _format_ehsq(data: dict) -> str:
+    """Format EHSQ lookup result."""
+    action = data.get("action", "")
+    facility = data.get("facility", "전체")
+    result = data.get("result", {})
+    lines = ["## 🛡️ EHSQ 조회 결과\n"]
+
+    if action == "incident_report":
+        summary = result.get("summary", {})
+        lines.append(f"**대상**: {facility} | **기준일**: {summary.get('기준일', '-')}\n")
+        for k in ("집계기간", "총 사고건수", "중대재해", "경미사고", "아차사고", "무재해 누적일수", "전년 동기 대비"):
+            if k in summary:
+                lines.append(f"- **{k}**: {summary[k]}")
+        incidents = result.get("incidents", [])
+        if incidents:
+            lines.append("\n### 사고 이력")
+            for inc in incidents:
+                lines.append(f"\n**{inc.get('사고번호', '')}** ({inc.get('분류', '')})")
+                for k in ("발생일", "시설", "내용", "조치상태", "담당자"):
+                    if k in inc:
+                        lines.append(f"- {k}: {inc[k]}")
+
+    elif action == "safety_status":
+        lines.append(f"**대상**: {facility}")
+        for k in ("기준일", "안전등급"):
+            if k in result:
+                lines.append(f"- **{k}**: {result[k]}")
+        kpi = result.get("핵심지표", {})
+        if kpi:
+            lines.append("\n### 핵심 지표")
+            for k, v in kpi.items():
+                lines.append(f"- **{k}**: {v}")
+        facilities = result.get("시설별 상태", [])
+        if facilities:
+            lines.append("\n### 시설별 안전 등급")
+            lines.append("| 시설명 | 등급 | 최근점검일 | 지적사항 |")
+            lines.append("|--------|------|------------|----------|")
+            for f in facilities:
+                lines.append(f"| {f.get('시설명', '')} | {f.get('등급', '')} | {f.get('최근점검일', '')} | {f.get('지적사항', 0)} |")
+        upcoming = result.get("이달 예정 점검", [])
+        if upcoming:
+            lines.append("\n### 이달 예정 점검")
+            for u in upcoming:
+                lines.append(f"- **{u.get('시설명', '')}**: {u.get('예정일', '')} ({u.get('점검유형', '')})")
+
+    elif action == "compliance_check":
+        lines.append(f"**대상**: {facility}")
+        for k in ("기준일", "전체 준수율"):
+            if k in result:
+                lines.append(f"- **{k}**: {result[k]}")
+        obligations = result.get("법정의무 이행", [])
+        if obligations:
+            lines.append("\n### 법정의무 이행 현황")
+            lines.append("| 항목 | 기한 | 상태 |")
+            lines.append("|------|------|------|")
+            for o in obligations:
+                lines.append(f"| {o.get('항목', '')} | {o.get('기한', '')} | {o.get('상태', '')} |")
+        violations = result.get("미이행 항목", [])
+        if violations:
+            lines.append("\n### ⚠️ 미이행 항목")
+            for v in violations:
+                lines.append(f"- **{v.get('항목', '')}** (기한: {v.get('기한', '')})")
+                lines.append(f"  - 사유: {v.get('사유', '')}")
+                lines.append(f"  - 조치계획: {v.get('조치계획', '')}")
+        note = result.get("비고")
+        if note:
+            lines.append(f"\n> {note}")
+
+    return "\n".join(lines)
+
+
+def _format_groupware(data: dict) -> str:
+    """Format Groupware lookup result."""
+    action = data.get("action", "")
+    keyword = data.get("keyword", "")
+    result = data.get("result", [])
+    lines = ["## 📅 그룹웨어 조회 결과\n"]
+
+    if action == "schedule":
+        lines.append(f"**검색**: {keyword} | **결과**: {len(result)}건\n")
+        for s in result:
+            lines.append(f"### 📌 {s.get('제목', '')}")
+            lines.append(f"- **일시**: {s.get('일시', '')}")
+            lines.append(f"- **장소**: {s.get('장소', '')}")
+            lines.append(f"- **주관**: {s.get('주관', '')}")
+            participants = s.get("참석", [])
+            if participants:
+                lines.append(f"- **참석**: {', '.join(participants)}")
+            if s.get("비고"):
+                lines.append(f"- **비고**: {s['비고']}")
+            lines.append("")
+
+    elif action == "approval":
+        summary = data.get("summary", {})
+        lines.append(f"**검색**: {keyword} | 진행중 {summary.get('진행중', 0)} / 완료 {summary.get('완료', 0)} / 반려 {summary.get('반려', 0)}\n")
+        for a in result:
+            status_icon = {"진행중": "🔄", "완료": "✅", "반려": "❌"}.get(a.get("상태", ""), "")
+            lines.append(f"### {status_icon} {a.get('문서명', '')}")
+            lines.append(f"- **결재번호**: {a.get('결재번호', '')}")
+            lines.append(f"- **기안자**: {a.get('기안자', '')} | **기안일**: {a.get('기안일', '')}")
+            if a.get("결재금액") and a["결재금액"] != "없음":
+                lines.append(f"- **결재금액**: {a['결재금액']}")
+            lines.append(f"- **현재단계**: {a.get('현재단계', '')}")
+            if a.get("반려사유"):
+                lines.append(f"- **반려사유**: {a['반려사유']}")
+            lines.append("")
+
+    elif action == "notice":
+        lines.append(f"**검색**: {keyword} | **결과**: {len(result)}건\n")
+        for n in result:
+            urgency = {"긴급": "🔴", "중요": "🟡", "일반": "🟢"}.get(n.get("중요도", ""), "")
+            lines.append(f"### {urgency} {n.get('제목', '')}")
+            lines.append(f"- **작성부서**: {n.get('작성부서', '')} | **게시일**: {n.get('게시일', '')}")
+            if n.get("마감일"):
+                lines.append(f"- **마감일**: {n['마감일']}")
+            lines.append(f"- {n.get('내용요약', '')}")
+            attachments = n.get("첨부", [])
+            if attachments:
+                lines.append(f"- **첨부**: {', '.join(attachments)}")
+            lines.append("")
+
+    return "\n".join(lines)
 
 # Shared instances with thread-safe initialization
 _memory = None
@@ -273,6 +517,25 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
 
     if tool_selection:
         mode = "tool"
+        # 이전 대화 참조 ("이 내용으로", "위 내용" 등) → 마지막 어시스턴트 응답을 도구 컨텍스트에 주입
+        _context_refs = ("이 내용", "위 내용", "위의 내용", "이걸로", "이것을", "이것으로", "해당 내용")
+        if any(ref in request.message for ref in _context_refs) and history:
+            last_assistant = next(
+                (m["content"] for m in reversed(history) if m.get("role") == "assistant"),
+                None,
+            )
+            if last_assistant:
+                prev_context = last_assistant[:3000]  # 컨텍스트 길이 제한
+                args = tool_selection.arguments
+                # 도구별 컨텍스트 주입 필드
+                if "body_context" in args:
+                    args["body_context"] = f"[이전 조회 결과]\n{prev_context}\n\n[사용자 요청]\n{request.message}"
+                elif "topic" in args:
+                    args["topic"] = f"[이전 조회 결과]\n{prev_context}\n\n[사용자 요청]\n{request.message}"
+                elif "text" in args:
+                    args["text"] = f"[이전 조회 결과]\n{prev_context}\n\n[사용자 요청]\n{request.message}"
+                elif "document_text" in args:
+                    args["document_text"] = f"[이전 조회 결과]\n{prev_context}\n\n[사용자 요청]\n{request.message}"
     elif request.mode == "auto":
         routing = await query_router.route(request.message, history)
         mode = (

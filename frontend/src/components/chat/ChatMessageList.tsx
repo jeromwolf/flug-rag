@@ -12,7 +12,6 @@ import {
 import {
   AutoAwesome as AutoAwesomeIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
-  Summarize as SummarizeIcon,
   EditNote as EditNoteIcon,
   Analytics as AnalyticsIcon,
   Gavel as GavelIcon,
@@ -25,11 +24,10 @@ import {
   ExpandLess as ExpandUpIcon,
   DragIndicator as DragIndicatorIcon,
   AccountBalance as AccountBalanceIcon,
-  School as SchoolIcon,
   Payments as PaymentsIcon,
   Lightbulb as LightbulbIcon,
-  Policy as PolicyIcon,
-  Shield as ShieldIcon,
+  HealthAndSafety as HealthAndSafetyIcon,
+  EventAvailable as EventAvailableIcon,
 } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -47,20 +45,26 @@ const LOAD_MORE_STEP = 30;
 
 const SUGGESTION_CARDS = [
   {
-    label: "여비규정에서 국내 출장 시 일비 지급 기준은?",
-    Icon: GavelIcon,
+    label: "연차휴가는 어떻게 부여되나요?",
+    Icon: EventAvailableIcon,
     color: "#10a37f",
     bg: "rgba(16, 163, 127, 0.08)",
   },
   {
-    label: "직장 내 갑질 행위의 정의와 금지 행위 유형은?",
+    label: "안전보건 교육은 누가 얼마나 받아야 하나요?",
+    Icon: HealthAndSafetyIcon,
+    color: "#0891b2",
+    bg: "rgba(8, 145, 178, 0.08)",
+  },
+  {
+    label: "갑질 예방지침에서 정의하는 '갑질'이란?",
     Icon: AnalyticsIcon,
     color: "#5436da",
     bg: "rgba(84, 54, 218, 0.08)",
   },
   {
-    label: "업무상 재해가 발생했을 때 보상 절차는 어떻게 되나요?",
-    Icon: EditNoteIcon,
+    label: "여비규정에서 국내 출장 시 일비 지급 기준은?",
+    Icon: GavelIcon,
     color: "#d97706",
     bg: "rgba(217, 119, 6, 0.08)",
   },
@@ -71,10 +75,10 @@ const SUGGESTION_CARDS = [
     bg: "rgba(220, 38, 38, 0.08)",
   },
   {
-    label: "신입사원 수습기간은 얼마인가요?",
-    Icon: SchoolIcon,
-    color: "#0891b2",
-    bg: "rgba(8, 145, 178, 0.08)",
+    label: "직무발명에 대한 보상 규정이 있나요?",
+    Icon: LightbulbIcon,
+    color: "#ea580c",
+    bg: "rgba(234, 88, 12, 0.08)",
   },
   {
     label: "퇴직금 지급 기준은 어떻게 되나요?",
@@ -83,28 +87,10 @@ const SUGGESTION_CARDS = [
     bg: "rgba(124, 58, 237, 0.08)",
   },
   {
-    label: "직무발명에 대한 보상 규정이 있나요?",
-    Icon: LightbulbIcon,
-    color: "#ea580c",
-    bg: "rgba(234, 88, 12, 0.08)",
-  },
-  {
-    label: "부정청탁 금지 위반 시 처리 절차는?",
-    Icon: PolicyIcon,
+    label: "업무상 재해가 발생했을 때 보상 절차는?",
+    Icon: EditNoteIcon,
     color: "#be185d",
     bg: "rgba(190, 24, 93, 0.08)",
-  },
-  {
-    label: "내부 고발자(공익신고자) 보호 규정이 있나요?",
-    Icon: ShieldIcon,
-    color: "#059669",
-    bg: "rgba(5, 150, 105, 0.08)",
-  },
-  {
-    label: "연차휴가는 어떻게 부여되나요?",
-    Icon: SummarizeIcon,
-    color: "#4f46e5",
-    bg: "rgba(79, 70, 229, 0.08)",
   },
 ];
 

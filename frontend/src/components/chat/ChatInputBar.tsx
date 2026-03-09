@@ -195,14 +195,10 @@ interface ChatInputBarProps {
 
 const ACCEPTED_TYPES = {
   "application/pdf": [".pdf"],
-  "application/msword": [".doc"],
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
-  "application/haansofthwp": [".hwp"],
-  "text/plain": [".txt"],
-  "application/vnd.ms-excel": [".xls"],
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-  "application/vnd.ms-powerpoint": [".ppt"],
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
+  "image/png": [".png"],
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/bmp": [".bmp"],
+  "image/tiff": [".tiff", ".tif"],
 };
 
 export function ChatInputBar({

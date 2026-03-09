@@ -120,6 +120,8 @@ export default function ChatPage() {
     selectedModel,
     temperature,
     showSnackbar,
+    attachedFiles,
+    onFilesSent: () => setAttachedFiles([]),
   });
 
   const {
@@ -306,19 +308,18 @@ export default function ChatPage() {
     setSearchBarOpen(true);
   }, []);
 
-  // Clear files after send (files are display-only until backend supports upload)
   const handleSendWithClear = useCallback(() => {
     if (compareMode) {
-      // In compare mode, capture question and trigger compare view
       const text = inputValue.trim();
       if (text) {
         setCompareQuestion(text);
         setInputValue("");
       }
+      setAttachedFiles([]);
     } else {
       handleSend();
+      // Files are cleared by onFilesSent callback from the hook after capture
     }
-    setAttachedFiles([]);
   }, [compareMode, handleSend, inputValue, setInputValue]);
 
   // Copy conversation — mirrors ChatTopBar logic, needed for keyboard shortcut
@@ -559,6 +560,7 @@ export default function ChatPage() {
       if ((isCtrl || isMac) && !e.shiftKey && e.key === "n") {
         e.preventDefault();
         handleNewChat();
+        setAttachedFiles([]);
         return;
       }
 
@@ -657,6 +659,7 @@ export default function ChatPage() {
           }}
           onNewChat={() => {
             handleNewChat();
+            setAttachedFiles([]);
             if (isMobile && sidebarOpen) toggleSidebar();
           }}
           onDeleteSession={setDeleteDialogId}

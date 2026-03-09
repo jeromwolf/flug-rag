@@ -12,6 +12,7 @@ export interface Message {
   ttftMs?: number;
   tps?: number;
   suggestedQuestions?: string[];
+  attachedFileNames?: string[];
   createdAt: string;
 }
 
