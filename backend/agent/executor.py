@@ -214,6 +214,7 @@ class PlanExecutor:
             "safety_checklist", "calculator", "data_analyzer",
             "document_search", "knowledge_base", "summarizer",
             "translator", "report_generator", "email_composer",
+            "asset_management",
         ]
         desc_lower = description.lower()
         for name in known:

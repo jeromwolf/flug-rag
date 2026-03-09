@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KOGAS AI - 시연 가이드</title>
+<style>
+  :root {
+    --primary: #00796b;
+    --primary-light: #e0f2f1;
+    --primary-dark: #004d40;
+    --blue: #1565c0;
+    --blue-light: #e3f2fd;
+    --orange: #e65100;
+    --orange-light: #fff3e0;
+    --purple: #6a1b9a;
+    --purple-light: #f3e5f5;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --border: #dee2e6;
+    --text: #212529;
+    --text-secondary: #6c757d;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 120px; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  .nav {
+    background: var(--primary-dark);
+    color: white;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  .nav-title { font-size: 1.1rem; font-weight: 700; }
+
+  .nav-links a {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    margin-left: 20px;
+    font-size: 0.9rem;
+  }
+
+  .nav-links a:hover, .nav-links a.active { color: white; text-decoration: underline; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  .hero {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+    color: white;
+    padding: 48px 0 40px;
+    text-align: center;
+  }
+
+  .hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+  .hero p { font-size: 1.1rem; opacity: 0.9; }
+
+  .criteria-banner {
+    background: white;
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    padding: 24px;
+    margin: -20px auto 32px;
+    max-width: 900px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    z-index: 10;
+  }
+
+  .criteria-banner h3 { color: var(--primary-dark); margin-bottom: 16px; font-size: 1.1rem; text-align: center; }
+
+  .criteria-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  .criteria-item { padding: 16px; border-radius: 8px; text-align: center; }
+  .criteria-item.rag { background: var(--blue-light); border: 1px solid #bbdefb; }
+  .criteria-item.ocr { background: var(--orange-light); border: 1px solid #ffe0b2; }
+  .criteria-item.agent { background: var(--purple-light); border: 1px solid #ce93d8; }
+
+  .criteria-item .num {
+    display: inline-block; width: 28px; height: 28px; line-height: 28px;
+    border-radius: 50%; color: white; font-weight: 700; font-size: 0.85rem; margin-bottom: 8px;
+  }
+
+  .criteria-item.rag .num { background: var(--blue); }
+  .criteria-item.ocr .num { background: var(--orange); }
+  .criteria-item.agent .num { background: var(--purple); }
+
+  .criteria-item h4 { font-size: 1rem; margin-bottom: 6px; }
+  .criteria-item p { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; }
+
+  .tabs {
+    display: flex;
+    border-bottom: 3px solid var(--border);
+    margin: 32px 0 0;
+    position: sticky;
+    top: 48px;
+    background: var(--bg);
+    z-index: 50;
+    padding-top: 8px;
+  }
+
+  .tab-btn {
+    flex: 1; padding: 14px 16px; border: none; background: transparent;
+    font-size: 1rem; font-weight: 600; cursor: pointer; color: var(--text-secondary);
+    border-bottom: 3px solid transparent; margin-bottom: -3px;
+    transition: all 0.2s; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  .tab-btn:hover { color: var(--text); background: rgba(0,0,0,0.03); }
+  .tab-btn.active { border-bottom-color: var(--primary); color: var(--primary-dark); }
+
+  .tab-btn .tab-num {
+    display: inline-block; width: 24px; height: 24px; line-height: 24px;
+    border-radius: 50%; font-size: 0.78rem; color: white; font-weight: 700;
+  }
+
+  .tab-btn:nth-child(1) .tab-num { background: var(--blue); }
+  .tab-btn:nth-child(2) .tab-num { background: var(--orange); }
+  .tab-btn:nth-child(3) .tab-num { background: var(--purple); }
+
+  .tab-content { display: none; padding: 32px 0; animation: fadeIn 0.3s ease; }
+  .tab-content.active { display: block; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow);
+  }
+
+  .card h3 {
+    font-size: 1.15rem; margin-bottom: 12px; color: var(--primary-dark);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .card h4 { font-size: 1rem; margin: 16px 0 8px; color: var(--text); }
+
+  .screenshot { margin: 16px 0; text-align: center; }
+
+  .screenshot img {
+    max-width: 100%; border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow);
+  }
+
+  .screenshot .caption { font-size: 0.82rem; color: var(--text-secondary); margin-top: 8px; font-style: italic; }
+
+  .question-list { list-style: none; counter-reset: q; }
+
+  .question-list li {
+    counter-increment: q; padding: 12px 16px; margin-bottom: 8px;
+    background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--blue);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+
+  .question-list li::before {
+    content: "Q" counter(q); background: var(--blue); color: white;
+    font-weight: 700; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px;
+    white-space: nowrap; margin-top: 1px;
+  }
+
+  .question-list .meta { display: inline-block; font-size: 0.75rem; color: var(--text-secondary); margin-left: 8px; }
+
+  .tag {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.75rem; font-weight: 600; margin: 0 4px 4px 0;
+  }
+
+  .tag-blue { background: var(--blue-light); color: var(--blue); }
+  .tag-orange { background: var(--orange-light); color: var(--orange); }
+  .tag-purple { background: var(--purple-light); color: var(--purple); }
+  .tag-green { background: #e8f5e9; color: #2e7d32; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.9rem; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f1f3f5; font-weight: 700; font-size: 0.85rem; color: var(--text-secondary); }
+  tr:hover { background: #f8f9fa; }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+
+  .feature-item {
+    padding: 14px; background: #f8f9fa; border-radius: 8px; border: 1px solid var(--border);
+  }
+
+  .feature-item strong { display: block; font-size: 0.9rem; margin-bottom: 4px; }
+  .feature-item span { font-size: 0.82rem; color: var(--text-secondary); }
+
+  .info-box {
+    background: var(--primary-light); border: 1px solid #b2dfdb;
+    border-radius: 8px; padding: 16px 20px; margin: 16px 0; font-size: 0.9rem;
+  }
+
+  .info-box.warn { background: #fff3e0; border-color: #ffe0b2; }
+
+  .footer {
+    text-align: center; padding: 32px 0; color: var(--text-secondary);
+    font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: 40px;
+  }
+
+  .screenshot-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 16px 0; }
+  .screenshot-grid .screenshot { margin: 0; }
+
+  @media print {
+    .nav, .tabs { display: none; }
+    .tab-content { display: block !important; page-break-before: always; }
+    .tab-content:first-of-type { page-break-before: auto; }
+  }
+
+  @media (max-width: 768px) {
+    .criteria-grid { grid-template-columns: 1fr; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .screenshot-grid { grid-template-columns: 1fr; }
+    .tab-btn { font-size: 0.85rem; padding: 10px 8px; }
+    .hero h1 { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-title" style="text-decoration:none;color:inherit;">KOGAS AI Platform</a>
+  <span class="nav-links">
+    <a href="demo.html" class="active">시연 가이드</a>
+    <a href="manual.html">접속 매뉴얼</a>
+  </span>
+</nav>
+
+<div class="hero">
+  <div class="container">
+    <h1>시연 가이드</h1>
+    <p>한국가스기술공사 생성형 AI 플랫폼 구축 사업</p>
+  </div>
+</div>
+
+<div class="container">
+  <div class="criteria-banner">
+    <h3>평가 영역 및 시연 방식</h3>
+    <div class="criteria-grid">
+      <div class="criteria-item rag">
+        <span class="num">1</span>
+        <h4>LLM / RAG</h4>
+        <p>평가용 자료만 사전 제공<br>현장 시나리오 질의 및<br>평가위원 즉석 질의 수행</p>
+      </div>
+      <div class="criteria-item ocr">
+        <span class="num">2</span>
+        <h4>OCR</h4>
+        <p>전체 비공개<br>현장 제공 문서/이미지<br>즉석 인식 및 데이터화 성능 검증</p>
+      </div>
+      <div class="criteria-item agent">
+        <span class="num">3</span>
+        <h4>에이전트 빌더</h4>
+        <p>평가요소 사전 공개<br>워크플로우 구성, 외부연동,<br>권한 제어 및 모니터링</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(0)">
+      <span class="tab-num">1</span> LLM / RAG
+    </button>
+    <button class="tab-btn" onclick="switchTab(1)">
+      <span class="tab-num">2</span> OCR
+    </button>
+    <button class="tab-btn" onclick="switchTab(2)">
+      <span class="tab-num">3</span> 에이전트 빌더
+    </button>
+  </div>
+
+  <!-- ===== TAB 1: LLM / RAG ===== -->
+  <div class="tab-content active" id="tab-0">
+
+    <div class="card">
+      <h3>RAG 시스템 핵심 사양</h3>
+      <table>
+        <tr><th>항목</th><th>사양</th></tr>
+        <tr><td>LLM 모델</td><td>Qwen2.5-32B-Instruct-AWQ (vLLM, A100 GPU)</td></tr>
+        <tr><td>임베딩 모델</td><td>BAAI/bge-m3 (1024 차원)</td></tr>
+        <tr><td>벡터DB</td><td>Milvus 2.6 Lite</td></tr>
+        <tr><td>검색 방식</td><td>하이브리드 (Vector + BM25)</td></tr>
+        <tr><td>인제스트 문서</td><td>RAG평가용 문서 92개 파일, 10,518 청크</td></tr>
+        <tr><td>벤치마크</td><td>300문항 92.3% (자동 평가 기준)</td></tr>
+      </table>
+
+      <div class="feature-grid">
+        <div class="feature-item">
+          <strong>SSE 스트리밍</strong>
+          <span>ChatGPT와 동일한 실시간 토큰 출력</span>
+        </div>
+        <div class="feature-item">
+          <strong>신뢰도 배지</strong>
+          <span>높음/중간/낮음 3단계 검색 신뢰도</span>
+        </div>
+        <div class="feature-item">
+          <strong>출처 표시</strong>
+          <span>참고 문서 + 유사도 점수 카드</span>
+        </div>
+        <div class="feature-item">
+          <strong>범위 외 차단</strong>
+          <span>보유 문서 밖 질문은 안전하게 거절</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>채팅 화면</h3>
+      <div class="screenshot-grid">
+        <div class="screenshot">
+          <img src="images/02_chat_light.png" alt="채팅 라이트 모드" loading="lazy">
+          <div class="caption">라이트 모드</div>
+        </div>
+        <div class="screenshot">
+          <img src="images/08_chat_dark.png" alt="채팅 다크 모드" loading="lazy">
+          <div class="caption">다크 모드</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>시연 질문 8개</h3>
+      <div class="info-box">
+        사전 제공되는 RAG 평가용 문서(92개 내부규정)를 기반으로 한 시연 질문입니다.
+      </div>
+
+      <ol class="question-list">
+        <li><div>연차휴가는 어떻게 부여되나요? <span class="meta"><span class="tag tag-green">쉬움</span> <span class="tag tag-blue">사실확인</span></span></div></li>
+        <li><div>안전보건 교육은 누가 얼마나 받아야 하나요? <span class="meta"><span class="tag tag-green">쉬움</span> <span class="tag tag-blue">사실확인</span></span></div></li>
+        <li><div>갑질 예방지침에서 정의하는 '갑질'이란? <span class="meta"><span class="tag tag-orange">보통</span> <span class="tag tag-purple">추론</span></span></div></li>
+        <li><div>여비규정에서 국내 출장 시 일비 지급 기준은? <span class="meta"><span class="tag tag-orange">보통</span> <span class="tag tag-blue">사실확인</span></span></div></li>
+        <li><div>징계의 종류에는 어떤 것들이 있나요? <span class="meta"><span class="tag tag-orange">보통</span> <span class="tag tag-blue">사실확인</span></span></div></li>
+        <li><div>직무발명에 대한 보상 규정이 있나요? <span class="meta"><span class="tag tag-orange">보통</span> <span class="tag tag-purple">추론</span></span></div></li>
+        <li><div>퇴직금 지급 기준은 어떻게 되나요? <span class="meta"><span class="tag tag-orange">보통</span> <span class="tag tag-blue">사실확인</span></span></div></li>
+        <li><div>업무상 재해가 발생했을 때 보상 절차는? <span class="meta"><span class="tag tag-orange">어려움</span> <span class="tag tag-purple">복합추론</span></span></div></li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3>질문별 답변 스크린샷</h3>
+
+      <h4>Q1. 연차휴가는 어떻게 부여되나요?</h4>
+      <div class="screenshot">
+        <img src="images/chat_q1_annual_leave.png" alt="Q1 연차휴가" loading="lazy">
+      </div>
+
+      <h4>Q2. 안전보건 교육은 누가 얼마나 받아야 하나요?</h4>
+      <div class="screenshot">
+        <img src="images/chat_q2_safety_education.png" alt="Q2 안전보건교육" loading="lazy">
+      </div>
+
+      <h4>Q3. 갑질 예방지침에서 정의하는 '갑질'이란?</h4>
+      <div class="screenshot">
+        <img src="images/chat_q3_bullying.png" alt="Q3 갑질예방" loading="lazy">
+      </div>
+
+      <h4>Q4. 여비규정에서 국내 출장 시 일비 지급 기준은?</h4>
+      <div class="screenshot">
+        <img src="images/chat_q4_travel_expense.png" alt="Q4 여비규정" loading="lazy">
+      </div>
+
+      <h4>Q5. 징계의 종류에는 어떤 것들이 있나요?</h4>
+      <div class="screenshot">
+        <img src="images/chat_q5_disciplinary.png" alt="Q5 징계종류" loading="lazy">
+      </div>
+
+      <h4>Q6. 직무발명에 대한 보상 규정이 있나요?</h4>
+      <div class="screenshot">
+        <img src="images/chat_q6_invention.png" alt="Q6 직무발명" loading="lazy">
+      </div>
+
+      <h4>Q7. 퇴직금 지급 기준은 어떻게 되나요?</h4>
+      <div class="screenshot">
+        <img src="images/chat_q7_retirement.png" alt="Q7 퇴직금" loading="lazy">
+      </div>
+
+      <h4>Q8. 업무상 재해가 발생했을 때 보상 절차는?</h4>
+      <div class="screenshot">
+        <img src="images/chat_q8_workplace_injury.png" alt="Q8 업무상재해" loading="lazy">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== TAB 2: OCR ===== -->
+  <div class="tab-content" id="tab-1">
+
+    <div class="card">
+      <h3>OCR 핵심 사양</h3>
+      <table>
+        <tr><th>항목</th><th>사양</th></tr>
+        <tr><td>OCR 엔진</td><td>Upstage Document Parse (Cloud API)</td></tr>
+        <tr><td>지원 문서</td><td>스캔 PDF, 이미지 (JPG/PNG), 도면</td></tr>
+        <tr><td>특화 기능</td><td>한국어 표/도형 인식, 레이아웃 분석</td></tr>
+        <tr><td>처리 방식</td><td>채팅에서 파일 첨부 시 자동 OCR + AI 분석</td></tr>
+      </table>
+
+      <div class="info-box warn">
+        평가 방식: 현장에서 제공하는 문서/이미지를 즉석에서 인식 및 데이터화 성능을 검증합니다. 평가 자료는 사전 비공개입니다.
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-item">
+          <strong>파일 첨부 OCR</strong>
+          <span>채팅창에서 파일 첨부 시 자동 OCR 처리 후 AI가 내용 분석</span>
+        </div>
+        <div class="feature-item">
+          <strong>표/도형 인식</strong>
+          <span>한국어 표, 양식, 도면의 구조화된 데이터 추출</span>
+        </div>
+        <div class="feature-item">
+          <strong>다중 파일 지원</strong>
+          <span>여러 파일을 동시에 첨부하여 비교 분석 가능</span>
+        </div>
+        <div class="feature-item">
+          <strong>레이아웃 분석</strong>
+          <span>Upstage Document Parse 기반 정교한 레이아웃 보존</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>OCR 시연 예시</h3>
+
+      <h4>입력 문서</h4>
+      <div class="screenshot">
+        <img src="images/ocr_source_doc.png" alt="OCR 입력 문서" loading="lazy">
+        <div class="caption">OCR 처리 대상 원본 문서</div>
+      </div>
+
+      <h4>OCR 인식 결과</h4>
+      <div class="screenshot-grid">
+        <div class="screenshot">
+          <img src="images/ocr_demo_1.png" alt="OCR 결과 1" loading="lazy">
+          <div class="caption">인식 결과 (1)</div>
+        </div>
+        <div class="screenshot">
+          <img src="images/ocr_demo_2.png" alt="OCR 결과 2" loading="lazy">
+          <div class="caption">인식 결과 (2)</div>
+        </div>
+      </div>
+
+      <div class="screenshot">
+        <img src="images/ocr_demo_3.png" alt="OCR 결과 3" loading="lazy">
+        <div class="caption">인식 결과 (3)</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>OCR 사용 방법</h3>
+      <ol style="padding-left: 20px; line-height: 2.2;">
+        <li>채팅 화면에서 하단의 <strong>파일 첨부</strong> 아이콘을 클릭합니다.</li>
+        <li>스캔된 PDF 또는 이미지 파일을 선택합니다.</li>
+        <li>Upstage Document Parse를 통해 자동 OCR 처리됩니다.</li>
+        <li>추출된 텍스트가 AI 컨텍스트에 반영되어 질문에 답변합니다.</li>
+        <li>예시 질문: "이 문서의 주요 내용을 요약해주세요"</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <!-- ===== TAB 3: 에이전트 빌더 ===== -->
+  <div class="tab-content" id="tab-2">
+
+    <div class="card">
+      <h3 id="workflow">에이전트 빌더 핵심 기능</h3>
+
+      <div class="info-box">
+        평가요소 사전 공개: <a href="#workflow">멀티에이전트 워크플로우 구성</a>, <a href="#external">외부 데이터 연동</a>, <a href="#rbac">권한 제어</a> 및 <a href="#monitoring">모니터링 기능</a>을 포함합니다.
+      </div>
+
+      <table>
+        <tr><th>기능</th><th>설명</th></tr>
+        <tr><td>비주얼 워크플로우</td><td>React Flow 기반 노드 드래그 & 연결</td></tr>
+        <tr><td>노드 유형 7종</td><td>시작, LLM 생성, 문서 검색, 도구 실행, 조건 분기, 출력, 변환</td></tr>
+        <tr><td>프리셋 5개</td><td>간단 RAG, 보고서 생성, 다단계 분석, 도구 체이닝, 조건 분기</td></tr>
+        <tr><td>MCP 도구 16개</td><td>지식검색, 설비DB, ERP, EHSQ, 그룹웨어, 이메일 등</td></tr>
+        <tr><td>인라인 실행</td><td>워크플로우를 즉시 실행하고 결과 확인</td></tr>
+        <tr><td>저장/내보내기</td><td>JSON 형식으로 워크플로우 저장 및 공유</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>에이전트 빌더 화면</h3>
+
+      <h4>노드 팔레트 및 캔버스</h4>
+      <div class="screenshot">
+        <img src="images/07_agent_builder.png" alt="에이전트 빌더" loading="lazy">
+        <div class="caption">노드 팔레트(좌), 캔버스(중앙), 속성 편집(우)</div>
+      </div>
+
+      <h4>프리셋 워크플로우</h4>
+      <div class="screenshot">
+        <img src="images/agent_builder_presets.png" alt="프리셋" loading="lazy">
+        <div class="caption">5개 프리셋 워크플로우 선택</div>
+      </div>
+
+      <h4>워크플로우 DAG 구성</h4>
+      <div class="screenshot">
+        <img src="images/agent_builder_dag.png" alt="DAG" loading="lazy">
+        <div class="caption">노드 연결로 구성된 워크플로우 DAG</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>워크플로우 실행 및 결과</h3>
+
+      <h4>실행 입력</h4>
+      <div class="screenshot">
+        <img src="images/agent_builder_run.png" alt="실행" loading="lazy">
+        <div class="caption">워크플로우 실행 - 입력 쿼리 전달</div>
+      </div>
+
+      <h4>실행 결과</h4>
+      <div class="screenshot">
+        <img src="images/agent_builder_result.png" alt="결과" loading="lazy">
+        <div class="caption">워크플로우 실행 결과</div>
+      </div>
+
+      <h4>워크플로우 빌드 과정 (영상)</h4>
+      <div class="screenshot">
+        <video src="images/agent_builder_demo.mp4" controls loop muted playsinline style="width:100%;border-radius:8px;"></video>
+        <div class="caption">노드 드래그 → 연결 → 실행까지 전체 과정</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 id="external">외부 시스템 연동 (실시간 API)</h3>
+
+      <div class="info-box">
+        <strong>실제 외부 REST API 호출</strong> — Mock 데이터가 아닌 외부 설비/자재 관리 시스템 API에 실시간 연동하여 데이터를 조회합니다.
+        월별 파라미터(1월~12월)로 기간별 데이터를 필터링할 수 있습니다.
+      </div>
+
+      <h4>시연 시나리오</h4>
+      <table>
+        <tr><th>단계</th><th>사용자 입력</th><th>AI 동작</th></tr>
+        <tr><td>1</td><td>"3월 설비 자재 현황"</td><td>외부 API 호출 → 3월 자재 10건 테이블 반환</td></tr>
+        <tr><td>2</td><td>"2월 설비 자재 현황"</td><td>외부 API 호출 → 2월 자재 10건 (다른 데이터셋)</td></tr>
+        <tr><td>3</td><td>"이 결과를 OOO에게 이메일 작성해줘"</td><td>도구 체이닝: 자재 조회 결과 → 이메일 자동 생성</td></tr>
+      </table>
+
+      <h4>자재 조회 결과 (3월)</h4>
+      <div class="screenshot">
+        <img src="images/asset_3month.png" alt="3월 자재 현황" loading="lazy">
+        <div class="caption">외부 API 실시간 연동 — 3월 설비/자재 관리 시스템 조회 결과</div>
+      </div>
+
+      <h4>자재 조회 결과 (2월) — 월별 다른 데이터</h4>
+      <div class="screenshot">
+        <img src="images/asset_2month.png" alt="2월 자재 현황" loading="lazy">
+        <div class="caption">동일 API, 다른 기간 → 다른 자재 목록 반환</div>
+      </div>
+
+      <h4>도구 체이닝: 조회 결과 → 이메일 작성</h4>
+      <div class="screenshot">
+        <img src="images/asset_email.png" alt="이메일 체이닝" loading="lazy">
+        <div class="caption">자재 조회 결과를 이메일로 자동 작성 (도구 체이닝)</div>
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-item">
+          <strong>실시간 HTTP 호출</strong>
+          <span>외부 REST API에 실제 HTTP 요청 → JSON 응답 수신</span>
+        </div>
+        <div class="feature-item">
+          <strong>월별 파라미터</strong>
+          <span>1월~12월 기간별 다른 데이터셋 조회</span>
+        </div>
+        <div class="feature-item">
+          <strong>도구 체이닝</strong>
+          <span>조회 결과를 다른 도구(이메일 등)에 자동 전달</span>
+        </div>
+        <div class="feature-item">
+          <strong>17개 MCP 도구</strong>
+          <span>설비/자재 관리 도구 추가 (기존 16개 + 1개)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 id="rbac">권한 제어 및 모니터링</h3>
+
+      <h4>RBAC 역할 기반 접근 제어</h4>
+      <table>
+        <tr><th>역할</th><th>채팅</th><th>파일 첨부<br>(OCR)</th><th>개인<br>지식공간</th><th>문서 관리</th><th>사용자<br>관리</th><th>모니터링<br>/로그</th><th>에이전트<br>빌더</th><th>RAG<br>품질관리</th></tr>
+        <tr><td><span class="tag tag-blue">Admin</span></td><td>O</td><td>O</td><td>O</td><td>O</td><td>O</td><td>O</td><td>O</td><td>O</td></tr>
+        <tr><td><span class="tag tag-orange">Manager</span></td><td>O</td><td>O</td><td>O</td><td>O</td><td>-</td><td>O</td><td>-</td><td>-</td></tr>
+        <tr><td><span class="tag tag-green">User</span></td><td>O</td><td>O</td><td>O</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+        <tr><td><span class="tag tag-purple">Viewer</span></td><td>O (읽기)</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+      </table>
+      <div class="info-box">
+        <strong>역할별 핵심 차이점</strong><br>
+        - <span class="tag tag-blue">Admin</span> vs <span class="tag tag-orange">Manager</span>: Admin만 <em>사용자 관리, 에이전트 빌더, RAG 품질관리</em> 접근 가능<br>
+        - 4단계 역할(Admin/Manager/User/Viewer)은 예시이며, <em>귀사의 보안 정책에 따라 역할별 권한을 변경</em>할 수 있습니다.
+      </div>
+
+      <div class="screenshot">
+        <img src="images/admin_users.png" alt="사용자 관리" loading="lazy">
+        <div class="caption">사용자 관리 — 역할별(관리자/매니저/사용자/뷰어) 권한 드롭다운으로 즉시 변경 가능</div>
+      </div>
+
+      <h4>관리자 대시보드</h4>
+      <div class="screenshot">
+        <img src="images/admin_dashboard.png" alt="관리자 대시보드" loading="lazy">
+        <div class="caption">관리자 설정 — 총 문서 수, 사용자 수, 오늘 질의 수, 시스템 상태, 피드백/에러 로그</div>
+      </div>
+
+      <h4 id="monitoring">모니터링 대시보드</h4>
+      <div class="screenshot">
+        <img src="images/monitoring_overview.png" alt="모니터링 개요" loading="lazy">
+        <div class="caption">시스템 리소스 (CPU/메모리/GPU), 문서/청크 현황, 피드백 통계</div>
+      </div>
+      <div class="screenshot-grid">
+        <div class="screenshot">
+          <img src="images/monitoring_stats.png" alt="사용 통계" loading="lazy">
+          <div class="caption">사용 통계 — 일별 질의 수, 키워드 분석</div>
+        </div>
+        <div class="screenshot">
+          <img src="images/monitoring_logs.png" alt="로그" loading="lazy">
+          <div class="caption">접속 로그 — 사용자별 로그인/로그아웃 이력</div>
+        </div>
+      </div>
+      <div class="screenshot">
+        <img src="images/monitoring_trends.png" alt="트렌드" loading="lazy">
+        <div class="caption">트렌드 — 시간별 질의 수, 평균 응답 시간, 모델별 사용 비율, 캐시 히트율</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>MCP 도구 현황 (17개)</h3>
+      <table>
+        <tr><th>도구명</th><th>기능</th></tr>
+        <tr><td>knowledge_search</td><td>지식 베이스 검색</td></tr>
+        <tr><td>system_db</td><td>설비 관리 DB 조회</td></tr>
+        <tr><td>erp_system</td><td>ERP 시스템 연동</td></tr>
+        <tr><td>ehsq_system</td><td>환경안전 (EHSQ) 시스템</td></tr>
+        <tr><td>groupware</td><td>그룹웨어 연동</td></tr>
+        <tr><td>email_composer</td><td>이메일 작성/발송</td></tr>
+        <tr><td><strong>asset_management</strong></td><td><strong>설비/자재 관리 시스템 (외부 API 실시간 연동)</strong></td></tr>
+        <tr><td>calculator</td><td>수학 계산</td></tr>
+        <tr><td>summarizer</td><td>문서 요약</td></tr>
+        <tr><td>translator</td><td>번역</td></tr>
+        <tr><td>report_generator</td><td>보고서 생성</td></tr>
+        <tr><td>weather</td><td>날씨 정보</td></tr>
+        <tr><td>calendar</td><td>일정 관리</td></tr>
+        <tr><td>code_executor</td><td>코드 실행</td></tr>
+        <tr><td>data_analyzer</td><td>데이터 분석</td></tr>
+        <tr><td>web_search</td><td>웹 검색</td></tr>
+        <tr><td>document_parser</td><td>문서 파싱</td></tr>
+      </table>
+
+      <h4>MCP 도구 관리 화면</h4>
+      <div class="screenshot-grid">
+        <div class="screenshot">
+          <img src="images/mcp_tools_list.png" alt="MCP 도구 목록" loading="lazy">
+          <div class="caption">관리자 → MCP 도구 탭: 내장 도구 목록 및 테스트</div>
+        </div>
+        <div class="screenshot">
+          <img src="images/mcp_custom_tool.png" alt="커스텀 도구 추가" loading="lazy">
+          <div class="caption">커스텀 도구 탭: 새 도구 추가 (API URL, 파라미터, HTTP 메소드 설정)</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="container">
+    한국가스기술공사 생성형 AI 플랫폼 구축 사업 | 2026년 3월
+  </div>
+</div>
+
+<script>
+function switchTab(idx) {
+  document.querySelectorAll('.tab-btn').forEach(function(btn, i) {
+    btn.classList.toggle('active', i === idx);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(content, i) {
+    content.classList.toggle('active', i === idx);
+  });
+  window.scrollTo({ top: document.querySelector('.tabs').offsetTop - 60, behavior: 'smooth' });
+}
+</script>
+
+</body>
+</html>

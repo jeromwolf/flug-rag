@@ -166,13 +166,16 @@ function DashboardTab() {
     status?: string;
   } | undefined;
 
-  // Today's query count from usage stats (or mock if not available)
+  // Today's query count from usage stats
   const todayQueries: number = (() => {
-    const usage = usageData?.data as { daily?: Array<{ count?: number }> } | undefined;
-    if (usage?.daily && usage.daily.length > 0) {
-      return usage.daily[usage.daily.length - 1]?.count ?? 0;
+    const usage = usageData?.data as { daily_breakdown?: Array<{ date?: string; queries?: number }> } | undefined;
+    if (usage?.daily_breakdown && usage.daily_breakdown.length > 0) {
+      const today = new Date().toISOString().slice(0, 10);
+      const todayEntry = usage.daily_breakdown.find((d) => d.date === today);
+      if (todayEntry) return todayEntry.queries ?? 0;
+      // fallback: last entry
+      return usage.daily_breakdown[usage.daily_breakdown.length - 1]?.queries ?? 0;
     }
-    // NOTE: needs backend /stats/usage?period=day endpoint to return daily breakdown
     return 0;
   })();
 

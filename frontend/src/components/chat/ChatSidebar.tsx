@@ -1161,7 +1161,7 @@ export function ChatSidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
-  const { logout } = useAuth();
+  const { logout, hasPermission } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [bookmarksOpen, setBookmarksOpen] = useState(true);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -1841,11 +1841,11 @@ export function ChatSidebar({
       {/* Bottom nav */}
       <List dense sx={{ py: 0.5 }}>
         {[
-          { label: "채팅", icon: <ChatIcon fontSize="small" />, path: "/chat" },
-          { label: "문서", icon: <DescriptionIcon fontSize="small" />, path: "/documents" },
-          { label: "관리", icon: <AdminIcon fontSize="small" />, path: "/admin" },
-          { label: "모니터링", icon: <MonitorIcon fontSize="small" />, path: "/monitor" },
-        ].map((item) => (
+          { label: "채팅", icon: <ChatIcon fontSize="small" />, path: "/chat", permission: "chat:read" },
+          { label: "문서", icon: <DescriptionIcon fontSize="small" />, path: "/documents", permission: "documents:write" },
+          { label: "관리", icon: <AdminIcon fontSize="small" />, path: "/admin", permission: "admin:read" },
+          { label: "모니터링", icon: <MonitorIcon fontSize="small" />, path: "/monitor", permission: "monitor:read" },
+        ].filter((item) => hasPermission(item.permission)).map((item) => (
           <ListItemButton
             key={item.path}
             selected={location.pathname === item.path}

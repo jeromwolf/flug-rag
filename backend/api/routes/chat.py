@@ -43,6 +43,9 @@ def _extract_tool_content(tool_name: str, result_data) -> str:
         # ERP/EHSQ/Groupware → 포맷팅
         if tool_name in ("erp_lookup", "ehsq_lookup", "groupware_lookup"):
             return _format_enterprise_tool(tool_name, result_data)
+        # 설비/자재 관리 시스템 (외부 API)
+        if tool_name == "asset_management":
+            return _format_asset_management(result_data)
         import json as _json
         return _json.dumps(result_data, ensure_ascii=False, indent=2)
     return str(result_data)
@@ -50,8 +53,12 @@ def _extract_tool_content(tool_name: str, result_data) -> str:
 
 def _format_email(data: dict) -> str:
     """Format email_composer result into readable markdown."""
+    import re as _re
     email_body = data.get("email", "")
     email_body = email_body.replace("\\n", "\n")
+    # LLM이 코드블록으로 감싼 경우 제거 (```text, ```markdown, ``` 등)
+    email_body = _re.sub(r'^```\w*\n?', '', email_body)
+    email_body = _re.sub(r'\n?```$', '', email_body)
     # 이메일 본문을 마크다운으로 자연스럽게 표시
     lines = ["## ✉️ 이메일 초안\n"]
     for line in email_body.split("\n"):
@@ -279,6 +286,48 @@ def _format_groupware(data: dict) -> str:
             lines.append("")
 
     return "\n".join(lines)
+
+
+def _format_asset_management(data: dict) -> str:
+    """Format asset_management (외부 API) result into readable markdown."""
+    action = data.get("action", "")
+    period = data.get("조회기간", "")
+    keyword = data.get("keyword", "")
+    total = data.get("total", 0)
+    count = data.get("반환건수", 0)
+    result = data.get("result", [])
+
+    lines = ["## 📦 설비/자재 관리 시스템 조회 결과\n"]
+    lines.append(f"**조회기간**: {period} | **총 자재**: {total:,}건 | **반환**: {count}건")
+    if keyword:
+        lines.append(f" | **검색어**: {keyword}")
+    lines.append("\n")
+
+    if action == "detail" and isinstance(result, dict):
+        # 단일 자재 상세
+        for k, v in result.items():
+            if k == "조회기간":
+                continue
+            lines.append(f"- **{k}**: {v}")
+    elif isinstance(result, list) and result:
+        # 테이블로 표시
+        lines.append("| 자재코드 | 자재명 | 제조사 | 분류 | 단가(USD) | 재고 | 재고상태 |")
+        lines.append("|----------|--------|--------|------|-----------|------|----------|")
+        for item in result:
+            code = item.get("자재코드", "")
+            name = item.get("자재명", "")
+            brand = item.get("제조사", "")
+            cat = item.get("분류", "")
+            price = item.get("단가(USD)", 0)
+            stock = item.get("재고수량", 0)
+            status = item.get("재고상태", "")
+            lines.append(f"| {code} | {name} | {brand} | {cat} | ${price:,.2f} | {stock} | {status} |")
+    else:
+        lines.append("조회 결과가 없습니다.")
+
+    lines.append("\n> *외부 설비/자재 관리 API 실시간 연동 결과입니다.*")
+    return "\n".join(lines)
+
 
 # Shared instances with thread-safe initialization
 _memory = None
@@ -518,7 +567,7 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
     if tool_selection:
         mode = "tool"
         # 이전 대화 참조 ("이 내용으로", "위 내용" 등) → 마지막 어시스턴트 응답을 도구 컨텍스트에 주입
-        _context_refs = ("이 내용", "위 내용", "위의 내용", "이걸로", "이것을", "이것으로", "해당 내용")
+        _context_refs = ("이 내용", "위 내용", "위의 내용", "이걸로", "이것을", "이것으로", "해당 내용", "이 문서", "이 결과", "위 결과", "조회 결과")
         if any(ref in request.message for ref in _context_refs) and history:
             last_assistant = next(
                 (m["content"] for m in reversed(history) if m.get("role") == "assistant"),
@@ -599,6 +648,7 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
                     "safety_checklist": "안전 체크리스트",
                     "calculator": "수식 계산",
                     "data_analyzer": "데이터 분석",
+                    "asset_management": "설비/자재 조회",
                 }.get(tool_selection.tool_name, tool_selection.tool_name)
 
                 yield {

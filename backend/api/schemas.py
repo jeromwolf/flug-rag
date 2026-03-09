@@ -105,6 +105,7 @@ class SystemInfoResponse(BaseModel):
     version: str
     default_provider: str
     document_count: int
+    file_count: int = 0
     session_count: int
 
 

@@ -77,6 +77,7 @@ class ToolRegistry:
 
 def create_default_registry() -> ToolRegistry:
     """Create a registry with all built-in tools."""
+    from agent.mcp.tools.asset_management_tool import AssetManagementTool
     from agent.mcp.tools.calculator_tool import CalculatorTool
     from agent.mcp.tools.data_analyzer_tool import DataAnalyzerTool
     from agent.mcp.tools.database_tool import KnowledgeBaseTool
@@ -111,6 +112,8 @@ def create_default_registry() -> ToolRegistry:
     registry.register(ErpLookupTool())
     registry.register(EhsqTool())
     registry.register(GroupwareTool())
+    # External API integration (real HTTP call)
+    registry.register(AssetManagementTool())
     # System DB real-time query
     registry.register(SystemDbQueryTool())
     return registry

@@ -34,7 +34,7 @@ const navItems = [
   { path: "/chat", label: "채팅", icon: <ChatIcon />, permission: "chat:read", roleLabel: null },
   { path: "/personal-knowledge", label: "개인 지식공간", icon: <PersonIcon />, permission: "chat:read", roleLabel: null },
   { path: "/activity", label: "활동 기록", icon: <HistoryIcon />, permission: "chat:read", roleLabel: null },
-  { path: "/documents", label: "문서 관리", icon: <DocsIcon />, permission: "documents:read", roleLabel: "관리자" },
+  { path: "/documents", label: "문서 관리", icon: <DocsIcon />, permission: "documents:write", roleLabel: "관리자" },
   { path: "/admin", label: "관리자", icon: <AdminIcon />, permission: "admin:read", roleLabel: "관리자" },
   { path: "/monitor", label: "모니터링", icon: <MonitorIcon />, permission: "monitor:read", roleLabel: "관리자" },
   { path: "/agent-builder", label: "에이전트 빌더", icon: <AgentIcon />, permission: "agent-builder:read", roleLabel: "관리자" },

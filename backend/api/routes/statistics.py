@@ -51,8 +51,9 @@ async def _get_audit_db_path():
 
 
 def _get_period_start(period: str) -> datetime:
-    """Calculate period start datetime."""
-    now = datetime.now(timezone.utc)
+    """Calculate period start datetime (KST)."""
+    KST = timezone(timedelta(hours=9))
+    now = datetime.now(KST)
     if period == "day":
         return now - timedelta(days=1)
     elif period == "week":
@@ -151,13 +152,30 @@ async def get_keyword_stats(
     # Simple Korean keyword extraction (2+ char nouns)
     counter = Counter()
     total = len(rows)
+    stop_words = {
+        # 조사/어미/접속사
+        "입니다", "있는", "하는", "되는", "에서", "으로", "합니다", "것입니다",
+        "무엇", "어떻게", "알려줘", "알려주세요", "해주세요", "대해서", "대해",
+        "있나요", "되나요", "인가요", "건가요", "할까요", "일까요",
+        "어떤", "어디", "언제", "얼마나", "얼마", "몇가지",
+        "당신의", "당신은", "당신이", "말해줘", "말해주세요", "말씀해주세요",
+        "그리고", "그러나", "하지만", "그래서", "때문에", "따라서",
+        "있습니다", "없습니다", "됩니다", "합니까", "있습니까",
+        "이것", "그것", "저것", "여기", "거기", "저기",
+        "오늘", "어제", "내일", "지금", "최근", "이전",
+        "관련된", "관련해", "관해서", "대한", "위한", "통해",
+        "모델명은", "어디까지", "최신정보를", "며칠인가요",
+        # 일반 동사/형용사 어간
+        "하고", "해서", "하면", "했는", "되고", "해야", "할수",
+        "있고", "없고", "같은", "다른", "새로운", "좋은",
+        "주세요", "줘요", "볼까요", "봐줘", "설명해", "설명해줘",
+        "학습하고", "연구관리에",
+    }
     for row in rows:
         text = row[0] if row[0] else ""
         # Extract Korean words of 2+ chars
         words = re.findall(r'[가-힣]{2,}', text)
-        # Filter common stop words
-        stop_words = {"입니다", "있는", "하는", "되는", "에서", "으로", "합니다", "것입니다", "무엇", "어떻게", "알려줘", "알려주세요", "해주세요"}
-        words = [w for w in words if w not in stop_words]
+        words = [w for w in words if w not in stop_words and len(w) <= 10]
         counter.update(words)
 
     keywords = [{"keyword": k, "count": v} for k, v in counter.most_common(top_n)]

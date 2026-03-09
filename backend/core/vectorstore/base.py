@@ -57,6 +57,10 @@ class BaseVectorStore(ABC):
         """Clear all documents."""
         ...
 
+    async def count_files(self) -> int:
+        """Get unique file (source) count. Default returns 0."""
+        return 0
+
     async def get_all_documents(self) -> list[dict]:
         """Get all documents with content and metadata (for BM25 index).
 

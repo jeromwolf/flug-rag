@@ -222,6 +222,23 @@ _GROUPWARE_TYPE_MAP = {
     "공지": "notice",
 }
 
+# ── Asset management (external API) ──────────────────────────────
+_ASSET_TRIGGERS = [
+    "설비 조회", "설비조회", "설비 목록", "설비목록", "설비 검색", "설비검색",
+    "자재 조회", "자재조회", "자재 목록", "자재목록", "자재 검색", "자재검색",
+    "제품 조회", "제품조회", "제품 목록", "제품목록", "제품 검색",
+    "재고 조회", "재고조회", "재고 현황", "재고현황",
+    "자산 조회", "자산조회", "자산 목록", "자산목록",
+    "설비 현황", "설비현황", "자재 현황", "자재현황",
+    "부품 조회", "부품조회", "부품 목록",
+]
+
+_ASSET_ACTION_MAP = {
+    "검색": "search", "찾": "search", "조회": "search",
+    "목록": "list", "현황": "list", "전체": "list",
+    "상세": "detail", "세부": "detail",
+}
+
 # ── System DB query ───────────────────────────────────────────────
 _SYSTEM_DB_TRIGGERS = [
     "시스템 현황", "시스템현황", "사용 현황", "사용현황",
@@ -251,6 +268,9 @@ def select_tool(message: str) -> ToolSelection | None:
     # Enterprise system integrations (highest priority for demo)
     if any(kw in msg for kw in _SYSTEM_DB_TRIGGERS):
         return _select_system_db(msg)
+
+    if any(kw in msg for kw in _ASSET_TRIGGERS):
+        return _select_asset(msg)
 
     if any(kw in msg for kw in _ERP_TRIGGERS):
         return _select_erp(msg)
@@ -518,6 +538,45 @@ def _select_groupware(msg: str) -> ToolSelection:
     return ToolSelection(
         tool_name="groupware_lookup",
         arguments={"action": action, "keyword": ""},
+        confidence=0.85,
+    )
+
+
+_PERIOD_MONTH_RE = re.compile(r"(\d{1,2})\s*월")
+
+
+def _select_asset(msg: str) -> ToolSelection:
+    """Select asset_management tool with action and period detection."""
+    action = "search"  # default
+    for kw, act in _ASSET_ACTION_MAP.items():
+        if kw in msg:
+            action = act
+            break
+
+    # Extract period (e.g. "3월", "2026년 1월")
+    period = ""
+    m = _PERIOD_MONTH_RE.search(msg)
+    if m:
+        period = f"{m.group(1)}월"
+
+    # Extract keyword: remove trigger phrases to get the search term
+    keyword = msg
+    for trigger in _ASSET_TRIGGERS:
+        keyword = keyword.replace(trigger, "")
+    # Remove period text from keyword
+    if period:
+        keyword = _PERIOD_MONTH_RE.sub("", keyword)
+        keyword = re.sub(r"\d{4}\s*년\s*", "", keyword)
+    keyword = keyword.strip()
+    # If only action remains or empty, use empty for list mode
+    if not keyword or len(keyword) < 2:
+        keyword = ""
+        if action == "search":
+            action = "list"
+
+    return ToolSelection(
+        tool_name="asset_management",
+        arguments={"action": action, "keyword": keyword, "period": period},
         confidence=0.85,
     )
 

@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>접속 매뉴얼 - 한국가스기술공사 생성형 AI 플랫폼</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f8f9fa;
+    }
+
+    /* ===== Navigation ===== */
+    .nav {
+      background: #00796b;
+      color: #fff;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .nav-brand {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: #fff;
+      text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 8px; }
+    .nav-links a {
+      color: rgba(255,255,255,0.85);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 14px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .nav-links a:hover { background: rgba(255,255,255,0.15); }
+    .nav-links a.active {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* ===== Layout ===== */
+    .wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    /* ===== Page Header ===== */
+    .page-header {
+      background: linear-gradient(135deg, #00796b 0%, #1976d2 100%);
+      color: #fff;
+      border-radius: 10px;
+      padding: 36px 40px;
+      margin-bottom: 36px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .page-header .subtitle {
+      font-size: 13px;
+      opacity: 0.8;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .page-header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .page-header .meta {
+      font-size: 13px;
+      opacity: 0.75;
+    }
+
+    /* ===== Section ===== */
+    .section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 32px 36px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+      border: 1px solid #e8eaed;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #00796b;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e0f2f1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: #00796b;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .subsection { margin-top: 24px; }
+    .subsection-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1976d2;
+      margin-bottom: 12px;
+      padding-left: 10px;
+      border-left: 3px solid #1976d2;
+    }
+
+    /* ===== Info Box ===== */
+    .info-box {
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      color: #1565c0;
+    }
+    .info-box strong { color: #0d47a1; }
+
+    .alert-box {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 6px;
+      padding: 14px 18px;
+      margin-top: 16px;
+      font-size: 14px;
+      color: #795548;
+    }
+
+    /* ===== URL Box ===== */
+    .url-box {
+      background: #1a1a2e;
+      border-radius: 6px;
+      padding: 14px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 15px;
+      color: #69f0ae;
+      letter-spacing: 0.02em;
+      margin: 12px 0;
+      word-break: break-all;
+    }
+
+    /* ===== Tables ===== */
+    .tbl-wrap { overflow-x: auto; margin: 12px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    thead th {
+      background: #00796b;
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    tbody tr:nth-child(even) { background: #f1f8f6; }
+    tbody tr:hover { background: #e0f2f1; }
+    tbody td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e8eaed;
+      vertical-align: top;
+    }
+    tbody td code {
+      background: #e8f5e9;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #2e7d32;
+    }
+
+    /* ===== Steps ===== */
+    .steps { list-style: none; counter-reset: step-counter; }
+    .steps li {
+      counter-increment: step-counter;
+      display: flex;
+      gap: 14px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step-counter);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      background: #1976d2;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .steps li .step-content { flex: 1; }
+    .steps li .step-content strong { color: #1565c0; }
+
+    /* ===== Screenshots ===== */
+    .screenshot-wrap {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .screenshot-wrap img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+    }
+    .screenshot-caption {
+      font-size: 12px;
+      color: #757575;
+      margin-top: 7px;
+      font-style: italic;
+    }
+
+    /* ===== Feature Grid ===== */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 14px 0;
+    }
+    @media (max-width: 600px) { .feature-grid { grid-template-columns: 1fr; } }
+    .feature-card {
+      background: #f8f9fa;
+      border: 1px solid #e8eaed;
+      border-radius: 6px;
+      padding: 14px 16px;
+    }
+    .feature-card .fc-title {
+      font-weight: 700;
+      color: #00796b;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .feature-card p { font-size: 13px; color: #555; line-height: 1.5; }
+
+    /* ===== Question List ===== */
+    .q-list { list-style: none; }
+    .q-list li {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+      align-items: flex-start;
+    }
+    .q-list li:last-child { border-bottom: none; }
+    .q-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      background: #e0f2f1;
+      color: #00796b;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .q-text { flex: 1; color: #333; }
+    .q-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .tag-easy { background: #e8f5e9; color: #2e7d32; }
+    .tag-med  { background: #e3f2fd; color: #1565c0; }
+    .tag-hard { background: #fce4ec; color: #c62828; }
+
+    /* ===== FAQ ===== */
+    .faq-item {
+      border-bottom: 1px solid #f0f0f0;
+      padding: 14px 0;
+    }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q {
+      font-weight: 700;
+      color: #1976d2;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .faq-a { font-size: 14px; color: #444; }
+
+    /* ===== Checklist ===== */
+    .checklist { list-style: none; }
+    .checklist li {
+      padding: 7px 0;
+      padding-left: 26px;
+      position: relative;
+      font-size: 14px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .checklist li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #00796b;
+      border-radius: 3px;
+    }
+
+    /* ===== Badge ===== */
+    .badge {
+      display: inline-block;
+      padding: 2px 9px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-admin   { background: #e8f5e9; color: #2e7d32; }
+    .badge-manager { background: #e3f2fd; color: #1565c0; }
+    .badge-user    { background: #fff3e0; color: #e65100; }
+    .badge-viewer  { background: #f3e5f5; color: #6a1b9a; }
+
+    /* ===== Print ===== */
+    @media print {
+      .nav { display: none; }
+      body { background: #fff; }
+      .section { box-shadow: none; border: 1px solid #ccc; }
+      .page-header { background: #00796b; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <a class="nav-brand" href="#">한국가스기술공사 생성형 AI 플랫폼</a>
+  <div class="nav-links">
+    <a href="manual.html" class="active">접속 매뉴얼</a>
+    <a href="demo.html">시연 가이드</a>
+  </div>
+</nav>
+
+<div class="wrapper">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="subtitle">한국가스기술공사 생성형 AI 플랫폼 구축 사업</div>
+    <h1>시연평가 접속 매뉴얼</h1>
+    <div class="meta">작성일: 2026년 3월 &nbsp;|&nbsp; 시연환경: RunPod A100 (vLLM + Qwen2.5-32B-AWQ)</div>
+  </div>
+
+  <!-- Section 1: Access Info -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">1</span>접속 정보</h2>
+
+    <p style="margin-bottom:12px; font-size:14px; color:#555;">시연평가용 AI 플랫폼에 접속하기 위한 URL과 계정 정보입니다.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>항목</th><th>정보</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>시연 URL</strong></td>
+            <td><a href="https://7rzubyo9fsfmco-3000.proxy.runpod.net/" target="_blank" style="color:#00796b; font-family:monospace;">https://7rzubyo9fsfmco-3000.proxy.runpod.net/</a></td>
+          </tr>
+          <tr>
+            <td><strong>권장 브라우저</strong></td>
+            <td>Chrome, Edge (최신 버전)</td>
+          </tr>
+          <tr>
+            <td><strong>시스템 상태</strong></td>
+            <td>24시간 가용 (평가 기간 상시 운영)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">평가자 계정 목록</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>계정 ID</th><th>비밀번호</th><th>권한</th><th>접근 가능 기능</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>KGT-G01</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-admin">admin</span></td>
+              <td>전체 기능 (채팅, 문서관리, 관리자설정, 모니터링, RAG품질)</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G02</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-admin">admin</span></td>
+              <td>전체 기능</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G03</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-admin">admin</span></td>
+              <td>전체 기능</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G04</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-admin">admin</span></td>
+              <td>전체 기능</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G05</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-admin">admin</span></td>
+              <td>전체 기능</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G06</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-admin">admin</span></td>
+              <td>전체 기능</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G07</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-admin">admin</span></td>
+              <td>전체 기능</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G08</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-manager">manager</span></td>
+              <td>채팅, 문서관리, 모니터링 (관리자 설정 일부 제한)</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G09</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-user">user</span></td>
+              <td>채팅 전용</td>
+            </tr>
+            <tr>
+              <td><code>KGT-G10</code></td>
+              <td><code>gggg</code></td>
+              <td><span class="badge badge-viewer">viewer</span></td>
+              <td>읽기 전용 (채팅 이력 조회만)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="info-box">
+        각 계정은 독립적인 세션으로 동작하며 동시 접속을 지원합니다. 권한별 기능 차이를 비교 평가하실 수 있습니다.
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Login -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">2</span>접속 방법</h2>
+
+    <div class="subsection">
+      <div class="subsection-title">단계 1 - 브라우저 접속</div>
+      <ol class="steps">
+        <li>
+          <div class="step-content">Chrome 또는 Edge를 열고 주소창에 아래 URL을 입력합니다.</div>
+        </li>
+      </ol>
+      <div class="url-box">https://7rzubyo9fsfmco-3000.proxy.runpod.net/</div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">단계 2 - 로그인</div>
+      <ol class="steps">
+        <li>
+          <div class="step-content"><strong>계정 ID</strong>를 입력합니다. (예: <code style="background:#e8f5e9;padding:2px 6px;border-radius:3px;font-family:monospace;color:#2e7d32;">KGT-G01</code>)</div>
+        </li>
+        <li>
+          <div class="step-content"><strong>비밀번호</strong>를 입력합니다. (<code style="background:#e8f5e9;padding:2px 6px;border-radius:3px;font-family:monospace;color:#2e7d32;">gggg</code>)</div>
+        </li>
+        <li>
+          <div class="step-content"><strong>로그인</strong> 버튼을 클릭합니다.</div>
+        </li>
+      </ol>
+      <div class="screenshot-wrap">
+        <img src="images/01_login.png" alt="로그인 화면">
+        <div class="screenshot-caption">그림 1. 로그인 화면 - 계정 ID와 비밀번호 입력</div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">단계 3 - 메인 화면 진입</div>
+      <ol class="steps">
+        <li>
+          <div class="step-content">로그인 성공 시 ChatGPT 스타일의 채팅 인터페이스가 표시됩니다.</div>
+        </li>
+        <li>
+          <div class="step-content"><strong>좌측 사이드바</strong>: 대화 세션 목록, 새 대화 시작 버튼</div>
+        </li>
+        <li>
+          <div class="step-content"><strong>중앙 영역</strong>: 채팅 입력창 및 답변 표시 영역</div>
+        </li>
+      </ol>
+      <div class="screenshot-wrap">
+        <img src="images/02_chat_light.png" alt="메인 채팅 화면 (라이트 모드)">
+        <div class="screenshot-caption">그림 2. 메인 채팅 화면 (라이트 모드) - ChatGPT 스타일 인터페이스</div>
+      </div>
+      <div class="screenshot-wrap">
+        <img src="images/08_chat_dark.png" alt="메인 채팅 화면 (다크 모드)">
+        <div class="screenshot-caption">그림 3. 메인 채팅 화면 (다크 모드) - 우측 상단 테마 전환 버튼으로 전환 가능</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Features -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">3</span>주요 기능 안내</h2>
+
+    <!-- 3.1 Chat -->
+    <div class="subsection">
+      <div class="subsection-title">3.1 채팅 (RAG 질의응답)</div>
+      <p style="font-size:14px; color:#555; margin-bottom:12px;">LLM과 RAG 성능을 직접 평가할 수 있는 핵심 기능입니다.</p>
+      <ol class="steps">
+        <li><div class="step-content">하단 텍스트 입력창에 질문을 입력합니다.</div></li>
+        <li><div class="step-content">전송 버튼을 클릭하거나 Enter를 누릅니다.</div></li>
+        <li>
+          <div class="step-content">
+            <strong>AI 답변 확인</strong>:
+            <ul style="list-style:disc; padding-left:18px; margin-top:6px; font-size:13px; color:#555;">
+              <li>SSE 스트리밍으로 토큰이 실시간 표시됩니다</li>
+              <li>신뢰도 배지 확인 (높음 / 중간 / 낮음)</li>
+              <li>출처 카드에서 참고 문서 및 청크 위치 확인</li>
+              <li>좋아요/싫어요 버튼으로 답변 품질 피드백 입력 가능</li>
+            </ul>
+          </div>
+        </li>
+      </ol>
+      <div class="screenshot-wrap">
+        <img src="images/09_chat_response.png" alt="채팅 답변 예시">
+        <div class="screenshot-caption">그림 4. 채팅 답변 예시 - 신뢰도 점수, 출처 카드, 스트리밍 응답 포함</div>
+      </div>
+    </div>
+
+    <!-- 3.2 Documents -->
+    <div class="subsection">
+      <div class="subsection-title">3.2 문서 관리</div>
+      <p style="font-size:14px; color:#555; margin-bottom:12px;">문서 업로드 및 인제스트 현황을 확인할 수 있습니다.</p>
+      <ol class="steps">
+        <li><div class="step-content">좌측 메뉴에서 <strong>"문서 관리"</strong>를 선택합니다.</div></li>
+        <li>
+          <div class="step-content">
+            현재 인제스트된 문서 목록을 확인합니다:
+            <ul style="list-style:disc; padding-left:18px; margin-top:6px; font-size:13px; color:#555;">
+              <li>총 <strong>92개 파일</strong>, <strong>10,518 청크</strong> (RAG평가용 문서)</li>
+              <li>파일명, 업로드 일시, 청크 수, 처리 상태 표시</li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <div class="step-content">
+            <strong>새 문서 업로드</strong> (선택 사항):
+            <ul style="list-style:disc; padding-left:18px; margin-top:6px; font-size:13px; color:#555;">
+              <li>PDF, HWP, DOCX, XLSX, PPTX, TXT 지원 (6가지 형식)</li>
+              <li>파일을 업로드 영역에 Drag &amp; Drop</li>
+              <li>인제스트 진행 상태 실시간 확인</li>
+            </ul>
+          </div>
+        </li>
+      </ol>
+      <div class="screenshot-wrap">
+        <img src="images/03_documents.png" alt="문서 관리 화면">
+        <div class="screenshot-caption">그림 5. 문서 관리 화면 - 인제스트 현황, 문서 업로드, 처리 상태 확인</div>
+      </div>
+    </div>
+
+    <!-- 3.3 OCR -->
+    <div class="subsection">
+      <div class="subsection-title">3.3 OCR 테스트 (관리자 계정)</div>
+      <p style="font-size:14px; color:#555; margin-bottom:12px;">Upstage Document Parse 기반 한국어 문서 OCR 기능입니다.</p>
+      <ol class="steps">
+        <li><div class="step-content">좌측 메뉴에서 <strong>"관리자"</strong>를 선택합니다.</div></li>
+        <li><div class="step-content">상단 탭에서 <strong>"OCR"</strong> 탭을 클릭합니다.</div></li>
+        <li>
+          <div class="step-content">
+            문서 또는 이미지를 업로드합니다:
+            <ul style="list-style:disc; padding-left:18px; margin-top:6px; font-size:13px; color:#555;">
+              <li>스캔된 PDF, 도면, 이미지 지원</li>
+              <li>한국어 표 및 도형 인식 포함</li>
+            </ul>
+          </div>
+        </li>
+        <li><div class="step-content">추출된 텍스트 결과를 확인하고 품질을 평가합니다.</div></li>
+      </ol>
+      <div class="screenshot-wrap">
+        <img src="images/04_admin.png" alt="관리자 설정 - OCR 탭 포함">
+        <div class="screenshot-caption">그림 6. 관리자 설정 화면 - OCR, 프롬프트 관리, 모델 설정 탭 포함</div>
+      </div>
+    </div>
+
+    <!-- 3.4 Agent Builder -->
+    <div class="subsection">
+      <div class="subsection-title">3.4 에이전트 빌더</div>
+      <p style="font-size:14px; color:#555; margin-bottom:12px;">React Flow 기반 비주얼 캔버스로 워크플로를 설계하고 실행합니다.</p>
+      <ol class="steps">
+        <li><div class="step-content">좌측 메뉴에서 <strong>"에이전트 빌더"</strong>를 선택합니다.</div></li>
+        <li>
+          <div class="step-content">
+            비주얼 캔버스를 확인합니다:
+            <ul style="list-style:disc; padding-left:18px; margin-top:6px; font-size:13px; color:#555;">
+              <li>노드를 드래그하여 워크플로 구성</li>
+              <li>LLM 노드, 도구 노드, 조건 분기 노드 연결</li>
+              <li>프리셋 워크플로 5개 제공 (목록에서 선택)</li>
+            </ul>
+          </div>
+        </li>
+        <li>
+          <div class="step-content">
+            워크플로를 실행합니다:
+            <ul style="list-style:disc; padding-left:18px; margin-top:6px; font-size:13px; color:#555;">
+              <li>입력 데이터 제공 후 실행 버튼 클릭</li>
+              <li>각 노드의 실행 상태가 실시간으로 표시됨</li>
+              <li>최종 결과 확인</li>
+            </ul>
+          </div>
+        </li>
+      </ol>
+      <div class="screenshot-wrap">
+        <img src="images/07_agent_builder.png" alt="에이전트 빌더 화면">
+        <div class="screenshot-caption">그림 7. 에이전트 빌더 - 비주얼 DAG 캔버스, 노드 연결, 프리셋 워크플로</div>
+      </div>
+      <div class="screenshot-wrap">
+        <img src="images/10_agent_workflow.png" alt="에이전트 워크플로우 실행 결과">
+        <div class="screenshot-caption">그림 8. 에이전트 워크플로우 실행 결과 - 도구 체이닝 및 단계별 실행 상태</div>
+      </div>
+    </div>
+
+    <!-- 3.5 Monitoring -->
+    <div class="subsection">
+      <div class="subsection-title">3.5 모니터링 및 품질 관리 (관리자/매니저 계정)</div>
+      <p style="font-size:14px; color:#555; margin-bottom:12px;">운영 현황 및 RAG 품질 지표를 대시보드에서 확인합니다.</p>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="fc-title">모니터링 대시보드</div>
+          <p>총 질문 수, 평균 응답 시간, 신뢰도 분포 (높음/중간/낮음) 비율, 사용 통계 Excel 내보내기</p>
+        </div>
+        <div class="feature-card">
+          <div class="fc-title">RAG 품질 대시보드</div>
+          <p>청크 길이 분포, 중복 탐지, 의미 완결성 분석, 임베딩 추적 (인제스트 작업별 상태)</p>
+        </div>
+        <div class="feature-card">
+          <div class="fc-title">피드백 관리</div>
+          <p>사용자 좋아요/싫어요 데이터 집계, 코멘트 조회, 개선 사항 추적</p>
+        </div>
+        <div class="feature-card">
+          <div class="fc-title">접근 로그</div>
+          <p>사용자별 쿼리 이력, 접속 로그, 이상 패턴 탐지 현황</p>
+        </div>
+      </div>
+
+      <div class="screenshot-wrap">
+        <img src="images/05_monitor.png" alt="모니터링 대시보드">
+        <div class="screenshot-caption">그림 9. 모니터링 대시보드 - 사용 통계, 응답 시간, 신뢰도 분포</div>
+      </div>
+      <div class="screenshot-wrap">
+        <img src="images/06_quality.png" alt="RAG 품질 관리 화면">
+        <div class="screenshot-caption">그림 10. RAG 품질 관리 - 청크 분포, 임베딩 추적, 중복 탐지</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Demo Questions -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">4</span>시연 질문 예시 8개</h2>
+
+    <p style="font-size:14px; color:#555; margin-bottom:16px;">아래 질문들은 RAG 시스템의 성능을 다양한 유형으로 평가할 수 있도록 선별된 예시입니다. 채팅창에 직접 입력하여 테스트하세요.</p>
+
+    <ul class="q-list">
+      <li>
+        <span class="q-num">1</span>
+        <span class="q-text">연차휴가는 어떻게 부여되나요?</span>
+        <span class="q-tag tag-easy">쉬움 / 사실확인</span>
+      </li>
+      <li>
+        <span class="q-num">2</span>
+        <span class="q-text">안전보건 교육은 누가 얼마나 받아야 하나요?</span>
+        <span class="q-tag tag-easy">쉬움 / 사실확인</span>
+      </li>
+      <li>
+        <span class="q-num">3</span>
+        <span class="q-text">갑질 예방지침에서 정의하는 '갑질'이란 무엇인가요?</span>
+        <span class="q-tag tag-med">보통 / 추론</span>
+      </li>
+      <li>
+        <span class="q-num">4</span>
+        <span class="q-text">여비규정에서 국내 출장 시 일비 지급 기준은 어떻게 되나요?</span>
+        <span class="q-tag tag-med">보통 / 사실확인</span>
+      </li>
+      <li>
+        <span class="q-num">5</span>
+        <span class="q-text">징계의 종류에는 어떤 것들이 있나요?</span>
+        <span class="q-tag tag-med">보통 / 사실확인</span>
+      </li>
+      <li>
+        <span class="q-num">6</span>
+        <span class="q-text">직무발명에 대한 보상 규정이 있나요?</span>
+        <span class="q-tag tag-med">보통 / 추론</span>
+      </li>
+      <li>
+        <span class="q-num">7</span>
+        <span class="q-text">퇴직금 지급 기준은 어떻게 되나요?</span>
+        <span class="q-tag tag-med">보통 / 사실확인</span>
+      </li>
+      <li>
+        <span class="q-num">8</span>
+        <span class="q-text">업무상 재해가 발생했을 때 보상 절차는 어떻게 되나요?</span>
+        <span class="q-tag tag-hard">어려움 / 복합추론</span>
+      </li>
+    </ul>
+
+    <div class="alert-box">
+      <strong>평가 팁:</strong> 동일한 질문을 서로 다른 계정(예: KGT-G01 admin vs KGT-G09 user)으로 입력하면 권한에 따른 접근 차이를 확인할 수 있습니다. 범위 외 질문(예: "양자역학에 대해 설명해주세요")을 입력하면 가드레일 안전 메시지를 확인할 수 있습니다.
+    </div>
+  </div>
+
+  <!-- Section 5: Precautions -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">5</span>유의사항</h2>
+
+    <div class="subsection">
+      <div class="subsection-title">접속 및 보안</div>
+      <ul style="list-style:disc; padding-left:18px; font-size:14px; color:#444; line-height:2;">
+        <li>각 계정은 독립적 세션으로 동작하며 동시 접속을 지원합니다</li>
+        <li>네트워크 상태에 따라 응답에 수 ~ 10초가 소요될 수 있습니다 (정상 동작)</li>
+        <li>보안을 위해 비밀번호 변경 안내가 표시될 수 있으며 안내에 따라 진행하면 됩니다</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">시스템 특성</div>
+      <ul style="list-style:disc; padding-left:18px; font-size:14px; color:#444; line-height:2;">
+        <li><strong>첫 번째 질문</strong>: 모델 워밍업으로 인해 10초 이상 걸릴 수 있습니다 (이후 정상 속도)</li>
+        <li><strong>SSE 스트리밍</strong>: 토큰이 실시간으로 표시됩니다 (ChatGPT와 동일한 방식)</li>
+        <li><strong>신뢰도 점수</strong>: 검색된 문서의 유사도 기반으로 자동 계산됩니다</li>
+        <li><strong>다크 모드</strong>: 우측 상단 버튼으로 라이트/다크 테마를 전환할 수 있습니다</li>
+      </ul>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-title">평가 기준 요약</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>평가 영역</th><th>벤치마크 결과</th><th>평가 방법</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>LLM / RAG</strong></td>
+              <td>60문항 기준 Run 5 100% (92.3% 객관 기준)</td>
+              <td>채팅에서 질문 입력 후 정답 여부 판단</td>
+            </tr>
+            <tr>
+              <td><strong>OCR</strong></td>
+              <td>한국어 문서 특화 (Upstage Document Parse)</td>
+              <td>관리자 OCR 탭에서 문서 업로드 후 텍스트 추출 품질 평가</td>
+            </tr>
+            <tr>
+              <td><strong>에이전트 빌더</strong></td>
+              <td>프리셋 워크플로 5개 제공</td>
+              <td>에이전트 빌더에서 워크플로 실행 후 결과 확인</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 6: FAQ -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">6</span>자주 묻는 질문 (FAQ)</h2>
+
+    <div class="faq-item">
+      <div class="faq-q">Q1. 로그인이 되지 않습니다.</div>
+      <div class="faq-a">계정명과 비밀번호를 다시 확인하세요 (영문 대소문자 구분). 브라우저 쿠키를 삭제(설정 &gt; 개인정보 &gt; 쿠키 삭제) 후 재시도하시거나 다른 브라우저(Chrome, Edge)에서 접속해 보세요.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Q2. 채팅 응답이 나오지 않거나 로딩이 멈춥니다.</div>
+      <div class="faq-a">네트워크 연결을 확인하세요. 첫 번째 질문은 모델 로드로 인해 최대 30초가 소요될 수 있습니다. 그 이후에도 응답이 없으면 페이지를 새로고침(F5) 후 재시도하세요.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Q3. 문서 업로드는 어떤 형식을 지원하나요?</div>
+      <div class="faq-a">PDF, HWP, DOCX, XLSX, PPTX, TXT 6가지 형식을 지원합니다. 스캔 문서의 경우 OCR 탭을 통해 처리할 수 있습니다.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Q4. 동시에 여러 명이 접속할 수 있나요?</div>
+      <div class="faq-a">가능합니다. KGT-G01 ~ KGT-G10 계정이 각각 독립적으로 동작하므로 10명이 동시에 접속할 수 있습니다.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Q5. 에이전트 빌더 메뉴가 보이지 않습니다.</div>
+      <div class="faq-a">에이전트 빌더는 모든 권한에서 접근 가능합니다. 좌측 사이드바에서 "에이전트 빌더" 항목을 찾아보세요. 사이드바가 접혀 있는 경우 상단 메뉴 아이콘을 클릭하여 펼치면 됩니다.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Q6. 신뢰도 점수는 어떻게 산출되나요?</div>
+      <div class="faq-a">검색된 문서 청크와 질문의 벡터 유사도를 기반으로 자동 계산됩니다. 0.7 이상: 높음(녹색), 0.4~0.7: 중간(노란색), 0.4 미만: 낮음(빨간색)으로 표시됩니다.</div>
+    </div>
+  </div>
+
+  <!-- Section 7: System Info -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">7</span>시스템 정보</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>항목</th><th>사양</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>LLM 모델</strong></td><td>Qwen2.5-32B-Instruct-AWQ (vLLM 서빙, A100 SXM 80GB)</td></tr>
+          <tr><td><strong>임베딩 모델</strong></td><td>BAAI/bge-m3 (1024 차원)</td></tr>
+          <tr><td><strong>벡터DB</strong></td><td>Milvus 2.6 Lite</td></tr>
+          <tr><td><strong>검색 방식</strong></td><td>하이브리드 (Dense Vector + BM25 Sparse)</td></tr>
+          <tr><td><strong>리랭커</strong></td><td>bge-reranker-v2-m3 (설정 기반 ON/OFF)</td></tr>
+          <tr><td><strong>컨텍스트</strong></td><td>최대 16,384 토큰 (A100 기준)</td></tr>
+          <tr><td><strong>인제스트 데이터</strong></td><td>RAG평가용 문서 92개 파일, 10,518 청크</td></tr>
+          <tr><td><strong>평가 데이터셋</strong></td><td>60문항 (factual, inference, multi-hop, negative)</td></tr>
+          <tr><td><strong>백엔드 프레임워크</strong></td><td>Python FastAPI, AsyncIO</td></tr>
+          <tr><td><strong>프론트엔드</strong></td><td>React 19, TypeScript 5.9, MUI v7, Vite 7</td></tr>
+          <tr><td><strong>OCR 엔진</strong></td><td>Upstage Document Parse (Cloud API)</td></tr>
+          <tr><td><strong>인증</strong></td><td>JWT + RBAC (4개 권한 등급)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="screenshot-wrap" style="margin-top:20px;">
+      <img src="images/11_architecture.png" alt="시스템 구성도">
+      <div class="screenshot-caption">그림 11. 시스템 아키텍처 구성도</div>
+    </div>
+  </div>
+
+  <!-- Section 8: Completion Checklist -->
+  <div class="section">
+    <h2 class="section-title"><span class="num">8</span>시연 완료 체크리스트</h2>
+    <p style="font-size:14px; color:#555; margin-bottom:16px;">시연이 완료된 후 아래 항목을 확인하세요.</p>
+    <ul class="checklist">
+      <li>LLM/RAG 질의응답 — 시연 질문 8개 중 5개 이상 테스트</li>
+      <li>신뢰도 점수 및 출처 카드 확인</li>
+      <li>문서 관리 기능 — 인제스트 현황 확인</li>
+      <li>OCR 테스트 — 문서 업로드 및 텍스트 추출 품질 확인 (선택)</li>
+      <li>에이전트 빌더 — 프리셋 워크플로 1개 이상 실행 (선택)</li>
+      <li>모니터링 대시보드 — 통계 및 품질 지표 확인 (선택)</li>
+      <li>다크 모드 / 라이트 모드 전환 확인</li>
+      <li>권한별 차이 확인 (admin vs user 계정 비교)</li>
+    </ul>
+
+    <div style="margin-top:28px; border-top:1px solid #e0e0e0; padding-top:20px;">
+      <p style="font-size:13px; color:#888; margin-bottom:12px;">시연 완료 서명 (선택)</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+        <div style="border-bottom:1px solid #999; padding-bottom:4px;">
+          <div style="font-size:12px; color:#aaa; margin-bottom:24px;">날짜</div>
+        </div>
+        <div style="border-bottom:1px solid #999; padding-bottom:4px;">
+          <div style="font-size:12px; color:#aaa; margin-bottom:24px;">평가자 성명</div>
+        </div>
+        <div style="border-bottom:1px solid #999; padding-bottom:4px;">
+          <div style="font-size:12px; color:#aaa; margin-bottom:24px;">서명</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center; font-size:12px; color:#aaa; margin-top:8px;">
+    본 접속 매뉴얼은 시연평가를 위한 가이드 문서입니다. &nbsp;|&nbsp; 한국가스기술공사 생성형 AI 플랫폼 구축 사업 &nbsp;|&nbsp; 2026년 3월
+  </p>
+
+</div>
+</body>
+</html>

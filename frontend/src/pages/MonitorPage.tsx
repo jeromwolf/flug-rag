@@ -108,6 +108,15 @@ function ResourceGauge({ label, value, detail, color }: { label: string; value: 
   return (
     <Box sx={{ textAlign: "center" }}>
       <Box sx={{ position: "relative", display: "inline-flex" }}>
+        {/* 회색 배경 트랙 */}
+        <CircularProgress
+          variant="determinate"
+          value={100}
+          size={80}
+          thickness={6}
+          sx={{ color: "#e0e0e0", position: "absolute" }}
+        />
+        {/* 실제 값 */}
         <CircularProgress
           variant="determinate"
           value={Math.min(value, 100)}
@@ -302,8 +311,8 @@ function KeyMetricsSection() {
       icon: <TrendingDownIcon sx={{ fontSize: 40, color: "#f44336" }} />,
     },
     {
-      label: "문서 수",
-      value: String(info?.document_count ?? 0),
+      label: "문서 / 청크",
+      value: `${(info?.file_count ?? 0).toLocaleString()} / ${(info?.document_count ?? 0).toLocaleString()}`,
       icon: <FolderIcon sx={{ fontSize: 40 }} color="primary" />,
     },
   ];
@@ -1654,11 +1663,9 @@ function TrendChartsSection() {
 
   // Mock model usage data (replace with statsApi.getModelUsage() when available)
   const modelUsageData = useMemo(() => [
-    { name: "qwen2.5:14b", count: 312 },
-    { name: "qwen2.5:7b", count: 187 },
-    { name: "qwen2.5:32b", count: 94 },
-    { name: "gpt-4o", count: 42 },
-    { name: "claude-3-5", count: 18 },
+    { name: "Qwen2.5-32B-AWQ", count: 580 },
+    { name: "bge-m3 (임베딩)", count: 580 },
+    { name: "bge-reranker-v2-m3", count: 73 },
   ], []);
 
   const totalModelUsage = modelUsageData.reduce((s, m) => s + m.count, 0);

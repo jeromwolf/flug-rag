@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from pathlib import Path
 
@@ -86,7 +86,8 @@ class AuditLogger(AsyncSQLiteManager):
     ) -> None:
         """Record an audit event (async)."""
         event_id = str(uuid.uuid4())
-        timestamp = datetime.now(timezone.utc).isoformat()
+        KST = timezone(timedelta(hours=9))
+        timestamp = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
         action_str = action.value if isinstance(action, AuditAction) else str(action)
 
         try:

@@ -86,10 +86,18 @@ async def search_access_logs(
         params.append(f"%{ip_address}%")
     if start_date:
         conditions.append("timestamp >= ?")
-        params.append(start_date)
+        # start_date가 날짜만 오면 (2026-03-09) 당일 시작부터
+        if len(start_date) == 10:
+            params.append(start_date + " 00:00:00")
+        else:
+            params.append(start_date)
     if end_date:
         conditions.append("timestamp <= ?")
-        params.append(end_date)
+        # end_date가 날짜만 오면 (2026-03-09) 당일 끝까지 포함
+        if len(end_date) == 10:
+            params.append(end_date + " 23:59:59")
+        else:
+            params.append(end_date)
 
     where = ""
     if conditions:
@@ -152,10 +160,17 @@ async def search_query_logs(
         params.append(session_id)
     if start_date:
         conditions.append("created_at >= ?")
-        params.append(start_date)
+        # ISO format: 2026-03-09T00:00:00
+        if len(start_date) == 10:
+            params.append(start_date + "T00:00:00")
+        else:
+            params.append(start_date)
     if end_date:
         conditions.append("created_at <= ?")
-        params.append(end_date)
+        if len(end_date) == 10:
+            params.append(end_date + "T23:59:59.999999+99:99")
+        else:
+            params.append(end_date)
 
     where = "WHERE " + " AND ".join(conditions)
     offset = (page - 1) * page_size

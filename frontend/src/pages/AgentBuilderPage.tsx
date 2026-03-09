@@ -122,15 +122,15 @@ const NODE_COLORS: Record<WorkflowNodeType, { bg: string; border: string; text: 
 
 const NODE_TYPE_META: Record<
   WorkflowNodeType,
-  { icon: React.ReactNode; label: string; sublabel: string; color: string }
+  { icon: React.ReactNode; label: string; sublabel: string; color: string; description: string }
 > = {
-  start:     { icon: <StartIcon />,     label: "시작",      sublabel: "TRIGGER",   color: "#22c55e" },
-  llm:       { icon: <LlmIcon />,       label: "LLM 생성",   sublabel: "LLM",       color: "#3b82f6" },
-  retrieval: { icon: <RetrievalIcon />, label: "문서 검색",  sublabel: "RETRIEVER", color: "#f97316" },
-  tool:      { icon: <ToolIcon />,      label: "도구 실행",  sublabel: "TOOL",      color: "#a855f7" },
-  condition: { icon: <ConditionIcon />, label: "조건 분기",  sublabel: "CONDITION", color: "#eab308" },
-  output:    { icon: <OutputIcon />,    label: "출력",       sublabel: "OUTPUT",    color: "#06b6d4" },
-  transform: { icon: <TransformIcon />, label: "변환",       sublabel: "TRANSFORM", color: "#6366f1" },
+  start:     { icon: <StartIcon />,     label: "시작",      sublabel: "TRIGGER",   color: "#22c55e", description: "워크플로우의 시작점. 사용자 입력을 받아 다음 노드로 전달합니다." },
+  llm:       { icon: <LlmIcon />,       label: "LLM 생성",   sublabel: "LLM",       color: "#3b82f6", description: "AI 모델로 텍스트를 생성합니다.\n설정: Provider, 모델명, 시스템 프롬프트, Temperature" },
+  retrieval: { icon: <RetrievalIcon />, label: "문서 검색",  sublabel: "RETRIEVER", color: "#f97316", description: "벡터DB에서 관련 문서를 검색합니다.\n설정: Top K (검색 수), 필터 조건 (JSON)" },
+  tool:      { icon: <ToolIcon />,      label: "도구 실행",  sublabel: "TOOL",      color: "#a855f7", description: "MCP 도구를 실행합니다. (ERP, 이메일 등)\n설정: 도구 선택, 인수 템플릿 (JSON)" },
+  condition: { icon: <ConditionIcon />, label: "조건 분기",  sublabel: "CONDITION", color: "#eab308", description: "조건에 따라 흐름을 분기합니다.\n설정: 조건 유형 (신뢰도/키워드/길이), 임계값" },
+  output:    { icon: <OutputIcon />,    label: "출력",       sublabel: "OUTPUT",    color: "#06b6d4", description: "최종 결과를 사용자에게 출력합니다.\n설정: 출력 형식 (text/markdown/json)" },
+  transform: { icon: <TransformIcon />, label: "변환",       sublabel: "TRANSFORM", color: "#6366f1", description: "데이터를 가공·변환합니다.\n설정: 변환 유형 (template/extract/merge), 템플릿" },
 };
 
 interface PresetDef {
@@ -932,69 +932,104 @@ function NodePalette({ onDragStart }: NodePaletteProps) {
         const meta = NODE_TYPE_META[nt];
         const colors = NODE_COLORS[nt];
         return (
-          <Box
+          <Tooltip
             key={nt}
-            draggable
-            onDragStart={(e) => onDragStart(e, nt)}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 0.875,
-              p: 0.875,
-              pr: 1.25,
-              borderRadius: "8px",
-              border: `1px solid ${colors.border}30`,
-              bgcolor: `${colors.bg}`,
-              cursor: "grab",
-              userSelect: "none",
-              transition: "all 0.15s ease",
-              "&:hover": {
-                borderColor: `${colors.border}80`,
-                bgcolor: `${colors.bg}cc`,
-                boxShadow: `0 0 12px ${colors.glow}`,
-                transform: "translateX(2px)",
+            title={
+              <Box sx={{ p: 0.5 }}>
+                <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, mb: 0.5, color: "#fff" }}>
+                  {meta.label} ({meta.sublabel})
+                </Typography>
+                {meta.description.split("\n").map((line, i) => (
+                  <Typography key={i} sx={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
+                    {line}
+                  </Typography>
+                ))}
+              </Box>
+            }
+            placement="right"
+            arrow
+            enterDelay={400}
+            slotProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: "rgba(15,20,30,0.95)",
+                  border: "1px solid rgba(80,120,200,0.3)",
+                  borderRadius: "8px",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
+                  maxWidth: 260,
+                  p: 1,
+                },
               },
-              "&:active": {
-                cursor: "grabbing",
-                transform: "scale(0.97)",
+              arrow: {
+                sx: {
+                  color: "rgba(15,20,30,0.95)",
+                },
               },
             }}
           >
-            <DragIcon sx={{ fontSize: 13, color: "rgba(120,140,180,0.4)", flexShrink: 0 }} />
             <Box
+              draggable
+              onDragStart={(e) => onDragStart(e, nt)}
               sx={{
-                width: 24,
-                height: 24,
-                borderRadius: "5px",
-                bgcolor: `${colors.border}22`,
-                border: `1px solid ${colors.border}55`,
-                color: colors.text,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                "& svg": { fontSize: 14 },
+                gap: 0.875,
+                p: 0.875,
+                pr: 1.25,
+                borderRadius: "8px",
+                border: `1px solid ${colors.border}30`,
+                bgcolor: `${colors.bg}`,
+                cursor: "grab",
+                userSelect: "none",
+                transition: "all 0.15s ease",
+                "&:hover": {
+                  borderColor: `${colors.border}80`,
+                  bgcolor: `${colors.bg}cc`,
+                  boxShadow: `0 0 12px ${colors.glow}`,
+                  transform: "translateX(2px)",
+                },
+                "&:active": {
+                  cursor: "grabbing",
+                  transform: "scale(0.97)",
+                },
               }}
             >
-              {meta.icon}
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#e0e4f0", lineHeight: 1.2 }}>
-                {meta.label}
-              </Typography>
-              <Typography
+              <DragIcon sx={{ fontSize: 13, color: "rgba(120,140,180,0.4)", flexShrink: 0 }} />
+              <Box
                 sx={{
-                  fontSize: "0.58rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.07em",
+                  width: 24,
+                  height: 24,
+                  borderRadius: "5px",
+                  bgcolor: `${colors.border}22`,
+                  border: `1px solid ${colors.border}55`,
                   color: colors.text,
-                  opacity: 0.7,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  "& svg": { fontSize: 14 },
                 }}
               >
-                {meta.sublabel}
-              </Typography>
+                {meta.icon}
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#e0e4f0", lineHeight: 1.2 }}>
+                  {meta.label}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "0.58rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.07em",
+                    color: colors.text,
+                    opacity: 0.7,
+                  }}
+                >
+                  {meta.sublabel}
+                </Typography>
+              </Box>
             </Box>
-          </Box>
+          </Tooltip>
         );
       })}
 

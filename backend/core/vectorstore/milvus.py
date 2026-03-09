@@ -185,6 +185,35 @@ class MilvusStore(BaseVectorStore):
         await asyncio.to_thread(self.client.drop_collection, collection_name=self.collection_name)
         await asyncio.to_thread(self._ensure_collection)
 
+    async def count_files(self) -> int:
+        """Get unique file (source) count from metadata."""
+        try:
+            sources: set[str] = set()
+            batch_size = 1000
+            last_id = ""
+            while True:
+                filter_expr = f'id > "{last_id}"' if last_id else ""
+                batch = await asyncio.to_thread(
+                    self.client.query,
+                    collection_name=self.collection_name,
+                    filter=filter_expr,
+                    output_fields=["id", "metadata_json"],
+                    limit=batch_size,
+                )
+                if not batch:
+                    break
+                for doc in batch:
+                    meta = json.loads(doc.get("metadata_json", "{}"))
+                    src = meta.get("filename", "") or meta.get("source", "")
+                    if src:
+                        sources.add(src)
+                last_id = batch[-1].get("id", "")
+                if len(batch) < batch_size:
+                    break
+            return len(sources)
+        except Exception:
+            return 0
+
     async def get_all_documents(self) -> list[dict]:
         """Get all documents for BM25 index building.
 

@@ -69,6 +69,7 @@ async def get_system_info(
 
     store = create_vectorstore()
     doc_count = await store.count()
+    file_count = await store.count_files()
 
     from agent import get_memory
 
@@ -80,6 +81,7 @@ async def get_system_info(
         version=settings.app_version,
         default_provider=settings.default_llm_provider,
         document_count=doc_count,
+        file_count=file_count,
         session_count=session_count,
     )
 

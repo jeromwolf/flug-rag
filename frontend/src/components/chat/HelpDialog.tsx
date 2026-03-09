@@ -29,6 +29,7 @@ import CampaignIcon from "@mui/icons-material/Campaign";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import PollIcon from "@mui/icons-material/Poll";
 import PushPinIcon from "@mui/icons-material/PushPin";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { contentApi } from "../../api/client";
 
@@ -536,7 +537,16 @@ export function HelpDialog({ open, onClose }: HelpDialogProps) {
         {tab === 2 && <SurveysTab />}
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
+        <Button
+          href="/guide/demo.html"
+          target="_blank"
+          size="small"
+          startIcon={<MenuBookIcon sx={{ fontSize: 16 }} />}
+          sx={{ textTransform: "none" }}
+        >
+          시연 가이드
+        </Button>
         <Button onClick={onClose} variant="outlined" size="small">
           닫기
         </Button>
