@@ -60,11 +60,11 @@ export default function Layout({ children, title, noPadding, headerActions }: La
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(true);
-  const { user, logout, hasPermission, authEnabled } = useAuth();
+  const { user, logout, hasPermission, platformName } = useAuth();
 
-  // Filter nav items by permission
+  // Filter nav items by permission (always check, even when auth disabled)
   const visibleNav = navItems.filter(
-    (item) => !authEnabled || hasPermission(item.permission),
+    (item) => hasPermission(item.permission),
   );
 
   const handleLogout = async () => {
@@ -93,7 +93,7 @@ export default function Layout({ children, title, noPadding, headerActions }: La
             <>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                  AI 어시스턴트
+                  {platformName || "AI 어시스턴트"}
                 </Typography>
               </Box>
               <IconButton size="small" onClick={() => setOpen(false)}>

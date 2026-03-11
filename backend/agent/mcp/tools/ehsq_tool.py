@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 
 from .base import BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class EhsqTool(BaseTool):
             description="EHSQ 시스템에서 안전사고, 안전현황, 법정 컴플라이언스 정보를 조회합니다 (데모용 Mock 데이터)",
             category="integration",
             help_text=(
-                "한국가스기술공사 EHSQ(환경·보건·안전·품질) 시스템 조회 도구입니다 (데모 Mock).\n\n"
+                f"{settings.platform_name} EHSQ(환경·보건·안전·품질) 시스템 조회 도구입니다 (데모 Mock).\n\n"
                 "action 종류:\n"
                 "  - incident_report   : 안전사고 현황 (발생건수·중대재해·무재해일수·사고목록)\n"
                 "  - safety_status     : 시설별 안전등급 및 점검 현황\n"

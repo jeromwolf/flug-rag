@@ -444,6 +444,27 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
     rag_chain = await _get_rag_chain()
     query_router = await _get_router()
 
+    # Pre-classify query (rule-based, <1ms)
+    from rag.query_classifier import QueryClassifier, QueryClass
+
+    classifier = QueryClassifier()
+    classification = classifier.classify(request.message)
+    query_class_value = classification.category.value
+
+    # Immediate response for identity/dangerous (no LLM needed)
+    if classification.category in (QueryClass.IDENTITY, QueryClass.DANGEROUS):
+        content = classification.immediate_response
+        msg_id = await _get_memory().add_message(session_id, "assistant", content)
+        return ChatResponse(
+            message_id=msg_id,
+            content=content,
+            sources=[],
+            confidence=1.0 if classification.category == QueryClass.IDENTITY else 0.0,
+            confidence_level="high" if classification.category == QueryClass.IDENTITY else "low",
+            session_id=session_id,
+            metadata={"query_class": query_class_value},
+        )
+
     # Tool selection (keyword-based, before LLM routing)
     from agent.tool_selector import select_tool
 
@@ -452,6 +473,9 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
 
     if tool_selection:
         mode = "tool"
+    elif classification.category in (QueryClass.CHITCHAT, QueryClass.GENERAL):
+        # Skip QueryRouter for non-RAG queries
+        mode = "direct"
     elif request.mode == "auto":
         routing = await query_router.route(request.message, history)
         mode = (
@@ -522,7 +546,11 @@ async def chat(request: ChatRequest, current_user: User | None = Depends(require
         provider=request.provider,
         model=request.model,
         temperature=request.temperature,
+        query_class=query_class_value,
     )
+
+    # Add query_class to metadata
+    response.metadata["query_class"] = query_class_value
 
     # Save assistant message
     msg_id = await _get_memory().add_message(
@@ -558,6 +586,36 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
     rag_chain = await _get_rag_chain()
     query_router = await _get_router()
 
+    # Pre-classify query (rule-based, <1ms)
+    from rag.query_classifier import QueryClassifier, QueryClass
+
+    classifier = QueryClassifier()
+    classification = classifier.classify(request.message)
+    query_class_value = classification.category.value
+
+    # Immediate response for identity/dangerous (no LLM needed)
+    if classification.category in (QueryClass.IDENTITY, QueryClass.DANGEROUS):
+        content = classification.immediate_response
+
+        async def immediate_generator():
+            msg_id = str(uuid.uuid4())
+            await _get_memory().add_message(session_id, "assistant", content)
+            yield {
+                "event": "start",
+                "data": json.dumps({"message_id": msg_id, "session_id": session_id}, ensure_ascii=False),
+            }
+            yield {"event": "chunk", "data": json.dumps({"content": content}, ensure_ascii=False)}
+            yield {
+                "event": "end",
+                "data": json.dumps({
+                    "confidence_score": 1.0 if classification.category == QueryClass.IDENTITY else 0.0,
+                    "confidence_level": "high" if classification.category == QueryClass.IDENTITY else "low",
+                    "query_class": query_class_value,
+                }, ensure_ascii=False),
+            }
+
+        return EventSourceResponse(immediate_generator())
+
     # Tool selection (keyword-based, before LLM routing)
     from agent.tool_selector import select_tool
 
@@ -585,6 +643,9 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
                     args["text"] = f"[이전 조회 결과]\n{prev_context}\n\n[사용자 요청]\n{request.message}"
                 elif "document_text" in args:
                     args["document_text"] = f"[이전 조회 결과]\n{prev_context}\n\n[사용자 요청]\n{request.message}"
+    elif classification.category in (QueryClass.CHITCHAT, QueryClass.GENERAL):
+        # Skip QueryRouter for non-RAG queries
+        mode = "direct"
     elif request.mode == "auto":
         routing = await query_router.route(request.message, history)
         mode = (
@@ -723,6 +784,7 @@ async def chat_stream(request: ChatRequest, current_user: User | None = Depends(
                     provider=request.provider,
                     model=request.model,
                     temperature=request.temperature,
+                    query_class=query_class_value,
                 ):
                     if event["event"] == "start":
                         # Skip the rag_chain's own start event; we already sent one

@@ -282,6 +282,7 @@ class RAGChain:
         model: str | None = None,
         temperature: float | None = None,
         user_id: str = "",
+        query_class: str | None = None,
     ) -> RAGResponse:
         """Execute a full RAG query.
 
@@ -455,7 +456,7 @@ class RAGChain:
                     logger.info("Auto-detected source_type filter: %s", filters["source_type"])
 
             if mode == "direct":
-                response = await self._direct_query(question, llm, start_time, user_id, correction_info, temperature)
+                response = await self._direct_query(question, llm, start_time, user_id, correction_info, temperature, query_class=query_class)
             else:
                 response = await self._rag_query(
                     question, llm, filters, start_time, user_id, correction_info, temperature,
@@ -733,11 +734,24 @@ class RAGChain:
         user_id: str = "",
         correction_info: dict | None = None,
         temperature: float | None = None,
+        query_class: str | None = None,
     ) -> RAGResponse:
         """Direct mode: LLM only, no retrieval."""
         # Token budget: trim question to fit model context window
         question = self._trim_direct_question(question)
-        system_prompt, user_prompt = self.prompt_manager.build_direct_prompt(question)
+
+        # Select system prompt based on query_class
+        prompt_name = "direct_system"
+        if query_class == "chitchat":
+            prompt_name = "chitchat_system"
+        elif query_class == "general":
+            prompt_name = "general_system"
+
+        try:
+            system_prompt = self.prompt_manager.get_system_prompt(prompt_name)
+        except KeyError:
+            system_prompt, _ = self.prompt_manager.build_direct_prompt(question)
+        user_prompt = question
 
         response = await llm.generate(
             prompt=user_prompt,
@@ -794,6 +808,7 @@ class RAGChain:
         model: str | None = None,
         temperature: float | None = None,
         user_id: str = "",
+        query_class: str | None = None,
     ) -> AsyncIterator[dict]:
         """Stream a RAG query response.
 
@@ -997,7 +1012,19 @@ class RAGChain:
             if mode == "direct":
                 # Token budget: trim question to fit model context window
                 question = self._trim_direct_question(question)
-                system, user_prompt = self.prompt_manager.build_direct_prompt(question)
+
+                # Select system prompt based on query_class
+                _prompt_name = "direct_system"
+                if query_class == "chitchat":
+                    _prompt_name = "chitchat_system"
+                elif query_class == "general":
+                    _prompt_name = "general_system"
+                try:
+                    system = self.prompt_manager.get_system_prompt(_prompt_name)
+                except KeyError:
+                    system, _ = self.prompt_manager.build_direct_prompt(question)
+                user_prompt = question
+
                 accumulated = []
                 async for token in llm.stream(prompt=user_prompt, system=system, temperature=temperature, max_tokens=settings.llm_max_tokens):
                     accumulated.append(token)

@@ -155,8 +155,8 @@ function DashboardTab() {
     session_count?: number;
   } | undefined;
 
-  const users: unknown[] = usersData?.data?.users ?? usersData?.data ?? [];
-  const metrics = metricsData?.data as {
+  const users: unknown[] = usersData?.data ?? [];
+  const metrics = (metricsData?.data as { metrics?: Record<string, unknown> })?.metrics as {
     cpu?: number;
     memory?: number;
     disk?: number;
@@ -623,7 +623,7 @@ function UserManagementTab() {
     queryFn: () => authApi.listUsers(),
   });
 
-  const rawUsers: UserRecord[] = (data?.data?.users ?? data?.data ?? []) as UserRecord[];
+  const rawUsers: UserRecord[] = (data?.data ?? []) as UserRecord[];
 
   // Mutations
   const createMutation = useMutation({

@@ -3,6 +3,7 @@
 from agent.mcp.tools.base import (
     BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult,
 )
+from config.settings import settings
 from rag.retriever import HybridRetriever
 
 
@@ -21,7 +22,7 @@ class DocumentSearchTool(BaseTool):
     def get_definition(self) -> ToolDefinition:
         return ToolDefinition(
             name="search_documents",
-            description="한국가스기술공사 문서 지식베이스에서 관련 문서를 검색합니다.",
+            description=f"{settings.platform_name} 문서 지식베이스에서 관련 문서를 검색합니다.",
             category="retrieval",
             help_text=(
                 "하이브리드 검색(벡터 + BM25)으로 지식베이스 문서를 검색합니다.\n"

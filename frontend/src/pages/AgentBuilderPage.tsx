@@ -77,6 +77,8 @@ import type {
   EdgeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import Layout from "../components/Layout";
 import { workflowsApi, mcpApi } from "../api/client";
 import type { WorkflowListItem } from "../api/client";
@@ -2986,20 +2988,29 @@ function AgentBuilderCanvas() {
               fontFamily: "'Noto Sans KR', sans-serif",
               "& strong": { color: "#93c5fd" },
             }}
-            dangerouslySetInnerHTML={{
-              __html: (() => {
-                const raw = typeof runResult?.final_output === "string"
-                  ? runResult.final_output
-                  : runResult?.final_output
-                    ? JSON.stringify(runResult.final_output, null, 2)
-                    : "출력 없음";
-                return raw
-                  .replace(/## (.+)/g, '<h3 style="margin:16px 0 8px;font-size:0.95rem;font-weight:700;color:#93c5fd">$1</h3>')
-                  .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-                  .replace(/\n/g, "<br/>");
-              })(),
-            }}
-          />
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => <Typography variant="h6" sx={{ color: "#93c5fd", mt: 2, mb: 1 }}>{children}</Typography>,
+                h2: ({ children }) => <Typography variant="subtitle1" sx={{ color: "#93c5fd", fontWeight: 700, mt: 2, mb: 1 }}>{children}</Typography>,
+                h3: ({ children }) => <Typography variant="subtitle2" sx={{ color: "#93c5fd", fontWeight: 700, mt: 1.5, mb: 0.5 }}>{children}</Typography>,
+                p: ({ children }) => <Typography variant="body2" sx={{ color: "#c8d4e8", mb: 1, lineHeight: 1.8 }}>{children}</Typography>,
+                strong: ({ children }) => <strong style={{ color: "#93c5fd" }}>{children}</strong>,
+                ul: ({ children }) => <Box component="ul" sx={{ pl: 2, mb: 1, "& li": { color: "#c8d4e8", mb: 0.3 } }}>{children}</Box>,
+                ol: ({ children }) => <Box component="ol" sx={{ pl: 2, mb: 1, "& li": { color: "#c8d4e8", mb: 0.3 } }}>{children}</Box>,
+                code: ({ children }) => <Box component="code" sx={{ bgcolor: "rgba(50,70,120,0.3)", px: 0.5, borderRadius: 0.5, fontSize: "0.8rem" }}>{children}</Box>,
+                pre: ({ children }) => <Box component="pre" sx={{ bgcolor: "rgba(20,30,50,0.6)", p: 1.5, borderRadius: 1, overflow: "auto", fontSize: "0.8rem", mb: 1 }}>{children}</Box>,
+                table: ({ children }) => <Box sx={{ overflow: "auto", bgcolor: "rgba(20,30,50,0.4)", borderRadius: 1, mb: 1 }}><Box component="table" sx={{ width: "100%", borderCollapse: "collapse", "& th, & td": { p: 1, borderBottom: "1px solid rgba(80,100,140,0.3)", color: "#c8d4e8", fontSize: "0.8rem" }, "& th": { color: "#93c5fd", fontWeight: 700 } }}>{children}</Box></Box>,
+              }}
+            >
+              {typeof runResult?.final_output === "string"
+                ? runResult.final_output
+                : runResult?.final_output
+                  ? JSON.stringify(runResult.final_output, null, 2)
+                  : "출력 없음"}
+            </ReactMarkdown>
+          </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button

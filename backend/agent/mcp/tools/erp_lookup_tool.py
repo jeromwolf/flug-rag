@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 
 from .base import BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +166,7 @@ class ErpLookupTool(BaseTool):
             description="ERP 시스템에서 예산, 프로젝트, 협력업체 정보를 조회합니다 (데모용 Mock 데이터)",
             category="integration",
             help_text=(
-                "한국가스기술공사 ERP 연동 조회 도구입니다 (데모 Mock).\n\n"
+                f"{settings.platform_name} ERP 연동 조회 도구입니다 (데모 Mock).\n\n"
                 "query_type 종류:\n"
                 "  - budget  : 예산 집행 현황 (부문별 예산·집행액·집행률)\n"
                 "  - project : 프로젝트 현황 (프로젝트코드·진행률·PM·상태)\n"

@@ -39,6 +39,14 @@ class QueryLogEntry(BaseModel):
     session_id: str
     content: str
     role: str
+    # 답변 관련 필드 (paired assistant response)
+    answer: str = ""
+    answer_timestamp: str = ""
+    confidence: float | None = None
+    latency_ms: int | None = None
+    query_class: str = ""
+    response_mode: str = ""
+    model_used: str = ""
 
 
 class QueryLogResponse(BaseModel):
@@ -176,6 +184,8 @@ async def search_query_logs(
     offset = (page - 1) * page_size
 
     try:
+        import json as _json
+
         async with aiosqlite.connect(db_path) as db:
             db.row_factory = aiosqlite.Row
 
@@ -183,17 +193,46 @@ async def search_query_logs(
                 row = await cur.fetchone()
                 total = row["cnt"] if row else 0
 
+            # Fetch user messages
             async with db.execute(
                 f"SELECT * FROM messages {where} ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 params + [page_size, offset]
             ) as cur:
-                rows = await cur.fetchall()
-                queries = [QueryLogEntry(
+                user_rows = await cur.fetchall()
+
+            # For each user message, find the next assistant response in the same session
+            queries = []
+            for row in user_rows:
+                entry = QueryLogEntry(
                     timestamp=row["created_at"] or "",
                     session_id=row["session_id"] or "",
                     content=row["content"] or "",
                     role=row["role"] or "",
-                ) for row in rows]
+                )
+
+                # Find paired assistant response (first assistant message after this user message)
+                async with db.execute(
+                    "SELECT content, metadata, created_at FROM messages "
+                    "WHERE session_id = ? AND role = 'assistant' AND created_at > ? "
+                    "ORDER BY created_at ASC LIMIT 1",
+                    [row["session_id"], row["created_at"]]
+                ) as ans_cur:
+                    ans_row = await ans_cur.fetchone()
+                    if ans_row:
+                        entry.answer = ans_row["content"] or ""
+                        entry.answer_timestamp = ans_row["created_at"] or ""
+                        # Parse metadata JSON
+                        try:
+                            meta = _json.loads(ans_row["metadata"] or "{}")
+                            entry.confidence = meta.get("confidence_score") or meta.get("confidence")
+                            entry.latency_ms = meta.get("latency_ms")
+                            entry.query_class = meta.get("query_class", "")
+                            entry.response_mode = meta.get("response_mode", "")
+                            entry.model_used = meta.get("model_used", "")
+                        except (ValueError, TypeError):
+                            pass
+
+                queries.append(entry)
 
         return QueryLogResponse(queries=queries, total=total, page=page, page_size=page_size)
     except Exception as e:

@@ -7,6 +7,7 @@ and KOGAS domain-specific prompts.
 from agent.builder.models import (
     Edge, NodeConfig, NodeType, Workflow, WorkflowNode, WorkflowStatus,
 )
+from config.settings import settings
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +39,7 @@ def create_tech_doc_summary_workflow() -> Workflow:
                 node_type=NodeType.LLM, label="요약 보고서 생성",
                 config={
                     "system_prompt": (
-                        "당신은 한국가스기술공사의 기술문서 분석 전문가입니다.\n"
+                        f"당신은 {settings.platform_name}의 기술문서 분석 전문가입니다.\n"
                         "검색된 기술문서를 바탕으로 다음 구조로 요약하세요:\n\n"
                         "## 핵심 요약\n- 3줄 이내 핵심 내용\n\n"
                         "## 주요 사항\n- 번호 매겨서 핵심 포인트 나열\n\n"
@@ -106,7 +107,7 @@ def create_regulation_comparison_workflow() -> Workflow:
                 node_type=NodeType.LLM, label="비교 분석",
                 config={
                     "system_prompt": (
-                        "당신은 한국가스기술공사 규정 분석 전문가입니다.\n"
+                        f"당신은 {settings.platform_name} 규정 분석 전문가입니다.\n"
                         "두 규정을 다음 형식으로 비교 분석하세요:\n\n"
                         "## 규정 개요\n| 항목 | 규정 A | 규정 B |\n\n"
                         "## 공통점\n- 두 규정이 동일하게 규정하는 사항\n\n"
@@ -170,7 +171,7 @@ def create_equipment_inspection_workflow() -> Workflow:
                 node_type=NodeType.LLM, label="점검이력 분석",
                 config={
                     "system_prompt": (
-                        "당신은 한국가스기술공사의 설비 안전 분석 전문가입니다.\n"
+                        f"당신은 {settings.platform_name}의 설비 안전 분석 전문가입니다.\n"
                         "EHSQ 점검이력과 관련 안전 규정을 종합하여 분석하세요:\n\n"
                         "## 점검 현황 요약\n- 총 점검 횟수, 최근 점검일, 점검 주기 준수 여부\n\n"
                         "## 주요 결함 유형\n- 발견된 결함을 유형별로 분류하고 빈도 표시\n\n"
@@ -246,7 +247,7 @@ def create_management_evaluation_workflow() -> Workflow:
                 node_type=NodeType.LLM, label="종합 분석",
                 config={
                     "system_prompt": (
-                        "당신은 한국가스기술공사의 경영평가 분석 전문가입니다.\n"
+                        f"당신은 {settings.platform_name}의 경영평가 분석 전문가입니다.\n"
                         "ERP에서 수집한 경영 데이터와 내부규정을 종합하여 분석하세요:\n\n"
                         "## 평가 항목 개요\n- 해당 경영평가 항목의 배경과 목적\n\n"
                         "## 정량 실적\n| 지표 | 목표 | 실적 | 달성률 |\n"
@@ -312,7 +313,7 @@ def create_onboarding_guide_workflow() -> Workflow:
                 node_type=NodeType.LLM, label="핵심 규정 정리",
                 config={
                     "system_prompt": (
-                        "당신은 한국가스기술공사의 인사교육 담당자입니다.\n"
+                        f"당신은 {settings.platform_name}의 인사교육 담당자입니다.\n"
                         "검색된 내부규정 중 신규직원이 반드시 알아야 할 핵심 내용을 정리하세요:\n\n"
                         "1. 조직 및 직무 관련 규정\n"
                         "2. 안전 관련 필수 규정\n"
@@ -387,7 +388,7 @@ def create_iso_compliance_workflow() -> Workflow:
                 node_type=NodeType.LLM, label="Gap 분석",
                 config={
                     "system_prompt": (
-                        "당신은 한국가스기술공사의 ISO 인증 심사 대응 전문가입니다.\n"
+                        f"당신은 {settings.platform_name}의 ISO 인증 심사 대응 전문가입니다.\n"
                         "EHSQ 준수 현황과 내부규정을 대조하여 Gap 분석을 수행하세요:\n\n"
                         "## ISO 요건 요약\n- 해당 ISO 조항의 핵심 요구사항\n\n"
                         "## 현재 준수 현황\n| 요구사항 | 현황 | 적합/부적합 |\n\n"

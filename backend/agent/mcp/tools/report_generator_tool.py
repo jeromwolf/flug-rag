@@ -6,6 +6,7 @@ from datetime import datetime
 from agent.mcp.tools.base import (
     BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult,
 )
+from config.settings import settings
 from core.llm import BaseLLM, create_llm
 
 
@@ -16,7 +17,7 @@ REPORT_TEMPLATES = {
         "description": "가스 시설 안전 점검 결과 보고서",
         "required_fields": ["facility_name", "inspector", "date", "findings"],
         "system_prompt": (
-            "당신은 한국가스기술공사의 안전 점검 보고서 작성 전문가입니다.\n"
+            f"당신은 {settings.platform_name}의 안전 점검 보고서 작성 전문가입니다.\n"
             "제공된 데이터를 기반으로 전문적이고 체계적인 안전 점검 보고서를 작성하세요.\n"
             "보고서는 다음 섹션을 포함해야 합니다:\n"
             "1. 점검 개요\n2. 점검 결과\n3. 지적 사항\n4. 개선 권고사항\n5. 결론"
@@ -27,7 +28,7 @@ REPORT_TEMPLATES = {
         "description": "월간 업무 요약 보고서",
         "required_fields": ["department", "period", "activities"],
         "system_prompt": (
-            "당신은 한국가스기술공사의 월간 보고서 작성 전문가입니다.\n"
+            f"당신은 {settings.platform_name}의 월간 보고서 작성 전문가입니다.\n"
             "제공된 데이터를 기반으로 월간 요약 보고서를 작성하세요.\n"
             "보고서는 다음 섹션을 포함해야 합니다:\n"
             "1. 기간 및 부서 정보\n2. 주요 업무 실적\n3. 주요 이슈\n4. 다음 달 계획"
@@ -38,7 +39,7 @@ REPORT_TEMPLATES = {
         "description": "가스 관련 사고 또는 이상 상황 보고서",
         "required_fields": ["incident_type", "location", "date", "description"],
         "system_prompt": (
-            "당신은 한국가스기술공사의 사고 보고서 작성 전문가입니다.\n"
+            f"당신은 {settings.platform_name}의 사고 보고서 작성 전문가입니다.\n"
             "제공된 데이터를 기반으로 사고/이상 보고서를 작성하세요.\n"
             "보고서는 다음 섹션을 포함해야 합니다:\n"
             "1. 사고 개요\n2. 상세 경위\n3. 피해 현황\n4. 원인 분석\n5. 조치 사항\n6. 재발 방지 대책"

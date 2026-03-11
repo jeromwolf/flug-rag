@@ -64,6 +64,9 @@ MILVUS_STORE_URI=./data/milvus.db  # Lite: file path, Standalone: "http://host:1
 CHROMA_PERSIST_DIR=./data/chroma_db
 CHROMA_COLLECTION_NAME=knowledge_base
 
+# Platform branding
+PLATFORM_NAME=한국가스기술공사    # 배포처별 변경 가능
+
 # Auth
 AUTH_ENABLED=false               # true for production
 
@@ -144,6 +147,7 @@ flux-rag/
 - OpenAI/Anthropic (폴백)
 
 ### 고급 RAG 기법
+- **Query Classifier**: 규칙 기반 사전 분류기 — identity/dangerous 즉시 응답, chitchat/general direct LLM (`rag/query_classifier.py`)
 - **Self-RAG**: 자기반성적 RAG, 환각 탐지 (`rag/self_rag.py`)
 - **Multi-Query**: 다중 관점 쿼리 생성 (`rag/multi_query.py`)
 - **Agentic RAG**: 동적 전략 라우팅 (`rag/agentic.py`)
@@ -363,19 +367,34 @@ asyncio.run(check())
 - **관리자 대시보드 수정**: `AdminPage.tsx` 오늘 질의 수 0 표시 버그 수정
   - `daily[].count` → `daily_breakdown[].queries` 필드명 매핑
 
-### 현재 상태
-- **시연 준비 완료**: RunPod A40+A100 환경에서 전체 기능 동작 확인
-- **시연 가이드**: `/guide/demo.html` 에서 전체 기능 스크린샷 확인 가능
+### Phase 8: 시연 이후 개선 (2026-03-12)
+- **Query Classifier**: 규칙 기반 사전 분류기 (`rag/query_classifier.py`, <1ms)
+  - 5 카테고리: rag, general, identity, dangerous, chitchat
+  - identity/dangerous → 즉시 응답 (LLM 호출 없음), chitchat/general → direct LLM
+  - `chat.py` non-streaming + streaming 양쪽에 통합
+- **플랫폼명 설정 분리**: `PLATFORM_NAME` 환경변수 (기본값: 한국가스기술공사)
+  - `settings.py`, `system.yaml`({platform_name}), `prompt.py`(로드시 치환)
+  - MCP 도구 9개 + presets.py + query_classifier/corrector + ethics.py 전부 settings 참조
+  - 프론트엔드: AuthContext → Layout 동적 타이틀
+- **질의 로그 확장**: 답변 내용 + 응답시간 + 신뢰도 + 분류 저장 (`logs.py`)
+  - MonitorPage 질의 이력 테이블 7열로 확장 (답변, 분류, 신뢰도, 응답시간)
+- **KGT-G09 메뉴 이슈 수정**: `Layout.tsx` 권한 바이패스 제거 → 실제 역할 기반 메뉴 필터링
+- **API RBAC 강화**: `workflows.py` mutation 엔드포인트에 `require_role()` 추가
+- **품질 대시보드 UX**: 청크 품질/벡터 분포 탭 로딩 시 안내 메시지
+- **에이전트 빌더**: 출력 포맷 `dangerouslySetInnerHTML` → `ReactMarkdown` + GFM
+- **QA 점검**: sync.py await 버그, admin timeout, quality timeout, AdminPage 매핑 수정
 
-### 시연 이후 최우선 작업
-- **Query Classifier (질문 분류기)** — 일반/규정/도구/위험 4분류 라우터 (현재 모든 질문이 RAG 직행)
-- **질의 로그에 답변 저장** — 답변 내용 + 응답시간 + 신뢰도 (현재 질문만 저장)
-- **전체 메뉴 QA 점검** — 메뉴별 기능 검증, 버그 리스트업
-- **시스템 프롬프트 보강** — 모델명/날씨 등 범위 밖 질문 대응, 프롬프트 인젝션 방어
-- 청크 품질 로딩 안내 메시지 추가
+### 현재 상태
+- **시연 완료**: RunPod A40+A100 환경 시연 종료
+- **시연 이후 개선**: Phase 8 작업 완료, 배포 대기
+
+### 남은 작업
 - 프롬프트 시뮬레이터 구현
 - 피드백 드릴다운 (부정 피드백 클릭 → 쿼리/응답 상세)
-- KGT-G09 메뉴 노출 이슈 수정
+- 관리자 UI에서 CONTEXT_MAX_CHUNKS, LLM_MAX_TOKENS 변경 기능
+- 채팅 파일첨부 시 파일 크기 사전 체크
+- OCR 30,000자 제한을 설정으로 분리
+- 관리자 페이지 전반 개선
 - 운영 배포 준비 (vLLM, K8s, Redis)
 
 ### 중장기 확장 방향

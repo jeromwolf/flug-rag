@@ -6,6 +6,8 @@ import logging
 import re
 from dataclasses import dataclass
 
+from config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,7 +23,7 @@ class CorrectionResult:
 # 가스 분야 도메인 유의어 사전
 DOMAIN_SYNONYMS: dict[str, str] = {
     # 조직명 약어/오타
-    "가스기술공사": "한국가스기술공사",
+    "가스기술공사": settings.platform_name,
     "가공": "한국가스공사",
     "가스공사": "한국가스공사",
     "KOGAS": "한국가스공사",

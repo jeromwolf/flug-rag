@@ -29,6 +29,14 @@ class PromptManager:
             with open(system_path, "r", encoding="utf-8") as f:
                 self._system_prompts = yaml.safe_load(f) or {}
 
+            # Substitute {platform_name} in all system prompts at load time
+            platform_name = settings.platform_name
+            for key in self._system_prompts:
+                if isinstance(self._system_prompts[key], str):
+                    self._system_prompts[key] = self._system_prompts[key].replace(
+                        "{platform_name}", platform_name
+                    )
+
         few_shot_path = self.prompts_dir / "few_shot.yaml"
         if few_shot_path.exists():
             with open(few_shot_path, "r", encoding="utf-8") as f:

@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"  # DEBUG, INFO, WARNING, ERROR
 
+    # Platform branding (configurable per deployment)
+    platform_name: str = "한국가스기술공사"  # PLATFORM_NAME env var
+
     # Server
     host: str = "0.0.0.0"
     port: int = 8000

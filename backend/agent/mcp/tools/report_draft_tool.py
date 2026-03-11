@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 
 from .base import BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class ReportDraftTool(BaseTool):
             today = datetime.now().strftime("%Y년 %m월 %d일")
             toc = "\n".join(f"  {s}" for s in structure)
 
-            system_prompt = """당신은 한국가스기술공사의 전문 보고서 작성 어시스턴트입니다.
+            system_prompt = f"""당신은 {settings.platform_name}의 전문 보고서 작성 어시스턴트입니다.
 제공된 참고 문서와 주제를 바탕으로 전문적이고 체계적인 보고서 초안을 작성하세요.
 - 한국 공공기관 문서 스타일을 준수합니다.
 - 사실에 기반하여 작성하고 불확실한 내용은 '[확인 필요]'로 표시합니다.

@@ -71,10 +71,10 @@ async def get_sync_status(current_user: User = Depends(get_current_user)):
     """
     try:
         scheduler = get_scheduler()
-        engine = get_sync_engine()
+        engine = await get_sync_engine()
 
         status = scheduler.get_status()
-        last_sync = engine.get_last_sync()
+        last_sync = await engine.get_last_sync()
 
         return SyncStatusResponse(
             scheduler_running=status["running"],
@@ -101,7 +101,7 @@ async def trigger_sync(
         SyncResultResponse: 동기화 실행 결과
     """
     try:
-        engine = get_sync_engine()
+        engine = await get_sync_engine()
 
         # H-04: Validate source_dir to prevent path traversal
         if source_dir:
@@ -196,7 +196,7 @@ async def get_sync_history(
         SyncHistoryResponse: 동기화 이력 목록 및 전체 개수
     """
     try:
-        engine = get_sync_engine()
+        engine = await get_sync_engine()
 
         # 이력 조회
         history_list = engine.get_history(limit=limit)

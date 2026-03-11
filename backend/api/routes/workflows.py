@@ -9,8 +9,8 @@ from agent.builder import WorkflowEngine, get_preset, list_presets
 from agent.builder.models import Edge, NodeConfig, NodeType, Workflow, WorkflowNode, WorkflowStatus
 from agent.builder.workflow_store import get_workflow_store
 from api.schemas import WorkflowRunRequest
-from auth.dependencies import get_current_user
-from auth.models import User
+from auth.dependencies import get_current_user, require_role
+from auth.models import Role, User
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ def _convert_frontend_nodes(frontend_nodes: list) -> list:
 
 
 @router.post("/workflows/run")
-async def run_workflow(request: WorkflowRunRequest, current_user: User | None = Depends(get_current_user)):
+async def run_workflow(request: WorkflowRunRequest, current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER]))):
     if request.preset:
         workflow = get_preset(request.preset)
         if not workflow:
@@ -163,11 +163,11 @@ async def list_workflows(current_user: User | None = Depends(get_current_user)):
 @router.post("/workflows", status_code=201)
 async def create_workflow(
     request: WorkflowSaveRequest,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER])),
 ):
     """Save a new workflow."""
     store = await get_workflow_store()
-    user_id = current_user.id if current_user else None
+    user_id = current_user.id
     workflow = await store.create(
         name=request.name,
         description=request.description,
@@ -192,7 +192,7 @@ async def get_workflow(workflow_id: str, current_user: User | None = Depends(get
 async def update_workflow(
     workflow_id: str,
     request: WorkflowSaveRequest,
-    current_user: User | None = Depends(get_current_user),
+    current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER])),
 ):
     """Update an existing saved workflow."""
     store = await get_workflow_store()
@@ -210,7 +210,7 @@ async def update_workflow(
 
 
 @router.delete("/workflows/{workflow_id}", status_code=204)
-async def delete_workflow(workflow_id: str, current_user: User | None = Depends(get_current_user)):
+async def delete_workflow(workflow_id: str, current_user: User = Depends(require_role([Role.ADMIN]))):
     """Delete a saved workflow."""
     store = await get_workflow_store()
     deleted = await store.delete(workflow_id)

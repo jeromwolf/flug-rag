@@ -16,14 +16,16 @@ from typing import Optional
 
 import aiosqlite
 
+from config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 # 현재 윤리 서약 내용 (버전 관리)
 CURRENT_PLEDGE_VERSION = "1.0"
-CURRENT_PLEDGE_CONTENT = """
-# 한국가스기술공사 생성형 AI 윤리 서약
+CURRENT_PLEDGE_CONTENT = f"""
+# {settings.platform_name} 생성형 AI 윤리 서약
 
-본인은 한국가스기술공사 생성형 AI 플랫폼을 사용함에 있어 다음 사항을 준수할 것을 서약합니다.
+본인은 {settings.platform_name} 생성형 AI 플랫폼을 사용함에 있어 다음 사항을 준수할 것을 서약합니다.
 
 ## 1. 정보 보안
 - AI 시스템에 영업비밀, 개인정보, 보안등급 문서를 무단 입력하지 않겠습니다.

@@ -724,6 +724,13 @@ interface QueryLogEntry {
   session_id: string;
   content: string;
   cached?: boolean;
+  answer?: string;
+  answer_timestamp?: string;
+  confidence?: number | null;
+  latency_ms?: number | null;
+  query_class?: string;
+  response_mode?: string;
+  model_used?: string;
 }
 interface OperationLogEntry {
   timestamp: string;
@@ -1009,9 +1016,12 @@ function LogManagementSection() {
                     <TableHead>
                       <TableRow>
                         <TableCell>시각</TableCell>
-                        <TableCell>세션 ID</TableCell>
+                        <TableCell>세션</TableCell>
                         <TableCell>질의 내용</TableCell>
-                        <TableCell>캐시</TableCell>
+                        <TableCell>답변</TableCell>
+                        <TableCell>분류</TableCell>
+                        <TableCell>신뢰도</TableCell>
+                        <TableCell>응답시간</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1021,23 +1031,48 @@ function LogManagementSection() {
                             <Typography variant="caption">{new Date(q.timestamp).toLocaleString("ko-KR")}</Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="caption" sx={{ fontFamily: "monospace" }}>{q.session_id?.slice(0, 8)}...</Typography>
+                            <Typography variant="caption" sx={{ fontFamily: "monospace" }}>{q.session_id?.slice(0, 8)}</Typography>
                           </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" noWrap sx={{ maxWidth: 420, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          <TableCell sx={{ maxWidth: 280 }}>
+                            <Typography variant="body2" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                               {q.content}
                             </Typography>
                           </TableCell>
+                          <TableCell sx={{ maxWidth: 280 }}>
+                            <Typography variant="body2" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis", color: q.answer ? "text.primary" : "text.disabled" }}>
+                              {q.answer || "-"}
+                            </Typography>
+                          </TableCell>
                           <TableCell>
-                            {q.cached && (
-                              <Chip label="캐시" size="small" color="success" variant="outlined" sx={{ fontSize: "0.7rem" }} />
+                            {q.query_class && (
+                              <Chip
+                                label={q.query_class}
+                                size="small"
+                                color={q.query_class === "rag" ? "primary" : q.query_class === "dangerous" ? "error" : "default"}
+                                variant="outlined"
+                                sx={{ fontSize: "0.7rem" }}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {q.confidence != null && (
+                              <Typography variant="caption" color={q.confidence >= 0.7 ? "success.main" : q.confidence >= 0.4 ? "warning.main" : "error.main"}>
+                                {(q.confidence * 100).toFixed(0)}%
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {q.latency_ms != null && (
+                              <Typography variant="caption">
+                                {q.latency_ms >= 1000 ? `${(q.latency_ms / 1000).toFixed(1)}s` : `${q.latency_ms}ms`}
+                              </Typography>
                             )}
                           </TableCell>
                         </TableRow>
                       ))}
                       {(queryLogs?.queries ?? []).length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={4}>
+                          <TableCell colSpan={7}>
                             <Typography color="text.secondary" variant="body2" align="center">결과 없음</Typography>
                           </TableCell>
                         </TableRow>

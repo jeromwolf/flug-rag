@@ -56,6 +56,8 @@ def _mask_model(model) -> dict:
 async def get_system_info(
     current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
 ):
+    import asyncio
+
     # Check cache first
     try:
         from core.cache import get_cache
@@ -67,14 +69,25 @@ async def get_system_info(
     except Exception:
         cache = None
 
-    store = create_vectorstore()
-    doc_count = await store.count()
-    file_count = await store.count_files()
+    # Milvus Lite single-process: wrap with timeout to avoid deadlock
+    doc_count = 0
+    file_count = 0
+    session_count = 0
 
-    from agent import get_memory
+    try:
+        store = create_vectorstore()
+        doc_count = await asyncio.wait_for(store.count(), timeout=5.0)
+        file_count = await asyncio.wait_for(store.count_files(), timeout=5.0)
+    except (asyncio.TimeoutError, Exception) as e:
+        logger.warning("Failed to get vectorstore stats: %s", e)
 
-    memory = get_memory()
-    session_count = await memory.count_sessions()
+    try:
+        from agent import get_memory
+
+        memory = get_memory()
+        session_count = await asyncio.wait_for(memory.count_sessions(), timeout=5.0)
+    except (asyncio.TimeoutError, Exception) as e:
+        logger.warning("Failed to get session count: %s", e)
 
     result = SystemInfoResponse(
         app_name=settings.app_name,

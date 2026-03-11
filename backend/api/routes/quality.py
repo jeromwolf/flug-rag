@@ -260,11 +260,15 @@ async def get_chunk_quality_metrics(current_user: User = Depends(require_role([R
     Returns:
         청크 품질 분석 리포트 (길이 분포, 중복, 완결성 등)
     """
+    import asyncio
     try:
         analyzer = _get_chunk_analyzer()
-        report = await analyzer.analyze_all_chunks()
+        report = await asyncio.wait_for(analyzer.analyze_all_chunks(), timeout=15.0)
         return asdict(report)
 
+    except asyncio.TimeoutError:
+        logger.warning("Chunk quality analysis timed out (15s)")
+        raise HTTPException(504, "청크 품질 분석 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.")
     except Exception as e:
         logger.error(f"Failed to analyze chunk quality: {e}")
         raise HTTPException(500, f"Failed to analyze chunk quality: {str(e)}")
@@ -410,11 +414,15 @@ async def get_vector_distribution(current_user: User = Depends(require_role([Rol
     Returns:
         벡터 노름 통계, 이상치 감지 결과
     """
+    import asyncio
     try:
         analyzer = _get_vector_analyzer()
-        distribution = await analyzer.get_distribution()
+        distribution = await asyncio.wait_for(analyzer.get_distribution(), timeout=10.0)
         return asdict(distribution)
 
+    except asyncio.TimeoutError:
+        logger.warning("Vector distribution analysis timed out (10s)")
+        raise HTTPException(504, "벡터 분포 분석 시간이 초과되었습니다.")
     except Exception as e:
         logger.error(f"Failed to get vector distribution: {e}")
         raise HTTPException(500, f"Failed to get vector distribution: {str(e)}")
@@ -428,11 +436,15 @@ async def get_vector_health(current_user: User = Depends(require_role([Role.ADMI
     Returns:
         컬렉션 크기, 인덱스 타입, 예상 용량 등
     """
+    import asyncio
     try:
         analyzer = _get_vector_analyzer()
-        health = await analyzer.get_collection_health()
+        health = await asyncio.wait_for(analyzer.get_collection_health(), timeout=10.0)
         return asdict(health)
 
+    except asyncio.TimeoutError:
+        logger.warning("Vector health check timed out (10s)")
+        raise HTTPException(504, "벡터 헬스 체크 시간이 초과되었습니다.")
     except Exception as e:
         logger.error(f"Failed to get vector health: {e}")
         raise HTTPException(500, f"Failed to get vector health: {str(e)}")

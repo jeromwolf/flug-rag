@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 
 from .base import BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +160,7 @@ class GroupwareTool(BaseTool):
             description="그룹웨어에서 일정, 결재 현황, 공지사항을 조회합니다 (데모용 Mock 데이터)",
             category="integration",
             help_text=(
-                "한국가스기술공사 그룹웨어 조회 도구입니다 (데모 Mock).\n\n"
+                f"{settings.platform_name} 그룹웨어 조회 도구입니다 (데모 Mock).\n\n"
                 "action 종류:\n"
                 "  - schedule : 일정 조회 (회의·점검·세미나 등 전사 캘린더)\n"
                 "  - approval : 결재 현황 (문서명·결재단계·상태·반려사유)\n"

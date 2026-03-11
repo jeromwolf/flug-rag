@@ -3,6 +3,7 @@
 from agent.mcp.tools.base import (
     BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult,
 )
+from config.settings import settings
 from core.llm import BaseLLM, create_llm
 
 
@@ -21,7 +22,7 @@ TONE_PROMPTS = {
     ),
 }
 
-EMAIL_SYSTEM = """당신은 한국가스기술공사의 이메일 작성 전문가입니다.
+EMAIL_SYSTEM = f"""당신은 {settings.platform_name}의 이메일 작성 전문가입니다.
 비즈니스 이메일을 전문적으로 작성합니다.
 
 이메일 구조:
@@ -59,7 +60,7 @@ class EmailComposerTool(BaseTool):
             description="비즈니스 이메일 초안을 작성합니다. 격식체, 반격식체, 캐주얼 톤을 지원합니다.",
             category="document",
             help_text=(
-                "한국가스기술공사 스타일의 비즈니스 이메일을 LLM으로 작성합니다.\n"
+                f"{settings.platform_name} 스타일의 비즈니스 이메일을 LLM으로 작성합니다.\n"
                 "톤(tone):\n"
                 "  - formal: 격식체 (-습니다, -시기 바랍니다)\n"
                 "  - semi-formal: 반격식체 (-드립니다, -감사드립니다)\n"

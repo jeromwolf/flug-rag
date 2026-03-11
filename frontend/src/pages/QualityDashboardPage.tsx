@@ -373,7 +373,14 @@ function ChunkQualityTab() {
     enabled: !!previewDocId,
   });
 
-  if (metricsLoading || byDocLoading) return <CircularProgress />;
+  if (metricsLoading || byDocLoading) return (
+    <Box sx={{ textAlign: "center", py: 4 }}>
+      <CircularProgress />
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+        청크 품질 분석 중입니다. 문서 수에 따라 시간이 소요될 수 있습니다...
+      </Typography>
+    </Box>
+  );
   if (metricsError) return <Alert severity="error">청크 메트릭을 불러올 수 없습니다.</Alert>;
   if (byDocError) return <Alert severity="error">문서별 청크 정보를 불러올 수 없습니다.</Alert>;
 
@@ -720,7 +727,14 @@ function VectorDistributionTab() {
     refetchInterval: 30000,
   });
 
-  if (distLoading || healthLoading) return <CircularProgress />;
+  if (distLoading || healthLoading) return (
+    <Box sx={{ textAlign: "center", py: 4 }}>
+      <CircularProgress />
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+        벡터 분포 분석 중입니다...
+      </Typography>
+    </Box>
+  );
   if (distError) return <Alert severity="error">벡터 분포를 불러올 수 없습니다.</Alert>;
   if (healthError) return <Alert severity="error">벡터 상태를 불러올 수 없습니다.</Alert>;
 

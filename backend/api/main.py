@@ -237,6 +237,7 @@ async def health_check():
         "app_name": settings.app_name,
         "version": settings.app_version,
         "auth_enabled": settings.auth_enabled,
+        "platform_name": settings.platform_name,
     }
 
 

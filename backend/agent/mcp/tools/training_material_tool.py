@@ -7,6 +7,7 @@
 import logging
 
 from .base import BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class TrainingMaterialTool(BaseTool):
             format_info = FORMAT_GUIDELINES.get(fmt, FORMAT_GUIDELINES["종합"])
             toc = "\n".join(f"  - {s}" for s in format_info["sections"])
 
-            system_prompt = f"""당신은 한국가스기술공사의 전문 교육자료 개발자입니다.
+            system_prompt = f"""당신은 {settings.platform_name}의 전문 교육자료 개발자입니다.
 주어진 주제와 수준에 맞는 실용적인 교육자료를 작성하세요.
 
 교육 대상 수준: {level} ({level_info['description']})
@@ -152,7 +153,7 @@ class TrainingMaterialTool(BaseTool):
 
 작성 지침:
 - {level_info['depth']}
-- 한국가스기술공사 현장 실무에 적합한 내용으로 작성하세요.
+- {settings.platform_name} 현장 실무에 적합한 내용으로 작성하세요.
 - 관련 규정 및 기준을 근거로 제시하세요.
 - 안전 관련 사항은 반드시 강조 표시(⚠️ 또는 [주의])하세요.
 - 내용이 불확실하거나 확인이 필요한 경우 '[확인 필요]'로 표시하세요."""

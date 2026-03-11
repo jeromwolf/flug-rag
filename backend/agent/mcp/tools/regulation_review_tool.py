@@ -4,6 +4,7 @@ SFR-013: 업로드 문서를 사내 규정과 대조 검토
 """
 import logging
 from .base import BaseTool, ToolDefinition, ToolParameter, ToolParamType, ToolResult
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ class RegulationReviewTool(BaseTool):
                 "detailed": "각 위반 항목에 대해 근거 규정, 위반 심각도, 개선 권고사항을 상세히 작성하세요.",
             }
 
-            system_prompt = """당신은 한국가스기술공사의 규정 검토 전문가입니다.
+            system_prompt = f"""당신은 {settings.platform_name}의 규정 검토 전문가입니다.
 제출된 문서를 관련 규정과 대조하여 다음을 식별하세요:
 1. 규정 위반 항목 (위반 조항, 심각도)
 2. 불일치 항목 (규정과 다른 부분)

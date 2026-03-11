@@ -30,6 +30,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   authEnabled: boolean;
+  platformName: string;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   hasRole: (roles: UserRole[]) => boolean;
@@ -126,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);
   const [isLoading, setIsLoading] = useState(true);
   const [authEnabled, setAuthEnabled] = useState(true);
+  const [platformName, setPlatformName] = useState("AI 어시스턴트");
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check whether auth is enabled by hitting the health endpoint
@@ -138,6 +140,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then((data) => {
         const enabled = data?.auth_enabled ?? true;
         setAuthEnabled(enabled);
+        if (data?.platform_name) {
+          setPlatformName(data.platform_name);
+        }
         if (!enabled) {
           // Auth disabled -- auto-authenticate as dev admin
           const devUser: AuthUser = {
@@ -259,6 +264,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: user !== null,
         isLoading,
         authEnabled,
+        platformName,
         login,
         logout,
         hasRole,
