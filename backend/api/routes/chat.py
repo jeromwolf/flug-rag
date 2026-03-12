@@ -425,6 +425,16 @@ async def _build_merged_filters(user, request_filters):
     return {"$and": [combined_filter, request_filters]}
 
 
+@router.get("/chat/config")
+async def chat_config():
+    """Public client config for chat (OCR limits, file size limits, etc.)."""
+    from config.settings import settings
+    return {
+        "ocr_max_chars": settings.ocr_max_chars,
+        "file_max_size_mb": 50,
+    }
+
+
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, current_user: User | None = Depends(require_password_changed)):
     """Non-streaming chat endpoint."""

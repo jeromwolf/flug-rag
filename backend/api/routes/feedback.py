@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from api.schemas import FeedbackRequest, FeedbackResponse
@@ -222,3 +222,29 @@ async def get_feedback_analytics(
         "error_breakdown": error_breakdown,
         "total_errors": total_errors,
     }
+
+
+# NOTE: This route uses a path parameter, so it MUST be defined AFTER
+# all specific /feedback/* routes to avoid matching "stats", "analytics", etc.
+@router.get("/feedback/{feedback_id}")
+async def get_feedback_detail(
+    feedback_id: str,
+    current_user: User = Depends(require_role([Role.ADMIN, Role.MANAGER])),
+):
+    """피드백 상세 조회 (query, answer, comment 포함)."""
+    if not FEEDBACK_FILE.exists():
+        raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다.")
+
+    with open(FEEDBACK_FILE, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+                if entry.get("id") == feedback_id:
+                    return entry
+            except json.JSONDecodeError:
+                continue
+
+    raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다.")

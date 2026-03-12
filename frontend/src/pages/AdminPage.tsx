@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Box,
-  Tabs,
-  Tab,
   Typography,
   Card,
   CardContent,
@@ -51,6 +50,9 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
+  ListSubheader,
+  ListItemButton,
+  ListItemIcon,
 } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
@@ -104,22 +106,23 @@ import ShieldIcon from "@mui/icons-material/Shield";
 import LoginIcon from "@mui/icons-material/Login";
 import LogoutIcon from "@mui/icons-material/Logout";
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner";
-import { adminApi, mcpApi, workflowsApi, guardrailsApi, authApi, governanceApi, feedbackApi, statsApi, ocrApi } from "../api/client";
+import TuneIcon from "@mui/icons-material/Tune";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
+import { adminApi, mcpApi, workflowsApi, guardrailsApi, authApi, governanceApi, feedbackApi, statsApi, ocrApi, logsApi } from "../api/client";
 import Layout from "../components/Layout";
 import CustomToolBuilder from "../components/CustomToolBuilder";
 import ContentManager from "../components/ContentManager";
 import { PasswordConfirmDialog } from "../components/chat/ChatDialogs";
-
-interface TabPanelProps {
-  children: React.ReactNode;
-  value: number;
-  index: number;
-}
-
-function TabPanel({ children, value, index }: TabPanelProps) {
-  if (value !== index) return null;
-  return <Box sx={{ py: 3 }}>{children}</Box>;
-}
+import PromptSimulatorTab from "../components/admin/PromptSimulatorTab";
+import BatchEvaluatorTab from "../components/admin/BatchEvaluatorTab";
+import NewSystemSettingsTab from "../components/admin/SystemSettingsTab";
+import FeedbackDrilldownDialog from "../components/admin/FeedbackDrilldownDialog";
+import ReportTemplateTab from "../components/admin/ReportTemplateTab";
+import CacheManagementTab from "../components/admin/CacheManagementTab";
+import LLMPlaygroundTab from "../components/admin/LLMPlaygroundTab";
+import OcrTestTab from "../components/admin/OcrTestTab";
+import AuditLogTab from "../components/admin/AuditLogTab";
+import ExportCenterTab from "../components/admin/ExportCenterTab";
 
 // ── Tab: Dashboard ──
 function DashboardTab() {
@@ -255,14 +258,20 @@ function DashboardTab() {
     return [];
   })();
 
-  // Mock recent error logs — NOTE: needs backend /logs/errors endpoint
-  const recentErrors: Array<{ timestamp: string; message: string; level: string }> = [
-    { timestamp: new Date(Date.now() - 5 * 60_000).toISOString(), message: "LLM 응답 타임아웃 (32s)", level: "ERROR" },
-    { timestamp: new Date(Date.now() - 18 * 60_000).toISOString(), message: "임베딩 배치 처리 실패 (doc_1234)", level: "WARNING" },
-    { timestamp: new Date(Date.now() - 42 * 60_000).toISOString(), message: "벡터 검색 응답 지연 (4.2s)", level: "WARNING" },
-    { timestamp: new Date(Date.now() - 70 * 60_000).toISOString(), message: "가드레일 트리거: 키워드 필터", level: "INFO" },
-    { timestamp: new Date(Date.now() - 120 * 60_000).toISOString(), message: "캐시 미스율 임계값 초과 (68%)", level: "WARNING" },
-  ];
+  const { data: errorsData } = useQuery({
+    queryKey: ["admin-recent-errors"],
+    queryFn: () => adminApi.getRecentErrors(5),
+    refetchInterval: 60_000,
+  });
+
+  const recentErrors: Array<{ timestamp: string; message: string; level: string }> = (() => {
+    const raw = errorsData?.data;
+    if (raw?.errors && Array.isArray(raw.errors)) return raw.errors.slice(0, 5);
+    return [];
+  })();
+
+  // Feedback drilldown dialog state
+  const [drilldownFeedbackId, setDrilldownFeedbackId] = useState<string | null>(null);
 
   const avgResponseMs = metrics?.avg_response_time_ms ?? null;
   const cacheHitRate = metrics?.cache_hit_rate ?? null;
@@ -419,6 +428,7 @@ function DashboardTab() {
                     return (
                       <Box
                         key={fb.id ?? i}
+                        onClick={() => fb.id && setDrilldownFeedbackId(fb.id)}
                         sx={{
                           display: "flex",
                           alignItems: "flex-start",
@@ -426,6 +436,8 @@ function DashboardTab() {
                           p: 1,
                           borderRadius: 1,
                           bgcolor: "action.hover",
+                          cursor: fb.id ? "pointer" : "default",
+                          "&:hover": fb.id ? { bgcolor: "action.selected" } : {},
                         }}
                       >
                         {ratingIcon}
@@ -478,66 +490,77 @@ function DashboardTab() {
                 <Typography variant="subtitle1" fontWeight={600}>
                   최근 에러 로그 (5건)
                 </Typography>
-                <Chip label="Mock" size="small" variant="outlined" color="default" />
-                {/* NOTE: replace mock data with real /logs/errors or /logs/access?action=error endpoint */}
               </Box>
-              <Stack spacing={1}>
-                {recentErrors.map((err, i) => {
-                  const levelColor =
-                    err.level === "ERROR"
-                      ? "error"
-                      : err.level === "WARNING"
-                      ? "warning"
-                      : "default";
-                  return (
-                    <Box
-                      key={i}
-                      sx={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 1.5,
-                        p: 1,
-                        borderRadius: 1,
-                        bgcolor: "action.hover",
-                      }}
-                    >
-                      {err.level === "ERROR" ? (
-                        <ErrorIcon fontSize="small" color="error" />
-                      ) : err.level === "WARNING" ? (
-                        <WarningAmberIcon fontSize="small" color="warning" />
-                      ) : (
-                        <InfoIcon fontSize="small" color="info" />
-                      )}
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {err.message}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          <AccessTimeIcon sx={{ fontSize: 11, verticalAlign: "middle", mr: 0.3 }} />
-                          {new Date(err.timestamp).toLocaleString("ko-KR", {
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </Typography>
+              {recentErrors.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
+                  최근 에러 로그가 없습니다.
+                </Typography>
+              ) : (
+                <Stack spacing={1}>
+                  {recentErrors.map((err, i) => {
+                    const levelColor =
+                      err.level === "ERROR"
+                        ? "error"
+                        : err.level === "WARNING"
+                        ? "warning"
+                        : "default";
+                    return (
+                      <Box
+                        key={i}
+                        sx={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 1.5,
+                          p: 1,
+                          borderRadius: 1,
+                          bgcolor: "action.hover",
+                        }}
+                      >
+                        {err.level === "ERROR" ? (
+                          <ErrorIcon fontSize="small" color="error" />
+                        ) : err.level === "WARNING" ? (
+                          <WarningAmberIcon fontSize="small" color="warning" />
+                        ) : (
+                          <InfoIcon fontSize="small" color="info" />
+                        )}
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {err.message}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            <AccessTimeIcon sx={{ fontSize: 11, verticalAlign: "middle", mr: 0.3 }} />
+                            {new Date(err.timestamp).toLocaleString("ko-KR", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </Typography>
+                        </Box>
+                        <Chip label={err.level} size="small" color={levelColor} variant="outlined" />
                       </Box>
-                      <Chip label={err.level} size="small" color={levelColor} variant="outlined" />
-                    </Box>
-                  );
-                })}
-              </Stack>
+                    );
+                  })}
+                </Stack>
+              )}
             </CardContent>
           </Card>
         </Grid>
       </Grid>
+
+      {/* Feedback Drilldown Dialog */}
+      <FeedbackDrilldownDialog
+        open={!!drilldownFeedbackId}
+        feedbackId={drilldownFeedbackId}
+        onClose={() => setDrilldownFeedbackId(null)}
+      />
     </Box>
   );
 }
@@ -3247,881 +3270,6 @@ function GovernanceTab() {
   );
 }
 
-// ── Tab: Cache Management ──
-interface CacheCategory {
-  key: string;
-  label: string;
-  description: string;
-  unit: string;
-}
-
-interface CacheConfigData {
-  cache_enabled: boolean;
-  cache_type: string;
-  ttl: Record<string, number>;
-  categories: CacheCategory[];
-}
-
-function CacheManagementTab() {
-  const queryClient = useQueryClient();
-  const [localTtl, setLocalTtl] = useState<Record<string, number> | null>(null);
-  const [snack, setSnack] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-  const [clearConfirmCategory, setClearConfirmCategory] = useState<string | null>(null);
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["admin-cache-config"],
-    queryFn: () => adminApi.getCacheConfig(),
-    select: (res) => res.data as CacheConfigData,
-  });
-
-  const config = data;
-  const effectiveTtl = localTtl ?? config?.ttl ?? {};
-
-  const updateMutation = useMutation({
-    mutationFn: (payload: Record<string, number>) => adminApi.updateCacheConfig(payload),
-    onSuccess: () => {
-      setSnack({ open: true, message: "캐시 TTL이 저장되었습니다.", severity: "success" });
-      queryClient.invalidateQueries({ queryKey: ["admin-cache-config"] });
-      setLocalTtl(null);
-    },
-    onError: () => {
-      setSnack({ open: true, message: "저장에 실패했습니다.", severity: "error" });
-    },
-  });
-
-  const clearMutation = useMutation({
-    mutationFn: (category?: string) => adminApi.clearCache(category),
-    onSuccess: (_, category) => {
-      setSnack({
-        open: true,
-        message: category ? `'${category}' 캐시가 초기화되었습니다.` : "전체 캐시가 초기화되었습니다.",
-        severity: "success",
-      });
-      setClearConfirmCategory(null);
-    },
-    onError: () => {
-      setSnack({ open: true, message: "캐시 초기화에 실패했습니다.", severity: "error" });
-      setClearConfirmCategory(null);
-    },
-  });
-
-  const handleSave = () => {
-    if (!localTtl) return;
-    const numeric: Record<string, number> = {};
-    for (const [k, v] of Object.entries(localTtl)) {
-      numeric[k] = Number(v);
-    }
-    updateMutation.mutate(numeric);
-  };
-
-  const formatTtl = (seconds: number): string => {
-    if (seconds === 0) return "비활성화";
-    if (seconds < 60) return `${seconds}초`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}분 ${seconds % 60}초`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}시간 ${Math.floor((seconds % 3600) / 60)}분`;
-    return `${Math.floor(seconds / 86400)}일`;
-  };
-
-  if (isLoading) return <CircularProgress />;
-  if (error || !config) return <Alert severity="error">캐시 설정을 불러올 수 없습니다.</Alert>;
-
-  return (
-    <>
-      <Box sx={{ mb: 3, display: "flex", alignItems: "center", gap: 2 }}>
-        <Box>
-          <Typography variant="h6" fontWeight={600}>캐시 관리</Typography>
-          <Typography variant="body2" color="text.secondary">
-            캐시 유형: <strong>{config.cache_type === "memory" ? "인메모리" : "Redis"}</strong>
-            {" · "}
-            캐시 활성화: <strong>{config.cache_enabled ? "활성" : "비활성"}</strong>
-          </Typography>
-        </Box>
-        {!config.cache_enabled && (
-          <Alert severity="info" sx={{ flex: 1 }}>
-            캐시가 비활성화 상태입니다. TTL 설정은 저장되지만 캐시가 활성화될 때 적용됩니다.
-          </Alert>
-        )}
-      </Box>
-
-      {/* TTL Settings per Category */}
-      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-        카테고리별 TTL 설정
-      </Typography>
-      <Card variant="outlined" sx={{ mb: 3 }}>
-        <CardContent sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {(config.categories ?? []).map((cat) => (
-            <Box key={cat.key} sx={{ display: "flex", alignItems: "flex-start", gap: 2, flexWrap: "wrap" }}>
-              <Box sx={{ flex: "1 1 220px" }}>
-                <Typography variant="body2" fontWeight={500}>{cat.label}</Typography>
-                <Typography variant="caption" color="text.secondary">{cat.description}</Typography>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1, flex: "0 0 auto" }}>
-                <TextField
-                  size="small"
-                  type="number"
-                  label={`TTL (${cat.unit})`}
-                  value={effectiveTtl[cat.key] ?? 0}
-                  onChange={(e) =>
-                    setLocalTtl({ ...effectiveTtl, [cat.key]: Number(e.target.value) })
-                  }
-                  inputProps={{ min: 0 }}
-                  sx={{ width: 140 }}
-                />
-                <Typography variant="caption" color="text.secondary" sx={{ minWidth: 80 }}>
-                  {formatTtl(effectiveTtl[cat.key] ?? 0)}
-                </Typography>
-                <Tooltip title={`'${cat.label}' 캐시만 초기화`}>
-                  <IconButton
-                    size="small"
-                    color="warning"
-                    onClick={() => setClearConfirmCategory(cat.key)}
-                    disabled={clearMutation.isPending}
-                  >
-                    <DeleteSweepIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Box>
-          ))}
-
-          <Box sx={{ display: "flex", gap: 1, mt: 1 }}>
-            <Button
-              variant="contained"
-              onClick={handleSave}
-              disabled={!localTtl || updateMutation.isPending}
-              startIcon={updateMutation.isPending ? <CircularProgress size={18} /> : undefined}
-            >
-              저장
-            </Button>
-            <Button
-              variant="outlined"
-              onClick={() => setLocalTtl(null)}
-              disabled={!localTtl}
-            >
-              초기화
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Global Cache Clear */}
-      <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-        전체 캐시 초기화
-      </Typography>
-      <Card variant="outlined">
-        <CardContent sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="body2">
-              모든 캐시 항목을 즉시 삭제합니다. 이후 요청은 캐시 없이 처리됩니다.
-            </Typography>
-          </Box>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<CachedIcon />}
-            onClick={() => setClearConfirmCategory("__all__")}
-            disabled={clearMutation.isPending}
-          >
-            전체 캐시 초기화
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Confirm Dialog */}
-      <Dialog
-        open={clearConfirmCategory !== null}
-        onClose={() => setClearConfirmCategory(null)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle>캐시 초기화 확인</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {clearConfirmCategory === "__all__"
-              ? "전체 캐시를 초기화하시겠습니까?"
-              : `'${config.categories.find((c) => c.key === clearConfirmCategory)?.label ?? clearConfirmCategory}' 캐시를 초기화하시겠습니까?`}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setClearConfirmCategory(null)}>취소</Button>
-          <Button
-            variant="contained"
-            color="error"
-            disabled={clearMutation.isPending}
-            onClick={() => {
-              if (clearConfirmCategory === "__all__") {
-                clearMutation.mutate(undefined);
-              } else if (clearConfirmCategory) {
-                clearMutation.mutate(clearConfirmCategory);
-              }
-            }}
-          >
-            {clearMutation.isPending ? <CircularProgress size={18} /> : "초기화"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={3000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert severity={snack.severity} onClose={() => setSnack((s) => ({ ...s, open: false }))}>
-          {snack.message}
-        </Alert>
-      </Snackbar>
-    </>
-  );
-}
-
-// ── Tab: LLM Playground ──
-function LLMPlaygroundTab() {
-  const [systemPrompt, setSystemPrompt] = useState(
-    "당신은 도움이 되는 AI 어시스턴트입니다. 질문에 명확하고 간결하게 답변하세요."
-  );
-  const [userPrompt, setUserPrompt] = useState("");
-  const [temperature, setTemperature] = useState(0.2);
-  const [maxTokens, setMaxTokens] = useState(1024);
-  const [selectedModel, setSelectedModel] = useState("");
-  const [result, setResult] = useState<{
-    response: string;
-    latency_ms: number;
-    model_used: string;
-    tokens_used?: number;
-  } | null>(null);
-  const [copied, setCopied] = useState(false);
-
-  const { data: modelsData } = useQuery({
-    queryKey: ["admin-models"],
-    queryFn: () => adminApi.listModels(),
-  });
-
-  const models: Array<{ model_id: string; name: string; provider: string }> =
-    modelsData?.data?.models ?? [];
-
-  const playgroundMutation = useMutation({
-    mutationFn: () =>
-      adminApi.playground({
-        prompt: userPrompt,
-        model: selectedModel || undefined,
-        temperature,
-        max_tokens: maxTokens,
-        system_prompt: systemPrompt || undefined,
-      }),
-    onSuccess: (res) => {
-      setResult(res.data);
-    },
-  });
-
-  const handleCopy = () => {
-    if (result?.response) {
-      navigator.clipboard.writeText(result.response);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  return (
-    <Box sx={{ maxWidth: 900 }}>
-      <Typography variant="h6" gutterBottom>
-        LLM 테스트
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        RAG 파이프라인 없이 LLM에 직접 프롬프트를 전송합니다. 프롬프트 엔지니어링 및 모델 동작 테스트에 사용하세요.
-      </Typography>
-
-      <Grid container spacing={3}>
-        {/* Left: Inputs */}
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Card variant="outlined">
-            <CardContent sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <Typography variant="subtitle2" color="text.secondary">
-                파라미터
-              </Typography>
-
-              {/* Model selector */}
-              <FormControl size="small" fullWidth>
-                <InputLabel>모델 (기본값 사용 시 비워두기)</InputLabel>
-                <Select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  label="모델 (기본값 사용 시 비워두기)"
-                >
-                  <MenuItem value="">
-                    <em>기본 모델</em>
-                  </MenuItem>
-                  {models.map((m) => (
-                    <MenuItem key={m.model_id} value={m.model_id}>
-                      [{m.provider}] {m.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              {/* Temperature */}
-              <Box>
-                <Typography variant="caption" color="text.secondary">
-                  Temperature: {temperature.toFixed(1)}
-                </Typography>
-                <Slider
-                  value={temperature}
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  onChange={(_, v) => setTemperature(v as number)}
-                  marks={[
-                    { value: 0, label: "0" },
-                    { value: 0.5, label: "0.5" },
-                    { value: 1, label: "1" },
-                  ]}
-                  size="small"
-                />
-              </Box>
-
-              {/* Max tokens */}
-              <TextField
-                label="Max Tokens"
-                type="number"
-                size="small"
-                value={maxTokens}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value);
-                  if (!isNaN(v)) setMaxTokens(Math.min(4096, Math.max(64, v)));
-                }}
-                inputProps={{ min: 64, max: 4096 }}
-                helperText="64 ~ 4096"
-              />
-
-              {/* System prompt */}
-              <TextField
-                label="시스템 프롬프트 (선택)"
-                multiline
-                rows={4}
-                value={systemPrompt}
-                onChange={(e) => setSystemPrompt(e.target.value)}
-                placeholder="시스템 프롬프트를 입력하세요..."
-                size="small"
-              />
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Right: Prompt & Result */}
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, height: "100%" }}>
-            {/* User prompt */}
-            <TextField
-              label="프롬프트"
-              multiline
-              rows={6}
-              value={userPrompt}
-              onChange={(e) => setUserPrompt(e.target.value)}
-              placeholder="LLM에 전송할 프롬프트를 입력하세요..."
-              fullWidth
-              required
-            />
-
-            <Button
-              variant="contained"
-              startIcon={
-                playgroundMutation.isPending ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />
-              }
-              disabled={playgroundMutation.isPending || !userPrompt.trim()}
-              onClick={() => playgroundMutation.mutate()}
-              sx={{ alignSelf: "flex-start" }}
-            >
-              {playgroundMutation.isPending ? "실행 중..." : "실행"}
-            </Button>
-
-            {/* Error */}
-            {playgroundMutation.isError && (
-              <Alert severity="error">
-                {(playgroundMutation.error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "LLM 요청 실패"}
-              </Alert>
-            )}
-
-            {/* Result */}
-            {result && (
-              <Card variant="outlined">
-                <CardContent>
-                  {/* Meta info */}
-                  <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1.5 }}>
-                    <Chip
-                      icon={<SpeedIcon />}
-                      label={`${result.latency_ms.toLocaleString()} ms`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                    />
-                    <Chip
-                      label={result.model_used}
-                      size="small"
-                      variant="outlined"
-                    />
-                    {result.tokens_used != null && (
-                      <Chip
-                        label={`${result.tokens_used} tokens`}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                    <Box sx={{ flex: 1 }} />
-                    <Tooltip title={copied ? "복사됨!" : "응답 복사"}>
-                      <IconButton size="small" onClick={handleCopy}>
-                        <ContentCopyIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-
-                  <Divider sx={{ mb: 1.5 }} />
-
-                  {/* Response text */}
-                  <Box
-                    component="pre"
-                    sx={{
-                      whiteSpace: "pre-wrap",
-                      wordBreak: "break-word",
-                      fontFamily: "inherit",
-                      fontSize: "0.875rem",
-                      lineHeight: 1.7,
-                      m: 0,
-                      maxHeight: 400,
-                      overflowY: "auto",
-                    }}
-                  >
-                    {result.response}
-                  </Box>
-                </CardContent>
-              </Card>
-            )}
-          </Box>
-        </Grid>
-      </Grid>
-    </Box>
-  );
-}
-
-// ── Tab: System Settings ──
-function SystemSettingsTab() {
-  const [llmSettings, setLlmSettings] = useState({
-    provider: "ollama" as "ollama" | "vllm" | "openai" | "anthropic",
-    model: "qwen2.5:7b",
-    temperature: 0.2,
-    maxTokens: 512,
-  });
-
-  const [ragSettings, setRagSettings] = useState({
-    chunkSize: 800,
-    chunkOverlap: 100,
-    topK: 10,
-    rerankTopN: 5,
-    multiQueryEnabled: false,
-    selfRagEnabled: true,
-  });
-
-  const [systemSettings, setSystemSettings] = useState({
-    authEnabled: false,
-    cacheEnabled: false,
-    debugMode: false,
-  });
-
-  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: "success" | "error" }>({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
-  const defaultLlm = { provider: "ollama" as const, model: "qwen2.5:7b", temperature: 0.2, maxTokens: 512 };
-  const defaultRag = { chunkSize: 800, chunkOverlap: 100, topK: 10, rerankTopN: 5, multiQueryEnabled: false, selfRagEnabled: true };
-  const defaultSystem = { authEnabled: false, cacheEnabled: false, debugMode: false };
-
-  const handleSave = () => {
-    // Mock save — no backend call
-    setSnackbar({ open: true, message: "설정이 저장되었습니다.", severity: "success" });
-  };
-
-  const handleReset = () => {
-    setLlmSettings(defaultLlm);
-    setRagSettings(defaultRag);
-    setSystemSettings(defaultSystem);
-    setSnackbar({ open: true, message: "기본값으로 초기화되었습니다.", severity: "success" });
-  };
-
-  return (
-    <Box>
-      <Typography variant="h5" fontWeight={700} gutterBottom>
-        시스템 설정
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        LLM, RAG 파이프라인, 시스템 전반 설정을 관리합니다.
-      </Typography>
-
-      <Grid container spacing={3}>
-        {/* LLM Settings */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <MemoryIcon fontSize="small" color="primary" />
-                LLM 설정
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-
-              <Stack spacing={2.5}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>기본 프로바이더</InputLabel>
-                  <Select
-                    value={llmSettings.provider}
-                    label="기본 프로바이더"
-                    onChange={(e) =>
-                      setLlmSettings((prev) => ({
-                        ...prev,
-                        provider: e.target.value as typeof llmSettings.provider,
-                      }))
-                    }
-                  >
-                    <MenuItem value="ollama">Ollama (로컬)</MenuItem>
-                    <MenuItem value="vllm">vLLM (운영)</MenuItem>
-                    <MenuItem value="openai">OpenAI</MenuItem>
-                    <MenuItem value="anthropic">Anthropic</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <TextField
-                  label="기본 모델명"
-                  size="small"
-                  fullWidth
-                  value={llmSettings.model}
-                  onChange={(e) =>
-                    setLlmSettings((prev) => ({ ...prev, model: e.target.value }))
-                  }
-                  placeholder="예: qwen2.5:7b"
-                />
-
-                <Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Temperature: <strong>{llmSettings.temperature.toFixed(1)}</strong>
-                  </Typography>
-                  <Slider
-                    value={llmSettings.temperature}
-                    min={0.0}
-                    max={1.0}
-                    step={0.1}
-                    marks
-                    valueLabelDisplay="auto"
-                    onChange={(_, v) =>
-                      setLlmSettings((prev) => ({ ...prev, temperature: v as number }))
-                    }
-                    sx={{ color: "primary.main" }}
-                  />
-                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-                    <Typography variant="caption" color="text.secondary">0.0 (결정적)</Typography>
-                    <Typography variant="caption" color="text.secondary">1.0 (창의적)</Typography>
-                  </Box>
-                </Box>
-
-                <TextField
-                  label="최대 토큰 수"
-                  size="small"
-                  fullWidth
-                  type="number"
-                  value={llmSettings.maxTokens}
-                  onChange={(e) =>
-                    setLlmSettings((prev) => ({
-                      ...prev,
-                      maxTokens: Math.max(256, Math.min(4096, Number(e.target.value))),
-                    }))
-                  }
-                  inputProps={{ min: 256, max: 4096, step: 64 }}
-                  helperText="범위: 256 ~ 4096"
-                />
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* RAG Settings */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <StorageIcon fontSize="small" color="primary" />
-                RAG 설정
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-
-              <Stack spacing={2.5}>
-                <Grid container spacing={2}>
-                  <Grid size={6}>
-                    <TextField
-                      label="청크 크기"
-                      size="small"
-                      fullWidth
-                      type="number"
-                      value={ragSettings.chunkSize}
-                      onChange={(e) =>
-                        setRagSettings((prev) => ({
-                          ...prev,
-                          chunkSize: Math.max(100, Number(e.target.value)),
-                        }))
-                      }
-                      inputProps={{ min: 100, max: 4000, step: 50 }}
-                    />
-                  </Grid>
-                  <Grid size={6}>
-                    <TextField
-                      label="청크 오버랩"
-                      size="small"
-                      fullWidth
-                      type="number"
-                      value={ragSettings.chunkOverlap}
-                      onChange={(e) =>
-                        setRagSettings((prev) => ({
-                          ...prev,
-                          chunkOverlap: Math.max(0, Number(e.target.value)),
-                        }))
-                      }
-                      inputProps={{ min: 0, max: 500, step: 10 }}
-                    />
-                  </Grid>
-                  <Grid size={6}>
-                    <TextField
-                      label="Top-K 검색 수"
-                      size="small"
-                      fullWidth
-                      type="number"
-                      value={ragSettings.topK}
-                      onChange={(e) =>
-                        setRagSettings((prev) => ({
-                          ...prev,
-                          topK: Math.max(1, Math.min(50, Number(e.target.value))),
-                        }))
-                      }
-                      inputProps={{ min: 1, max: 50, step: 1 }}
-                    />
-                  </Grid>
-                  <Grid size={6}>
-                    <TextField
-                      label="Rerank Top-N"
-                      size="small"
-                      fullWidth
-                      type="number"
-                      value={ragSettings.rerankTopN}
-                      onChange={(e) =>
-                        setRagSettings((prev) => ({
-                          ...prev,
-                          rerankTopN: Math.max(1, Math.min(20, Number(e.target.value))),
-                        }))
-                      }
-                      inputProps={{ min: 1, max: 20, step: 1 }}
-                    />
-                  </Grid>
-                </Grid>
-
-                <Divider />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={ragSettings.multiQueryEnabled}
-                      onChange={(e) =>
-                        setRagSettings((prev) => ({ ...prev, multiQueryEnabled: e.target.checked }))
-                      }
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>Multi-Query</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        다중 관점 쿼리 생성으로 검색 품질 향상
-                      </Typography>
-                    </Box>
-                  }
-                />
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={ragSettings.selfRagEnabled}
-                      onChange={(e) =>
-                        setRagSettings((prev) => ({ ...prev, selfRagEnabled: e.target.checked }))
-                      }
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>Self-RAG</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        응답 생성 후 근거성 자동 평가
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* System Settings */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <SettingsIcon fontSize="small" color="primary" />
-                시스템 설정
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-
-              <Stack spacing={1.5}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={systemSettings.authEnabled}
-                      onChange={(e) =>
-                        setSystemSettings((prev) => ({ ...prev, authEnabled: e.target.checked }))
-                      }
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>인증 활성화</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        JWT 기반 인증 및 RBAC 권한 제어
-                      </Typography>
-                    </Box>
-                  }
-                />
-                <Divider />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={systemSettings.cacheEnabled}
-                      onChange={(e) =>
-                        setSystemSettings((prev) => ({ ...prev, cacheEnabled: e.target.checked }))
-                      }
-                      color="primary"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>캐시 활성화</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Redis/InMemory 응답 캐시로 성능 향상
-                      </Typography>
-                    </Box>
-                  }
-                />
-                <Divider />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={systemSettings.debugMode}
-                      onChange={(e) =>
-                        setSystemSettings((prev) => ({ ...prev, debugMode: e.target.checked }))
-                      }
-                      color="warning"
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body2" fontWeight={500}>디버그 모드</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        상세 로그 출력 (운영 환경에서 비활성화 권장)
-                      </Typography>
-                    </Box>
-                  }
-                />
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Current Values Summary */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined" sx={{ bgcolor: "action.hover" }}>
-            <CardContent>
-              <Typography variant="h6" fontWeight={600} gutterBottom sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <InfoIcon fontSize="small" color="primary" />
-                현재 설정 요약
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              <Stack spacing={1}>
-                {[
-                  ["LLM 프로바이더", llmSettings.provider],
-                  ["모델명", llmSettings.model],
-                  ["Temperature", llmSettings.temperature.toFixed(1)],
-                  ["Max Tokens", String(llmSettings.maxTokens)],
-                  ["청크 크기", String(ragSettings.chunkSize)],
-                  ["오버랩", String(ragSettings.chunkOverlap)],
-                  ["Top-K", String(ragSettings.topK)],
-                  ["Rerank Top-N", String(ragSettings.rerankTopN)],
-                  ["Multi-Query", ragSettings.multiQueryEnabled ? "ON" : "OFF"],
-                  ["Self-RAG", ragSettings.selfRagEnabled ? "ON" : "OFF"],
-                  ["인증", systemSettings.authEnabled ? "활성" : "비활성"],
-                  ["캐시", systemSettings.cacheEnabled ? "활성" : "비활성"],
-                  ["디버그", systemSettings.debugMode ? "ON" : "OFF"],
-                ].map(([key, val]) => (
-                  <Box key={key} sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <Typography variant="caption" color="text.secondary">{key}</Typography>
-                    <Chip label={val} size="small" variant="outlined" sx={{ fontSize: "0.7rem", height: 20 }} />
-                  </Box>
-                ))}
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Action Buttons */}
-        <Grid size={12}>
-          <Box sx={{ display: "flex", gap: 2, justifyContent: "flex-end", pt: 1 }}>
-            <Button
-              variant="outlined"
-              color="inherit"
-              startIcon={<RefreshIcon />}
-              onClick={handleReset}
-            >
-              기본값으로 초기화
-            </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<CheckIcon />}
-              onClick={handleSave}
-              sx={{ minWidth: 120 }}
-            >
-              설정 저장
-            </Button>
-          </Box>
-        </Grid>
-      </Grid>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
-}
-
-// ── Main: AdminPage ──
 // ── Notification Bell ──
 
 type NotificationType = "feedback" | "document" | "system" | "user";
@@ -4153,82 +3301,34 @@ const NOTIFICATION_TYPE_META: Record<NotificationType, { icon: React.ReactNode; 
   user: { icon: <PersonIcon fontSize="small" />, color: "#9c27b0" },
 };
 
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: 1,
-    type: "feedback",
-    title: "새로운 부정확 피드백이 접수되었습니다",
-    timestamp: new Date(Date.now() - 2 * 60 * 1000),
-    read: false,
-  },
-  {
-    id: 2,
-    type: "document",
-    title: "문서 '내부규정_제5장.hwp' 인제스트 완료",
-    timestamp: new Date(Date.now() - 8 * 60 * 1000),
-    read: false,
-  },
-  {
-    id: 3,
-    type: "system",
-    title: "시스템 CPU 사용률 85% 초과",
-    timestamp: new Date(Date.now() - 15 * 60 * 1000),
-    read: false,
-  },
-  {
-    id: 4,
-    type: "user",
-    title: "새 사용자 'kim_manager' 가입 승인 대기",
-    timestamp: new Date(Date.now() - 30 * 60 * 1000),
-    read: false,
-  },
-  {
-    id: 5,
-    type: "document",
-    title: "문서 'ALIO_공시_2025Q4.pdf' 인제스트 완료",
-    timestamp: new Date(Date.now() - 55 * 60 * 1000),
-    read: true,
-  },
-  {
-    id: 6,
-    type: "feedback",
-    title: "부분정확 피드백 3건이 누적되었습니다",
-    timestamp: new Date(Date.now() - 2 * 3600 * 1000),
-    read: true,
-  },
-  {
-    id: 7,
-    type: "system",
-    title: "메모리 사용률 78% — 모니터링 권장",
-    timestamp: new Date(Date.now() - 4 * 3600 * 1000),
-    read: true,
-  },
-  {
-    id: 8,
-    type: "user",
-    title: "사용자 'park_expert' 역할 변경 요청",
-    timestamp: new Date(Date.now() - 6 * 3600 * 1000),
-    read: true,
-  },
-  {
-    id: 9,
-    type: "document",
-    title: "문서 동기화 작업 완료 — 12개 갱신됨",
-    timestamp: new Date(Date.now() - 24 * 3600 * 1000),
-    read: true,
-  },
-  {
-    id: 10,
-    type: "system",
-    title: "가드레일 규칙 위반 시도 감지됨",
-    timestamp: new Date(Date.now() - 2 * 24 * 3600 * 1000),
-    read: true,
-  },
-];
-
 function NotificationBell() {
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    logsApi.searchAccess({ page: 1, page_size: 10 })
+      .then((resp) => {
+        const logs = resp.data?.logs || [];
+        const mapped: Notification[] = logs.map((log: any, idx: number) => {
+          let type: NotificationType = "system";
+          const action = (log.action || "").toUpperCase();
+          if (action.includes("LOGIN") || action.includes("LOGOUT") || action.includes("USER") || action.includes("ROLE")) type = "user";
+          else if (action.includes("DOCUMENT") || action.includes("UPLOAD") || action.includes("INGEST")) type = "document";
+          else if (action.includes("FEEDBACK")) type = "feedback";
+          return {
+            id: idx + 1,
+            type,
+            title: log.action + (log.details ? ` — ${String(log.details).slice(0, 50)}` : ""),
+            timestamp: new Date(log.timestamp),
+            read: idx >= 3,
+          };
+        });
+        setNotifications(mapped);
+      })
+      .catch(() => {
+        setNotifications([]);
+      });
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const open = Boolean(anchorEl);
@@ -4296,7 +3396,6 @@ function NotificationBell() {
           },
         }}
       >
-        {/* Header */}
         <Box
           sx={{
             px: 2,
@@ -4332,7 +3431,6 @@ function NotificationBell() {
           )}
         </Box>
 
-        {/* Notification list */}
         <Box sx={{ overflowY: "auto", flex: 1 }}>
           {notifications.length === 0 ? (
             <Box
@@ -4355,7 +3453,6 @@ function NotificationBell() {
                 return (
                   <Box key={notif.id}>
                     <ListItem
-                      alignItems="flex-start"
                       onClick={() => markRead(notif.id)}
                       sx={{
                         px: 2,
@@ -4420,1766 +3517,163 @@ function NotificationBell() {
   );
 }
 
-// ── Tab: Export Center ──
-interface ExportType {
-  id: string;
-  title: string;
-  description: string;
-  estimatedRows: number;
-  lastExport: string;
-  icon: React.ReactNode;
-  color: string;
-}
+// ── Sidebar navigation structure ──
 
-interface ExportHistoryItem {
-  id: string;
-  name: string;
-  format: string;
-  rows: number;
-  size: string;
-  date: string;
-}
-
-function generateFeedbackCSV(): string {
-  const headers = ["messageId", "question", "answer", "rating", "correctionText", "date"];
-  const rows: string[][] = [];
-  const ratings = [1, 0, -1];
-  const questions = [
-    "안전관리 기준은 무엇인가요?",
-    "가스 누출 시 대처 방법은?",
-    "정기 점검 주기는 어떻게 되나요?",
-    "설비 운전 기준을 알려주세요.",
-    "긴급 차단 절차를 설명해 주세요.",
-  ];
-  for (let i = 0; i < 50; i++) {
-    const d = new Date(2026, 0, 1 + (i % 60));
-    rows.push([
-      `msg-${1000 + i}`,
-      questions[i % questions.length],
-      `해당 규정에 따르면 ${i + 1}번 항목을 참고하시기 바랍니다.`,
-      String(ratings[i % 3]),
-      i % 5 === 0 ? "답변 내용이 불명확합니다." : "",
-      d.toISOString().split("T")[0],
-    ]);
-  }
-  const BOM = "\uFEFF";
-  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  return BOM + [headers.map(escape).join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
-}
-
-function generateStatsCSV(): string {
-  const headers = ["date", "queryCount", "avgResponseTime", "cacheHitRate"];
-  const rows: string[][] = [];
-  for (let i = 0; i < 30; i++) {
-    const d = new Date(2026, 1, 3 - i);
-    rows.push([
-      d.toISOString().split("T")[0],
-      String(Math.floor(50 + Math.random() * 200)),
-      String((1.2 + Math.random() * 3).toFixed(2)),
-      String((0.4 + Math.random() * 0.5).toFixed(2)),
-    ]);
-  }
-  const BOM = "\uFEFF";
-  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  return BOM + [headers.map(escape).join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
-}
-
-function generateUsersCSV(): string {
-  const headers = ["username", "email", "role", "department", "lastLogin"];
-  const roles = ["admin", "manager", "user", "viewer"];
-  const departments = ["IT팀", "안전관리팀", "운영팀", "경영지원팀", "기술팀"];
-  const rows: string[][] = [];
-  for (let i = 0; i < 20; i++) {
-    const d = new Date(2026, 1, 1 + (i % 28));
-    rows.push([
-      `user${String(i + 1).padStart(3, "0")}`,
-      `user${i + 1}@example.com`,
-      roles[i % 4],
-      departments[i % 5],
-      d.toISOString().split("T")[0],
-    ]);
-  }
-  const BOM = "\uFEFF";
-  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  return BOM + [headers.map(escape).join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
-}
-
-function generateConversationsCSV(): string {
-  const headers = ["sessionId", "userId", "messageIndex", "role", "content", "timestamp"];
-  const rows: string[][] = [];
-  for (let s = 0; s < 10; s++) {
-    const sessionId = `sess-${2000 + s}`;
-    const userId = `user${String(s + 1).padStart(3, "0")}`;
-    const msgCount = 4 + (s % 4) * 2;
-    for (let m = 0; m < msgCount; m++) {
-      const d = new Date(2026, 1, 1 + s, 9 + m);
-      rows.push([
-        sessionId,
-        userId,
-        String(m),
-        m % 2 === 0 ? "user" : "assistant",
-        m % 2 === 0
-          ? "안전 점검 절차에 대해 알려주세요."
-          : "안전 점검 절차는 다음과 같습니다. 첫째, 설비 상태를 확인하고...",
-        d.toISOString(),
-      ]);
-    }
-  }
-  const BOM = "\uFEFF";
-  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  return BOM + [headers.map(escape).join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
-}
-
-function generateJSON(exportId: string): string {
-  if (exportId === "feedback") {
-    const ratings = [1, 0, -1];
-    const data = Array.from({ length: 50 }, (_, i) => ({
-      messageId: `msg-${1000 + i}`,
-      question: `안전관리 관련 질문 ${i + 1}`,
-      answer: `답변 내용 ${i + 1}`,
-      rating: ratings[i % 3],
-      correctionText: i % 5 === 0 ? "답변 내용이 불명확합니다." : null,
-      date: new Date(2026, 0, 1 + (i % 60)).toISOString().split("T")[0],
-    }));
-    return JSON.stringify(data, null, 2);
-  }
-  if (exportId === "stats") {
-    const data = Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(2026, 1, 3 - i).toISOString().split("T")[0],
-      queryCount: Math.floor(50 + Math.random() * 200),
-      avgResponseTime: parseFloat((1.2 + Math.random() * 3).toFixed(2)),
-      cacheHitRate: parseFloat((0.4 + Math.random() * 0.5).toFixed(2)),
-    }));
-    return JSON.stringify(data, null, 2);
-  }
-  if (exportId === "users") {
-    const roles = ["admin", "manager", "user", "viewer"];
-    const departments = ["IT팀", "안전관리팀", "운영팀", "경영지원팀", "기술팀"];
-    const data = Array.from({ length: 20 }, (_, i) => ({
-      username: `user${String(i + 1).padStart(3, "0")}`,
-      email: `user${i + 1}@example.com`,
-      role: roles[i % 4],
-      department: departments[i % 5],
-      lastLogin: new Date(2026, 1, 1 + (i % 28)).toISOString().split("T")[0],
-    }));
-    return JSON.stringify(data, null, 2);
-  }
-  // conversations
-  const sessions = Array.from({ length: 10 }, (_, s) => ({
-    sessionId: `sess-${2000 + s}`,
-    userId: `user${String(s + 1).padStart(3, "0")}`,
-    messages: Array.from({ length: 4 + (s % 4) * 2 }, (__, m) => ({
-      index: m,
-      role: m % 2 === 0 ? "user" : "assistant",
-      content: m % 2 === 0 ? "안전 점검 절차에 대해 알려주세요." : "안전 점검 절차는 다음과 같습니다.",
-      timestamp: new Date(2026, 1, 1 + s, 9 + m).toISOString(),
-    })),
-  }));
-  return JSON.stringify(sessions, null, 2);
-}
-
-// ── Tab: Audit Log ──
-type AuditSeverity = "INFO" | "WARNING" | "CRITICAL";
-type AuditEventType =
-  | "login"
-  | "logout"
-  | "doc_upload"
-  | "doc_delete"
-  | "feedback"
-  | "settings"
-  | "security"
-  | "system";
-
-interface AuditEntry {
-  id: string;
-  timestamp: string;
-  user: string;
-  eventType: AuditEventType;
-  action: string;
-  details: string;
-  severity: AuditSeverity;
-  ip?: string;
-  resource?: string;
-}
-
-const AUDIT_EVENT_CONFIG: Record<
-  AuditEventType,
-  { label: string; color: string; bgColor: string; icon: React.ReactNode }
-> = {
-  login: {
-    label: "로그인",
-    color: "#1976d2",
-    bgColor: "#e3f2fd",
-    icon: <LoginIcon fontSize="small" />,
+const NAV_SECTIONS = [
+  {
+    label: "개요",
+    items: [
+      { key: "dashboard", label: "대시보드", icon: <DashboardIcon fontSize="small" /> },
+    ],
   },
-  logout: {
-    label: "로그아웃",
-    color: "#5c6bc0",
-    bgColor: "#e8eaf6",
-    icon: <LogoutIcon fontSize="small" />,
+  {
+    label: "AI / RAG",
+    items: [
+      { key: "rag-settings", label: "시스템 설정", icon: <SettingsIcon fontSize="small" /> },
+      { key: "providers", label: "LLM 프로바이더", icon: <StorageIcon fontSize="small" /> },
+      { key: "models", label: "모델 관리", icon: <MemoryIcon fontSize="small" /> },
+      { key: "prompts", label: "프롬프트 관리", icon: <DescriptionIcon fontSize="small" /> },
+      { key: "prompt-simulator", label: "프롬프트 시뮬레이터", icon: <ScienceOutlinedIcon fontSize="small" /> },
+      { key: "batch-evaluator", label: "배치 평가기", icon: <SpeedIcon fontSize="small" /> },
+      { key: "chunking", label: "청킹 설정", icon: <TuneIcon fontSize="small" /> },
+      { key: "playground", label: "LLM 테스트", icon: <ScienceIcon fontSize="small" /> },
+      { key: "ocr-test", label: "OCR 테스트", icon: <DocumentScannerIcon fontSize="small" /> },
+    ],
   },
-  doc_upload: {
-    label: "문서 업로드",
-    color: "#388e3c",
-    bgColor: "#e8f5e9",
-    icon: <DescriptionIcon fontSize="small" />,
+  {
+    label: "도구",
+    items: [
+      { key: "mcp-tools", label: "MCP 도구", icon: <BuildIcon fontSize="small" /> },
+      { key: "custom-tools", label: "커스텀 도구", icon: <AppRegistrationIcon fontSize="small" /> },
+      { key: "report-templates", label: "보고서 템플릿", icon: <DescriptionIcon fontSize="small" /> },
+      { key: "workflows", label: "워크플로우", icon: <AccountTreeIcon fontSize="small" /> },
+      { key: "content", label: "콘텐츠 관리", icon: <FolderIcon fontSize="small" /> },
+    ],
   },
-  doc_delete: {
-    label: "문서 삭제",
-    color: "#c62828",
-    bgColor: "#ffebee",
-    icon: <DeleteIcon fontSize="small" />,
+  {
+    label: "보안",
+    items: [
+      { key: "users", label: "사용자 관리", icon: <PersonIcon fontSize="small" /> },
+      { key: "guardrails", label: "가드레일", icon: <SecurityIcon fontSize="small" /> },
+      { key: "governance", label: "변경 관리", icon: <ShieldIcon fontSize="small" /> },
+      { key: "audit-log", label: "감사 로그", icon: <HistoryIcon fontSize="small" /> },
+    ],
   },
-  feedback: {
-    label: "피드백",
-    color: "#f57c00",
-    bgColor: "#fff8e1",
-    icon: <ThumbUpIcon fontSize="small" />,
-  },
-  settings: {
-    label: "설정 변경",
-    color: "#ef6c00",
-    bgColor: "#fff3e0",
-    icon: <SettingsIcon fontSize="small" />,
-  },
-  security: {
-    label: "보안 이벤트",
-    color: "#b71c1c",
-    bgColor: "#ffebee",
-    icon: <ShieldIcon fontSize="small" />,
-  },
-  system: {
+  {
     label: "시스템",
-    color: "#546e7a",
-    bgColor: "#eceff1",
-    icon: <ComputerIcon fontSize="small" />,
+    items: [
+      { key: "system-info", label: "시스템 정보", icon: <ComputerIcon fontSize="small" /> },
+      { key: "cache", label: "캐시 관리", icon: <CachedIcon fontSize="small" /> },
+      { key: "export", label: "데이터 내보내기", icon: <DownloadIcon fontSize="small" /> },
+    ],
   },
+];
+
+const ADMIN_NAV_WIDTH = 220;
+
+const TAB_COMPONENTS: Record<string, React.ComponentType> = {
+  "dashboard": DashboardTab,
+  "rag-settings": NewSystemSettingsTab,
+  "providers": ProvidersTab,
+  "models": ModelsTab,
+  "prompts": PromptsTab,
+  "prompt-simulator": PromptSimulatorTab,
+  "batch-evaluator": BatchEvaluatorTab,
+  "chunking": ChunkingConfigTab,
+  "playground": LLMPlaygroundTab,
+  "ocr-test": OcrTestTab,
+  "mcp-tools": McpToolsTab,
+  "custom-tools": CustomToolBuilder,
+  "report-templates": ReportTemplateTab,
+  "workflows": WorkflowsTab,
+  "content": ContentManager,
+  "users": UserManagementTab,
+  "guardrails": GuardrailsTab,
+  "governance": GovernanceTab,
+  "audit-log": AuditLogTab,
+  "system-info": SystemInfoTab,
+  "cache": CacheManagementTab,
+  "export": ExportCenterTab,
 };
 
-
-function generateMockAuditData(): AuditEntry[] {
-  const now = new Date("2026-03-05T10:00:00");
-  const entries: AuditEntry[] = [
-    {
-      id: "a001",
-      timestamp: new Date(now.getTime() - 5 * 60 * 1000).toISOString(),
-      user: "admin",
-      eventType: "login",
-      action: "로그인 성공",
-      details: "관리자 계정으로 로그인. 브라우저: Chrome 121",
-      severity: "INFO",
-      ip: "192.168.1.10",
-    },
-    {
-      id: "a002",
-      timestamp: new Date(now.getTime() - 12 * 60 * 1000).toISOString(),
-      user: "user1",
-      eventType: "doc_upload",
-      action: "문서 업로드",
-      details: "파일: 안전관리규정_2026.pdf (2.3 MB), 컬렉션: 내부규정",
-      severity: "INFO",
-      ip: "192.168.1.22",
-      resource: "안전관리규정_2026.pdf",
-    },
-    {
-      id: "a003",
-      timestamp: new Date(now.getTime() - 25 * 60 * 1000).toISOString(),
-      user: "system",
-      eventType: "system",
-      action: "자동 동기화 실행",
-      details: "문서 동기화 스케줄러 트리거. 변경 감지: 3개 파일",
-      severity: "INFO",
-    },
-    {
-      id: "a004",
-      timestamp: new Date(now.getTime() - 45 * 60 * 1000).toISOString(),
-      user: "unknown",
-      eventType: "security",
-      action: "로그인 실패 (5회 연속)",
-      details: "계정: admin, IP: 203.0.113.55. 브루트포스 시도 의심. 계정 잠금 적용.",
-      severity: "CRITICAL",
-      ip: "203.0.113.55",
-    },
-    {
-      id: "a005",
-      timestamp: new Date(now.getTime() - 70 * 60 * 1000).toISOString(),
-      user: "manager",
-      eventType: "settings",
-      action: "가드레일 규칙 추가",
-      details: "새 키워드 필터 규칙 추가: '기밀정보', '내부자료'. 규칙 ID: gr-2026-031",
-      severity: "INFO",
-      ip: "192.168.1.5",
-    },
-    {
-      id: "a006",
-      timestamp: new Date(now.getTime() - 90 * 60 * 1000).toISOString(),
-      user: "user2",
-      eventType: "feedback",
-      action: "피드백 제출",
-      details: "응답 평가: 부정확 (-1). 세션 ID: sess-2044. 수정 의견 포함.",
-      severity: "INFO",
-      ip: "192.168.1.33",
-    },
-    {
-      id: "a007",
-      timestamp: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
-      user: "admin",
-      eventType: "doc_delete",
-      action: "문서 삭제",
-      details: "파일: 구_안전규정_2024.pdf 삭제. 벡터스토어에서 234 청크 제거.",
-      severity: "WARNING",
-      ip: "192.168.1.10",
-      resource: "구_안전규정_2024.pdf",
-    },
-    {
-      id: "a008",
-      timestamp: new Date(now.getTime() - 3 * 60 * 60 * 1000).toISOString(),
-      user: "manager",
-      eventType: "login",
-      action: "로그인 성공",
-      details: "관리자(매니저) 계정 로그인. IP: 192.168.1.5",
-      severity: "INFO",
-      ip: "192.168.1.5",
-    },
-    {
-      id: "a009",
-      timestamp: new Date(now.getTime() - 3.5 * 60 * 60 * 1000).toISOString(),
-      user: "system",
-      eventType: "system",
-      action: "임베딩 작업 완료",
-      details: "문서 5건 임베딩 완료. 신규 청크: 1,247개. 소요시간: 42초.",
-      severity: "INFO",
-    },
-    {
-      id: "a010",
-      timestamp: new Date(now.getTime() - 4 * 60 * 60 * 1000).toISOString(),
-      user: "admin",
-      eventType: "settings",
-      action: "LLM 프로바이더 변경",
-      details: "기본 LLM: ollama/qwen2.5:7b → ollama/qwen2.5:14b. 변경자: admin",
-      severity: "WARNING",
-      ip: "192.168.1.10",
-    },
-    {
-      id: "a011",
-      timestamp: new Date(now.getTime() - 5 * 60 * 60 * 1000).toISOString(),
-      user: "user1",
-      eventType: "logout",
-      action: "로그아웃",
-      details: "세션 정상 종료. 세션 지속 시간: 2시간 15분",
-      severity: "INFO",
-      ip: "192.168.1.22",
-    },
-    {
-      id: "a012",
-      timestamp: new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString(),
-      user: "system",
-      eventType: "security",
-      action: "비정상 접근 패턴 감지",
-      details: "IP 203.0.113.88에서 단시간 내 API 호출 횟수 초과 (500회/분). 자동 차단 적용.",
-      severity: "CRITICAL",
-      ip: "203.0.113.88",
-    },
-    {
-      id: "a013",
-      timestamp: new Date(now.getTime() - 7 * 60 * 60 * 1000).toISOString(),
-      user: "user2",
-      eventType: "doc_upload",
-      action: "문서 업로드",
-      details: "파일: ALIO_공시자료_Q4.xlsx (1.1 MB), 컬렉션: ALIO공시",
-      severity: "INFO",
-      ip: "192.168.1.33",
-      resource: "ALIO_공시자료_Q4.xlsx",
-    },
-    {
-      id: "a014",
-      timestamp: new Date(now.getTime() - 8 * 60 * 60 * 1000).toISOString(),
-      user: "admin",
-      eventType: "settings",
-      action: "사용자 권한 변경",
-      details: "user2 역할 변경: viewer → user. 승인자: admin",
-      severity: "WARNING",
-      ip: "192.168.1.10",
-    },
-    {
-      id: "a015",
-      timestamp: new Date(now.getTime() - 10 * 60 * 60 * 1000).toISOString(),
-      user: "system",
-      eventType: "system",
-      action: "데이터베이스 백업 완료",
-      details: "SQLite 백업 완료: memory.db, audit.db, users.db. 총 크기: 18.4 MB",
-      severity: "INFO",
-    },
-    {
-      id: "a016",
-      timestamp: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "manager",
-      eventType: "feedback",
-      action: "피드백 검토",
-      details: "최근 50건 피드백 검토 완료. 부정 피드백 3건 메모 추가.",
-      severity: "INFO",
-      ip: "192.168.1.5",
-    },
-    {
-      id: "a017",
-      timestamp: new Date(now.getTime() - 1.2 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "admin",
-      eventType: "security",
-      action: "IP 블랙리스트 추가",
-      details: "IP 203.0.113.55 영구 차단 등록. 사유: 반복적 브루트포스 시도.",
-      severity: "WARNING",
-      ip: "192.168.1.10",
-    },
-    {
-      id: "a018",
-      timestamp: new Date(now.getTime() - 1.5 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "user1",
-      eventType: "login",
-      action: "로그인 성공",
-      details: "일반 사용자 로그인. 기기: MacBook Pro",
-      severity: "INFO",
-      ip: "192.168.1.22",
-    },
-    {
-      id: "a019",
-      timestamp: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "system",
-      eventType: "system",
-      action: "Milvus 인덱스 최적화",
-      details: "벡터 인덱스 재구성 완료. 39,739 청크. 소요시간: 8분 22초.",
-      severity: "INFO",
-    },
-    {
-      id: "a020",
-      timestamp: new Date(now.getTime() - 2.2 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "admin",
-      eventType: "doc_upload",
-      action: "대량 문서 업로드",
-      details: "일괄 업로드: 국외출장_보고서 20건. 총 크기: 45.2 MB. 인제스트 파이프라인 실행 중.",
-      severity: "INFO",
-      ip: "192.168.1.10",
-      resource: "국외출장_보고서 (20건)",
-    },
-    {
-      id: "a021",
-      timestamp: new Date(now.getTime() - 2.5 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "manager",
-      eventType: "settings",
-      action: "프롬프트 버전 롤백",
-      details: "시스템 프롬프트 v1.3 → v1.2 롤백. 사유: 응답 품질 저하 탐지.",
-      severity: "WARNING",
-      ip: "192.168.1.5",
-    },
-    {
-      id: "a022",
-      timestamp: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "system",
-      eventType: "security",
-      action: "가드레일 트리거",
-      details: "입력 가드레일 활성화. 사용자: user2, 쿼리에 민감 키워드 포함. 요청 차단.",
-      severity: "WARNING",
-    },
-    {
-      id: "a023",
-      timestamp: new Date(now.getTime() - 3.3 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "user2",
-      eventType: "login",
-      action: "로그인 실패",
-      details: "잘못된 비밀번호 입력 (2회). IP: 192.168.1.33",
-      severity: "WARNING",
-      ip: "192.168.1.33",
-    },
-    {
-      id: "a024",
-      timestamp: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "admin",
-      eventType: "settings",
-      action: "캐시 초기화",
-      details: "LLM 응답 캐시 전체 삭제. 삭제된 항목: 1,240개. 메모리 해제: 128 MB.",
-      severity: "INFO",
-      ip: "192.168.1.10",
-    },
-    {
-      id: "a025",
-      timestamp: new Date(now.getTime() - 4.5 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "manager",
-      eventType: "doc_delete",
-      action: "문서 삭제",
-      details: "파일: 홍보물_2023_outdated.pdf 삭제. 관련 벡터 512개 제거.",
-      severity: "INFO",
-      ip: "192.168.1.5",
-      resource: "홍보물_2023_outdated.pdf",
-    },
-    {
-      id: "a026",
-      timestamp: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "system",
-      eventType: "system",
-      action: "시스템 재시작",
-      details: "RunPod 인스턴스 재시작. 서비스 복구 시간: 45초. 모든 서비스 정상 확인.",
-      severity: "WARNING",
-    },
-    {
-      id: "a027",
-      timestamp: new Date(now.getTime() - 5.5 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "user1",
-      eventType: "feedback",
-      action: "피드백 제출",
-      details: "응답 평가: 정확 (+1). 세션 ID: sess-2031. '상세한 답변 감사합니다' 코멘트.",
-      severity: "INFO",
-      ip: "192.168.1.22",
-    },
-    {
-      id: "a028",
-      timestamp: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "admin",
-      eventType: "security",
-      action: "감사 로그 내보내기",
-      details: "감사 로그 CSV 내보내기 실행. 기간: 2026-02-01 ~ 2026-03-05. 항목: 2,341건.",
-      severity: "INFO",
-      ip: "192.168.1.10",
-    },
-    {
-      id: "a029",
-      timestamp: new Date(now.getTime() - 6.5 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "manager",
-      eventType: "login",
-      action: "로그인 성공",
-      details: "매니저 계정 로그인. 위치: 서울 사무소",
-      severity: "INFO",
-      ip: "192.168.1.5",
-    },
-    {
-      id: "a030",
-      timestamp: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      user: "system",
-      eventType: "system",
-      action: "정기 점검 완료",
-      details: "주간 시스템 점검 완료. CPU: 정상, 메모리: 정상, 디스크: 정상, 네트워크: 정상.",
-      severity: "INFO",
-    },
-  ];
-  return entries;
-}
-
-function AuditLogTab() {
-  const ALL_ENTRIES = generateMockAuditData();
-  const PAGE_SIZE = 10;
-
-  const [searchText, setSearchText] = useState("");
-  const [userFilter, setUserFilter] = useState("");
-  const [eventTypeFilter, setEventTypeFilter] = useState<AuditEventType[]>([]);
-  const [severityFilter, setSeverityFilter] = useState<AuditSeverity[]>([]);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [page, setPage] = useState(0);
-  const [detailEntry, setDetailEntry] = useState<AuditEntry | null>(null);
-
-  const eventTypes = Object.keys(AUDIT_EVENT_CONFIG) as AuditEventType[];
-  const severities: AuditSeverity[] = ["INFO", "WARNING", "CRITICAL"];
-
-  const filtered = ALL_ENTRIES.filter((e) => {
-    if (
-      searchText &&
-      ![e.user, e.action, e.details, e.ip ?? "", e.resource ?? ""]
-        .join(" ")
-        .toLowerCase()
-        .includes(searchText.toLowerCase())
-    )
-      return false;
-    if (userFilter && !e.user.toLowerCase().includes(userFilter.toLowerCase()))
-      return false;
-    if (eventTypeFilter.length > 0 && !eventTypeFilter.includes(e.eventType))
-      return false;
-    if (severityFilter.length > 0 && !severityFilter.includes(e.severity))
-      return false;
-    if (dateFrom && new Date(e.timestamp) < new Date(dateFrom)) return false;
-    if (dateTo && new Date(e.timestamp) > new Date(dateTo + "T23:59:59")) return false;
-    return true;
+export default function AdminPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeKey, setActiveKey] = useState(() => {
+    const tab = searchParams.get("tab") || "dashboard";
+    return TAB_COMPONENTS[tab] ? tab : "dashboard";
   });
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const pageItems = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-
-  const resetFilters = () => {
-    setSearchText("");
-    setUserFilter("");
-    setEventTypeFilter([]);
-    setSeverityFilter([]);
-    setDateFrom("");
-    setDateTo("");
-    setPage(0);
+  const handleTabChange = (key: string) => {
+    setActiveKey(key);
+    setSearchParams({ tab: key }, { replace: true });
   };
 
-  const exportCsv = () => {
-    const header = "id,timestamp,user,eventType,action,details,severity,ip,resource\n";
-    const rows = filtered
-      .map((e) =>
-        [
-          e.id,
-          e.timestamp,
-          e.user,
-          e.eventType,
-          `"${e.action}"`,
-          `"${e.details.replace(/"/g, '""')}"`,
-          e.severity,
-          e.ip ?? "",
-          e.resource ?? "",
-        ].join(",")
-      )
-      .join("\n");
-    const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `audit_log_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const formatTs = (ts: string) => {
-    const d = new Date(ts);
-    return d.toLocaleString("ko-KR", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-  };
-
-  const toggleEventType = (et: AuditEventType) => {
-    setPage(0);
-    setEventTypeFilter((prev) =>
-      prev.includes(et) ? prev.filter((x) => x !== et) : [...prev, et]
-    );
-  };
-
-  const toggleSeverity = (s: AuditSeverity) => {
-    setPage(0);
-    setSeverityFilter((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
-    );
-  };
+  const ActiveComponent = TAB_COMPONENTS[activeKey] ?? DashboardTab;
 
   return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-        <HistoryIcon color="primary" />
-        <Typography variant="h6" fontWeight={700}>
-          감사 로그
-        </Typography>
-        <Chip
-          label={`${filtered.length}건`}
-          color="primary"
-          size="small"
-          sx={{ fontWeight: 700 }}
-        />
-        <Box sx={{ flex: 1 }} />
-        <Button
-          startIcon={<DownloadIcon />}
-          variant="outlined"
-          size="small"
-          onClick={exportCsv}
+    <Layout title="관리자 설정" noPadding headerActions={<NotificationBell />}>
+      <Box sx={{ display: "flex", height: "100%" }}>
+        {/* Sidebar Navigation */}
+        <Box
+          sx={{
+            width: ADMIN_NAV_WIDTH,
+            flexShrink: 0,
+            borderRight: "1px solid",
+            borderColor: "divider",
+            overflowY: "auto",
+            bgcolor: "background.paper",
+          }}
         >
-          CSV 내보내기
-        </Button>
-        <Tooltip title="필터 초기화">
-          <IconButton size="small" onClick={resetFilters}>
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
-
-      {/* Filters */}
-      <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-        <Grid container spacing={2} alignItems="flex-start">
-          {/* Search */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="전체 검색..."
-              value={searchText}
-              onChange={(e) => { setSearchText(e.target.value); setPage(0); }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          {/* User filter */}
-          <Grid size={{ xs: 12, md: 3 }}>
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="사용자 필터..."
-              value={userFilter}
-              onChange={(e) => { setUserFilter(e.target.value); setPage(0); }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <PersonIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </Grid>
-          {/* Date from */}
-          <Grid size={{ xs: 6, md: 2 }}>
-            <TextField
-              size="small"
-              fullWidth
-              type="date"
-              label="시작일"
-              value={dateFrom}
-              onChange={(e) => { setDateFrom(e.target.value); setPage(0); }}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-          {/* Date to */}
-          <Grid size={{ xs: 6, md: 2 }}>
-            <TextField
-              size="small"
-              fullWidth
-              type="date"
-              label="종료일"
-              value={dateTo}
-              onChange={(e) => { setDateTo(e.target.value); setPage(0); }}
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Event type chips */}
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
-            이벤트 유형:
-          </Typography>
-          {eventTypes.map((et) => {
-            const cfg = AUDIT_EVENT_CONFIG[et];
-            const active = eventTypeFilter.includes(et);
-            return (
-              <Chip
-                key={et}
-                label={cfg.label}
-                size="small"
-                icon={
-                  <Box
-                    component="span"
-                    sx={{ color: active ? "#fff" : cfg.color, display: "flex" }}
-                  >
-                    {cfg.icon}
-                  </Box>
-                }
-                onClick={() => toggleEventType(et)}
-                sx={{
-                  mr: 0.5,
-                  mb: 0.5,
-                  fontWeight: 600,
-                  bgcolor: active ? cfg.color : cfg.bgColor,
-                  color: active ? "#fff" : cfg.color,
-                  border: `1px solid ${cfg.color}`,
-                  cursor: "pointer",
-                  "&:hover": { opacity: 0.85 },
-                }}
-              />
-            );
-          })}
-        </Box>
-
-        {/* Severity chips */}
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
-            심각도:
-          </Typography>
-          {severities.map((s) => {
-            const active = severityFilter.includes(s);
-            const colorMap: Record<AuditSeverity, string> = {
-              INFO: "#1976d2",
-              WARNING: "#f57c00",
-              CRITICAL: "#b71c1c",
-            };
-            const bgMap: Record<AuditSeverity, string> = {
-              INFO: "#e3f2fd",
-              WARNING: "#fff8e1",
-              CRITICAL: "#ffebee",
-            };
-            return (
-              <Chip
-                key={s}
-                label={s}
-                size="small"
-                onClick={() => toggleSeverity(s)}
-                sx={{
-                  mr: 0.5,
-                  fontWeight: 700,
-                  fontSize: "0.7rem",
-                  bgcolor: active ? colorMap[s] : bgMap[s],
-                  color: active ? "#fff" : colorMap[s],
-                  border: `1px solid ${colorMap[s]}`,
-                  cursor: "pointer",
-                  "&:hover": { opacity: 0.85 },
-                }}
-              />
-            );
-          })}
-        </Box>
-      </Paper>
-
-      {/* Timeline */}
-      <Box>
-        {pageItems.length === 0 ? (
-          <Box sx={{ textAlign: "center", py: 6 }}>
-            <HistoryIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
-            <Typography color="text.secondary">조건에 맞는 감사 로그가 없습니다.</Typography>
-          </Box>
-        ) : (
-          pageItems.map((entry, idx) => {
-            const cfg = AUDIT_EVENT_CONFIG[entry.eventType];
-            const isLast = idx === pageItems.length - 1;
-            return (
-              <Box
-                key={entry.id}
-                sx={{ display: "flex", gap: 0, mb: isLast ? 0 : 0 }}
-              >
-                {/* Timeline line + dot */}
-                <Box
+          <List disablePadding dense>
+            {NAV_SECTIONS.map((section) => (
+              <Box key={section.label}>
+                <ListSubheader
                   sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    mr: 2,
-                    minWidth: 36,
+                    lineHeight: "32px",
+                    fontSize: "0.7rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    color: "text.disabled",
+                    letterSpacing: 0.5,
+                    bgcolor: "background.paper",
                   }}
                 >
-                  <Avatar
+                  {section.label}
+                </ListSubheader>
+                {section.items.map((item) => (
+                  <ListItemButton
+                    key={item.key}
+                    selected={activeKey === item.key}
+                    onClick={() => handleTabChange(item.key)}
                     sx={{
-                      width: 36,
-                      height: 36,
-                      bgcolor: cfg.bgColor,
-                      color: cfg.color,
-                      border: `2px solid ${cfg.color}`,
-                      flexShrink: 0,
+                      py: 0.6,
+                      px: 2,
+                      minHeight: 36,
+                      "&.Mui-selected": {
+                        bgcolor: "primary.main",
+                        color: "primary.contrastText",
+                        "&:hover": { bgcolor: "primary.dark" },
+                        "& .MuiListItemIcon-root": { color: "inherit" },
+                      },
                     }}
                   >
-                    {cfg.icon}
-                  </Avatar>
-                  {!isLast && (
-                    <Box
-                      sx={{
-                        width: 2,
-                        flex: 1,
-                        minHeight: 16,
-                        bgcolor: "divider",
-                        my: 0.5,
-                      }}
+                    <ListItemIcon sx={{ minWidth: 32 }}>{item.icon}</ListItemIcon>
+                    <ListItemText
+                      primary={item.label}
+                      primaryTypographyProps={{ fontSize: "0.82rem" }}
                     />
-                  )}
-                </Box>
-
-                {/* Content */}
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    flex: 1,
-                    p: 1.5,
-                    mb: 1.5,
-                    borderRadius: 2,
-                    cursor: "pointer",
-                    borderColor:
-                      entry.severity === "CRITICAL"
-                        ? "#b71c1c"
-                        : entry.severity === "WARNING"
-                        ? "#f57c00"
-                        : "divider",
-                    bgcolor:
-                      entry.severity === "CRITICAL"
-                        ? "#fff5f5"
-                        : entry.severity === "WARNING"
-                        ? "#fffbf0"
-                        : "background.paper",
-                    "&:hover": { boxShadow: 2 },
-                    transition: "box-shadow 0.15s",
-                  }}
-                  onClick={() => setDetailEntry(entry)}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-                    <Chip
-                      label={cfg.label}
-                      size="small"
-                      sx={{
-                        bgcolor: cfg.bgColor,
-                        color: cfg.color,
-                        fontWeight: 700,
-                        fontSize: "0.7rem",
-                        height: 20,
-                      }}
-                    />
-                    <Chip
-                      label={entry.severity}
-                      size="small"
-                      sx={{
-                        bgcolor: entry.severity === "CRITICAL" ? "#b71c1c" : entry.severity === "WARNING" ? "#f57c00" : "#e3f2fd",
-                        color: entry.severity === "INFO" ? "#1976d2" : "#fff",
-                        fontWeight: 700,
-                        fontSize: "0.65rem",
-                        height: 18,
-                      }}
-                    />
-                    <Typography variant="body2" fontWeight={700} sx={{ flex: 1, minWidth: 0 }}>
-                      {entry.action}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-                      {formatTs(entry.timestamp)}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
-                    <PersonIcon sx={{ fontSize: 13, color: "text.secondary" }} />
-                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                      {entry.user}
-                    </Typography>
-                    {entry.ip && (
-                      <>
-                        <Typography variant="caption" color="text.disabled">
-                          •
-                        </Typography>
-                        <Typography variant="caption" color="text.disabled">
-                          {entry.ip}
-                        </Typography>
-                      </>
-                    )}
-                    {entry.resource && (
-                      <>
-                        <Typography variant="caption" color="text.disabled">
-                          •
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color="primary"
-                          sx={{ fontStyle: "italic" }}
-                        >
-                          {entry.resource}
-                        </Typography>
-                      </>
-                    )}
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 0.25, lineHeight: 1.4 }}
-                  >
-                    {entry.details}
-                  </Typography>
-                </Paper>
-              </Box>
-            );
-          })
-        )}
-      </Box>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 1, mt: 2 }}>
-          <Button
-            size="small"
-            disabled={page === 0}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            이전
-          </Button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <Button
-              key={i}
-              size="small"
-              variant={page === i ? "contained" : "outlined"}
-              onClick={() => setPage(i)}
-              sx={{ minWidth: 36 }}
-            >
-              {i + 1}
-            </Button>
-          ))}
-          <Button
-            size="small"
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            다음
-          </Button>
-        </Box>
-      )}
-
-      {/* Detail Dialog */}
-      <Dialog
-        open={!!detailEntry}
-        onClose={() => setDetailEntry(null)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <HistoryIcon color="primary" />
-          감사 로그 상세
-        </DialogTitle>
-        <DialogContent dividers>
-          {detailEntry && (() => {
-            const cfg = AUDIT_EVENT_CONFIG[detailEntry.eventType];
-            return (
-              <Stack spacing={1.5}>
-                <Box sx={{ display: "flex", gap: 1 }}>
-                  <Chip
-                    label={cfg.label}
-                    size="small"
-                    sx={{ bgcolor: cfg.bgColor, color: cfg.color, fontWeight: 700 }}
-                  />
-                  <Chip
-                    label={detailEntry.severity}
-                    size="small"
-                    color={
-                      detailEntry.severity === "CRITICAL"
-                        ? "error"
-                        : detailEntry.severity === "WARNING"
-                        ? "warning"
-                        : "info"
-                    }
-                    sx={{ fontWeight: 700 }}
-                  />
-                </Box>
-                <Divider />
-                {[
-                  { label: "로그 ID", value: detailEntry.id },
-                  {
-                    label: "타임스탬프",
-                    value: new Date(detailEntry.timestamp).toLocaleString("ko-KR"),
-                  },
-                  { label: "사용자", value: detailEntry.user },
-                  { label: "액션", value: detailEntry.action },
-                  { label: "IP 주소", value: detailEntry.ip ?? "N/A" },
-                  { label: "대상 리소스", value: detailEntry.resource ?? "N/A" },
-                ].map(({ label, value }) => (
-                  <Box key={label} sx={{ display: "flex", gap: 1 }}>
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ minWidth: 100, fontWeight: 600 }}
-                    >
-                      {label}
-                    </Typography>
-                    <Typography variant="caption" sx={{ wordBreak: "break-all" }}>
-                      {value}
-                    </Typography>
-                  </Box>
+                  </ListItemButton>
                 ))}
-                <Divider />
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                    상세 내용
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mt: 0.5,
-                      p: 1.5,
-                      bgcolor: "grey.50",
-                      borderRadius: 1,
-                      fontSize: "0.8125rem",
-                      lineHeight: 1.6,
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {detailEntry.details}
-                  </Typography>
-                </Box>
-              </Stack>
-            );
-          })()}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailEntry(null)}>닫기</Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
-}
-
-function ExportCenterTab() {
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedExport, setSelectedExport] = useState<ExportType | null>(null);
-  const [dateFrom, setDateFrom] = useState("2026-01-01");
-  const [dateTo, setDateTo] = useState("2026-03-05");
-  const [format, setFormat] = useState<"csv" | "json">("csv");
-  const [snackOpen, setSnackOpen] = useState(false);
-  const [exportHistory, setExportHistory] = useState<ExportHistoryItem[]>([
-    { id: "h1", name: "피드백 데이터", format: "CSV", rows: 50, size: "12 KB", date: "2026-03-04 14:22" },
-    { id: "h2", name: "사용 통계", format: "JSON", rows: 30, size: "8 KB", date: "2026-03-03 09:15" },
-    { id: "h3", name: "사용자 목록", format: "CSV", rows: 20, size: "5 KB", date: "2026-03-01 16:40" },
-  ]);
-
-  const exportTypes: ExportType[] = [
-    {
-      id: "feedback",
-      title: "피드백 데이터",
-      description: "모든 피드백 (질문, 답변, 평점, 수정의견, 날짜 포함)",
-      estimatedRows: 50,
-      lastExport: "2026-03-04",
-      icon: <ThumbUpIcon sx={{ fontSize: 36 }} />,
-      color: "#1976d2",
-    },
-    {
-      id: "stats",
-      title: "사용 통계",
-      description: "일별 쿼리 수, 평균 응답시간, 캐시 히트율",
-      estimatedRows: 30,
-      lastExport: "2026-03-03",
-      icon: <SpeedIcon sx={{ fontSize: 36 }} />,
-      color: "#388e3c",
-    },
-    {
-      id: "users",
-      title: "사용자 목록",
-      description: "사용자 정보, 역할, 부서, 최근 로그인 날짜",
-      estimatedRows: 20,
-      lastExport: "2026-03-01",
-      icon: <GroupIcon sx={{ fontSize: 36 }} />,
-      color: "#7b1fa2",
-    },
-    {
-      id: "conversations",
-      title: "대화 로그",
-      description: "세션별 대화 메시지 전체 (role, content, timestamp 포함)",
-      estimatedRows: 87,
-      lastExport: "2026-02-28",
-      icon: <QuestionAnswerIcon sx={{ fontSize: 36 }} />,
-      color: "#e65100",
-    },
-  ];
-
-  function handleCardClick(et: ExportType) {
-    setSelectedExport(et);
-    setDialogOpen(true);
-  }
-
-  function handleExport() {
-    if (!selectedExport) return;
-
-    let content: string;
-    let mimeType: string;
-    let ext: string;
-    const rows =
-      selectedExport.id === "feedback"
-        ? 50
-        : selectedExport.id === "stats"
-        ? 30
-        : selectedExport.id === "users"
-        ? 20
-        : 87;
-
-    if (format === "csv") {
-      if (selectedExport.id === "feedback") content = generateFeedbackCSV();
-      else if (selectedExport.id === "stats") content = generateStatsCSV();
-      else if (selectedExport.id === "users") content = generateUsersCSV();
-      else content = generateConversationsCSV();
-      mimeType = "text/csv;charset=utf-8";
-      ext = "csv";
-    } else {
-      content = generateJSON(selectedExport.id);
-      mimeType = "application/json";
-      ext = "json";
-    }
-
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const fileName = `${selectedExport.id}_${dateFrom}_${dateTo}.${ext}`;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    const sizeKb = Math.round(blob.size / 1024);
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-    const newItem: ExportHistoryItem = {
-      id: `h${Date.now()}`,
-      name: selectedExport.title,
-      format: format.toUpperCase(),
-      rows,
-      size: `${sizeKb} KB`,
-      date: dateStr,
-    };
-    setExportHistory((prev) => [newItem, ...prev].slice(0, 10));
-    setDialogOpen(false);
-    setSnackOpen(true);
-  }
-
-  return (
-    <Box>
-      <Typography variant="h6" fontWeight={700} mb={1}>
-        데이터 내보내기
-      </Typography>
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        원하는 데이터 유형을 선택하고 날짜 범위와 형식을 지정하여 내보내세요.
-      </Typography>
-
-      {/* Export type cards */}
-      <Grid container spacing={2} mb={4}>
-        {exportTypes.map((et) => (
-          <Grid key={et.id} size={{ xs: 12, sm: 6, md: 3 }}>
-            <Card
-              sx={{
-                cursor: "pointer",
-                borderRadius: 2,
-                border: "1px solid",
-                borderColor: "divider",
-                transition: "box-shadow 0.2s, transform 0.15s",
-                "&:hover": {
-                  boxShadow: 4,
-                  transform: "translateY(-2px)",
-                },
-              }}
-              onClick={() => handleCardClick(et)}
-            >
-              <CardContent>
-                <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
-                  <Avatar sx={{ bgcolor: `${et.color}22`, color: et.color, width: 52, height: 52 }}>
-                    {et.icon}
-                  </Avatar>
-                  <Box>
-                    <Typography variant="subtitle1" fontWeight={700}>
-                      {et.title}
-                    </Typography>
-                    <Chip
-                      label={`약 ${et.estimatedRows.toLocaleString()}행`}
-                      size="small"
-                      sx={{ bgcolor: `${et.color}18`, color: et.color, fontWeight: 600, fontSize: "0.7rem" }}
-                    />
-                  </Box>
-                </Box>
-                <Typography variant="body2" color="text.secondary" mb={1.5} sx={{ minHeight: 40 }}>
-                  {et.description}
-                </Typography>
-                <Divider sx={{ mb: 1 }} />
-                <Box display="flex" alignItems="center" gap={0.5}>
-                  <AccessTimeIcon sx={{ fontSize: 14, color: "text.disabled" }} />
-                  <Typography variant="caption" color="text.disabled">
-                    최근 내보내기: {et.lastExport}
-                  </Typography>
-                </Box>
-                <Box display="flex" justifyContent="flex-end" mt={1}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<DownloadIcon />}
-                    sx={{ borderRadius: 5, textTransform: "none", fontSize: "0.75rem" }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCardClick(et);
-                    }}
-                  >
-                    내보내기
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Export history */}
-      <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
-        최근 내보내기 이력
-      </Typography>
-      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: "action.hover" }}>
-              <TableCell sx={{ fontWeight: 700 }}>데이터 유형</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>형식</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="right">행 수</TableCell>
-              <TableCell sx={{ fontWeight: 700 }} align="right">크기</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>내보낸 시각</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {exportHistory.map((item) => (
-              <TableRow key={item.id} hover>
-                <TableCell>{item.name}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={item.format}
-                    size="small"
-                    color={item.format === "CSV" ? "primary" : "secondary"}
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell align="right">{item.rows.toLocaleString()}</TableCell>
-                <TableCell align="right">{item.size}</TableCell>
-                <TableCell>{item.date}</TableCell>
-              </TableRow>
+              </Box>
             ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+          </List>
+        </Box>
 
-      {/* Export dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <DownloadIcon color="primary" />
-          {selectedExport?.title} 내보내기
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2.5} mt={0.5}>
-            <Box>
-              <Typography variant="body2" fontWeight={600} mb={1}>
-                날짜 범위
-              </Typography>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <TextField
-                  label="시작일"
-                  type="date"
-                  size="small"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-                <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
-                  ~
-                </Typography>
-                <TextField
-                  label="종료일"
-                  type="date"
-                  size="small"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  fullWidth
-                />
-              </Stack>
-            </Box>
-            <Box>
-              <Typography variant="body2" fontWeight={600} mb={1}>
-                내보내기 형식
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                {(["csv", "json"] as const).map((f) => (
-                  <Button
-                    key={f}
-                    variant={format === f ? "contained" : "outlined"}
-                    size="small"
-                    onClick={() => setFormat(f)}
-                    sx={{ textTransform: "uppercase", fontWeight: 700, borderRadius: 5, minWidth: 80 }}
-                  >
-                    {f}
-                  </Button>
-                ))}
-              </Stack>
-            </Box>
-            <Alert severity="info" sx={{ fontSize: "0.8rem" }}>
-              약 <strong>{selectedExport?.estimatedRows.toLocaleString()}행</strong>의 데이터가 포함됩니다.
-              {format === "csv" && " CSV는 Excel 호환 BOM 인코딩(UTF-8)을 사용합니다."}
-            </Alert>
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDialogOpen(false)} sx={{ textTransform: "none" }}>
-            취소
-          </Button>
-          <Button
-            onClick={handleExport}
-            variant="contained"
-            startIcon={<DownloadIcon />}
-            sx={{ textTransform: "none", borderRadius: 5 }}
-          >
-            내보내기
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Success snackbar */}
-      <Snackbar
-        open={snackOpen}
-        autoHideDuration={3500}
-        onClose={() => setSnackOpen(false)}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert
-          onClose={() => setSnackOpen(false)}
-          severity="success"
-          variant="filled"
-          sx={{ width: "100%", borderRadius: 2 }}
-        >
-          파일이 다운로드되었습니다.
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
-}
-
-function OcrTestTab() {
-  const [file, setFile] = useState<File | null>(null);
-  const [provider, setProvider] = useState<string>("cloud");
-  const [enhanced, setEnhanced] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [healthLoading, setHealthLoading] = useState(false);
-  const [result, setResult] = useState<{
-    text: string;
-    confidence: number;
-    page_count: number;
-    table_count: number;
-    provider: string;
-    enhanced: boolean;
-    metadata: object;
-  } | null>(null);
-  const [health, setHealth] = useState<{ cloud: boolean; onprem: boolean } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState(false);
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setDragOver(false);
-    const dropped = e.dataTransfer.files[0];
-    if (dropped) {
-      setFile(dropped);
-      setResult(null);
-      setError(null);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (selected) {
-      setFile(selected);
-      setResult(null);
-      setError(null);
-    }
-  };
-
-  const handleProcess = async () => {
-    if (!file) return;
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      const res = await ocrApi.process(file, provider, enhanced);
-      setResult(res.data as { text: string; confidence: number; page_count: number; table_count: number; provider: string; enhanced: boolean; metadata: object });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "OCR 처리 중 오류가 발생했습니다.";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleHealthCheck = async () => {
-    setHealthLoading(true);
-    setError(null);
-    try {
-      const res = await ocrApi.health();
-      setHealth(res.data as { cloud: boolean; onprem: boolean });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "헬스 체크 실패";
-      setError(msg);
-    } finally {
-      setHealthLoading(false);
-    }
-  };
-
-  return (
-    <Box>
-      <Typography variant="h6" gutterBottom fontWeight={600}>
-        OCR 테스트
-      </Typography>
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        문서 파일을 업로드하여 OCR 처리 결과를 확인합니다.
-      </Typography>
-
-      <Grid container spacing={3}>
-        {/* Upload area */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                파일 업로드
-              </Typography>
-              <Box
-                onDrop={handleDrop}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                sx={{
-                  border: "2px dashed",
-                  borderColor: dragOver ? "primary.main" : "divider",
-                  borderRadius: 2,
-                  p: 4,
-                  textAlign: "center",
-                  bgcolor: dragOver ? "action.hover" : "background.default",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  mb: 2,
-                }}
-                onClick={() => document.getElementById("ocr-file-input")?.click()}
-              >
-                <DocumentScannerIcon sx={{ fontSize: 48, color: "text.secondary", mb: 1 }} />
-                <Typography variant="body2" color="text.secondary">
-                  파일을 드래그하거나 클릭하여 선택
-                </Typography>
-                <Typography variant="caption" color="text.disabled">
-                  PDF, PNG, JPG, JPEG, TIFF, BMP 지원
-                </Typography>
-              </Box>
-              <input
-                id="ocr-file-input"
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif,.bmp"
-                style={{ display: "none" }}
-                onChange={handleFileChange}
-              />
-              {file && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  선택된 파일: <strong>{file.name}</strong> ({(file.size / 1024).toFixed(1)} KB)
-                </Alert>
-              )}
-
-              <Stack spacing={2}>
-                <FormControl size="small" fullWidth>
-                  <InputLabel>OCR 프로바이더</InputLabel>
-                  <Select
-                    value={provider}
-                    label="OCR 프로바이더"
-                    onChange={(e) => setProvider(e.target.value)}
-                  >
-                    <MenuItem value="cloud">Cloud (Upstage)</MenuItem>
-                    <MenuItem value="onprem">On-Premise</MenuItem>
-                  </Select>
-                </FormControl>
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={enhanced}
-                      onChange={(e) => setEnhanced(e.target.checked)}
-                    />
-                  }
-                  label="Enhanced 모드 (고품질 처리)"
-                />
-
-                <Button
-                  variant="contained"
-                  startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <DocumentScannerIcon />}
-                  onClick={handleProcess}
-                  disabled={!file || loading}
-                  fullWidth
-                >
-                  {loading ? "처리 중..." : "OCR 처리"}
-                </Button>
-              </Stack>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Health check */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined">
-            <CardContent>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                OCR 서비스 상태
-              </Typography>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={healthLoading ? <CircularProgress size={14} /> : <RefreshIcon />}
-                onClick={handleHealthCheck}
-                disabled={healthLoading}
-                sx={{ mb: 2 }}
-              >
-                헬스 체크
-              </Button>
-              {health && (
-                <Stack spacing={1}>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    {health.cloud ? (
-                      <CheckCircleIcon color="success" fontSize="small" />
-                    ) : (
-                      <ErrorIcon color="error" fontSize="small" />
-                    )}
-                    <Typography variant="body2">
-                      Cloud (Upstage): {health.cloud ? "정상" : "비활성"}
-                    </Typography>
-                  </Box>
-                  <Box display="flex" alignItems="center" gap={1}>
-                    {health.onprem ? (
-                      <CheckCircleIcon color="success" fontSize="small" />
-                    ) : (
-                      <ErrorIcon color="error" fontSize="small" />
-                    )}
-                    <Typography variant="body2">
-                      On-Premise: {health.onprem ? "정상" : "비활성"}
-                    </Typography>
-                  </Box>
-                </Stack>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Error */}
-        {error && (
-          <Grid size={{ xs: 12 }}>
-            <Alert severity="error">{error}</Alert>
-          </Grid>
-        )}
-
-        {/* Results */}
-        {result && (
-          <Grid size={{ xs: 12 }}>
-            <Card variant="outlined">
-              <CardContent>
-                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                  OCR 결과
-                </Typography>
-                <Grid container spacing={2} mb={2}>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography variant="caption" color="text.secondary">신뢰도</Typography>
-                    <Typography variant="h6" color="primary">
-                      {(result.confidence * 100).toFixed(1)}%
-                    </Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography variant="caption" color="text.secondary">페이지 수</Typography>
-                    <Typography variant="h6">{result.page_count}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography variant="caption" color="text.secondary">표 수</Typography>
-                    <Typography variant="h6">{result.table_count}</Typography>
-                  </Grid>
-                  <Grid size={{ xs: 6, sm: 3 }}>
-                    <Typography variant="caption" color="text.secondary">프로바이더</Typography>
-                    <Typography variant="h6" sx={{ textTransform: "capitalize" }}>
-                      {result.provider}
-                    </Typography>
-                  </Grid>
-                </Grid>
-                <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-                  추출된 텍스트
-                </Typography>
-                <Paper
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    maxHeight: 400,
-                    overflow: "auto",
-                    fontFamily: "monospace",
-                    fontSize: "0.8rem",
-                    whiteSpace: "pre-wrap",
-                    bgcolor: "background.default",
-                  }}
-                >
-                  {result.text || "(텍스트 없음)"}
-                </Paper>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
-      </Grid>
-    </Box>
-  );
-}
-
-export default function AdminPage() {
-  const [tabIndex, setTabIndex] = useState(0);
-
-  return (
-    <Layout title="관리자 설정" headerActions={<NotificationBell />}>
-      <Tabs
-        value={tabIndex}
-        onChange={(_, v: number) => setTabIndex(v)}
-        sx={{ borderBottom: 1, borderColor: "divider", mb: 1 }}
-        variant="scrollable"
-        scrollButtons="auto"
-      >
-        <Tab label="대시보드" icon={<DashboardIcon />} iconPosition="start" />
-        <Tab label="사용자 관리" icon={<PersonIcon />} iconPosition="start" />
-        <Tab label="시스템 정보" />
-        <Tab label="LLM 프로바이더" />
-        <Tab label="모델 관리" icon={<MemoryIcon />} iconPosition="start" />
-        <Tab label="가드레일" icon={<SecurityIcon />} iconPosition="start" />
-        <Tab label="프롬프트 관리" />
-        <Tab label="MCP 도구" />
-        <Tab label="커스텀 도구" />
-        <Tab label="워크플로우" />
-        <Tab label="콘텐츠 관리" />
-        <Tab label="청킹 설정" />
-        <Tab label="변경 관리" icon={<AccountTreeIcon />} iconPosition="start" />
-        <Tab label="캐시 관리" icon={<CachedIcon />} iconPosition="start" />
-        <Tab label="LLM 테스트" icon={<ScienceIcon />} iconPosition="start" />
-        <Tab label="시스템 설정" icon={<SettingsIcon />} iconPosition="start" />
-        <Tab label="데이터 내보내기" icon={<DownloadIcon />} iconPosition="start" />
-        <Tab label="감사 로그" icon={<HistoryIcon />} iconPosition="start" />
-        <Tab label="OCR 테스트" icon={<DocumentScannerIcon />} iconPosition="start" />
-      </Tabs>
-
-      <TabPanel value={tabIndex} index={0}>
-        <DashboardTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={1}>
-        <UserManagementTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={2}>
-        <SystemInfoTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={3}>
-        <ProvidersTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={4}>
-        <ModelsTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={5}>
-        <GuardrailsTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={6}>
-        <PromptsTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={7}>
-        <McpToolsTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={8}>
-        <CustomToolBuilder />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={9}>
-        <WorkflowsTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={10}>
-        <ContentManager />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={11}>
-        <ChunkingConfigTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={12}>
-        <GovernanceTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={13}>
-        <CacheManagementTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={14}>
-        <LLMPlaygroundTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={15}>
-        <SystemSettingsTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={16}>
-        <ExportCenterTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={17}>
-        <AuditLogTab />
-      </TabPanel>
-      <TabPanel value={tabIndex} index={18}>
-        <OcrTestTab />
-      </TabPanel>
+        {/* Content Area */}
+        <Box sx={{ flex: 1, overflow: "auto", p: 3 }}>
+          <ActiveComponent />
+        </Box>
+      </Box>
     </Layout>
   );
 }

@@ -48,6 +48,8 @@ import {
   AddCircleOutline as AddNodeIcon,
   TuneRounded as TuneIcon,
   KeyboardArrowRight as ArrowRightIcon,
+  GetApp as DownloadIcon,
+  Replay as LoopIcon,
 } from "@mui/icons-material";
 import {
   ReactFlow,
@@ -80,7 +82,7 @@ import "@xyflow/react/dist/style.css";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Layout from "../components/Layout";
-import { workflowsApi, mcpApi } from "../api/client";
+import { workflowsApi, mcpApi, reportsApi } from "../api/client";
 import type { WorkflowListItem } from "../api/client";
 
 // ---------------------------------------------------------------------------
@@ -94,7 +96,8 @@ type WorkflowNodeType =
   | "tool"
   | "condition"
   | "output"
-  | "transform";
+  | "transform"
+  | "loop";
 
 type ExecutionStatus = "pending" | "running" | "completed" | "failed";
 
@@ -120,6 +123,7 @@ const NODE_COLORS: Record<WorkflowNodeType, { bg: string; border: string; text: 
   condition: { bg: "#6b5c1a", border: "#eab308", text: "#facc15", glow: "rgba(234,179,8,0.35)" },
   output:    { bg: "#1a5a6b", border: "#06b6d4", text: "#22d3ee", glow: "rgba(6,182,212,0.35)" },
   transform: { bg: "#2a2a6b", border: "#6366f1", text: "#818cf8", glow: "rgba(99,102,241,0.35)" },
+  loop:      { bg: "#5a1a4a", border: "#ec4899", text: "#f472b6", glow: "rgba(236,72,153,0.35)" },
 };
 
 const NODE_TYPE_META: Record<
@@ -133,6 +137,7 @@ const NODE_TYPE_META: Record<
   condition: { icon: <ConditionIcon />, label: "조건 분기",  sublabel: "CONDITION", color: "#eab308", description: "조건에 따라 흐름을 분기합니다.\n설정: 조건 유형 (신뢰도/키워드/길이), 임계값" },
   output:    { icon: <OutputIcon />,    label: "출력",       sublabel: "OUTPUT",    color: "#06b6d4", description: "최종 결과를 사용자에게 출력합니다.\n설정: 출력 형식 (text/markdown/json)" },
   transform: { icon: <TransformIcon />, label: "변환",       sublabel: "TRANSFORM", color: "#6366f1", description: "데이터를 가공·변환합니다.\n설정: 변환 유형 (template/extract/merge), 템플릿" },
+  loop:      { icon: <LoopIcon />,     label: "반복",      sublabel: "LOOP",      color: "#ec4899", description: "지정된 횟수나 조건에 따라 반복 실행합니다.\n설정: 반복 유형 (횟수/리스트/조건), 최대 반복 수\n연결: body(반복 본체) → done(완료 후)" },
 };
 
 interface PresetDef {
@@ -698,7 +703,7 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
   return (
     <Box
       sx={{
-        width: 192,
+        width: 210,
         borderRadius: "10px",
         border: `1.5px solid ${borderColor}`,
         bgcolor: "#141922",
@@ -719,12 +724,12 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
           position={Position.Left}
           id={`${id}-target`}
           style={{
-            width: 12,
-            height: 12,
+            width: 14,
+            height: 14,
             background: colors.border,
             border: `2px solid #141922`,
             boxShadow: `0 0 6px ${colors.glow}`,
-            left: -7,
+            left: -8,
             cursor: "crosshair",
           }}
         />
@@ -737,12 +742,12 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
           position={Position.Right}
           id={`${id}-source`}
           style={{
-            width: 12,
-            height: 12,
+            width: 14,
+            height: 14,
             background: colors.border,
             border: `2px solid #141922`,
             boxShadow: `0 0 6px ${colors.glow}`,
-            right: -7,
+            right: -8,
             cursor: "crosshair",
           }}
         />
@@ -764,8 +769,8 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
         {/* Icon badge */}
         <Box
           sx={{
-            width: 26,
-            height: 26,
+            width: 30,
+            height: 30,
             borderRadius: "6px",
             bgcolor: `${colors.border}22`,
             border: `1px solid ${colors.border}55`,
@@ -774,7 +779,7 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
-            "& svg": { fontSize: 15 },
+            "& svg": { fontSize: 17 },
           }}
         >
           {meta.icon}
@@ -783,7 +788,7 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography
             sx={{
-              fontSize: "0.75rem",
+              fontSize: "0.85rem",
               fontWeight: 700,
               color: "#e8eaf0",
               lineHeight: 1.2,
@@ -796,7 +801,7 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
           </Typography>
           <Typography
             sx={{
-              fontSize: "0.6rem",
+              fontSize: "0.68rem",
               fontWeight: 700,
               letterSpacing: "0.08em",
               color: colors.text,
@@ -811,10 +816,10 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
 
         {/* Status indicator */}
         {status === "completed" && (
-          <CompletedIcon sx={{ fontSize: 16, color: "#22c55e", flexShrink: 0 }} />
+          <CompletedIcon sx={{ fontSize: 18, color: "#22c55e", flexShrink: 0 }} />
         )}
         {status === "failed" && (
-          <FailedIcon sx={{ fontSize: 16, color: "#ef4444", flexShrink: 0 }} />
+          <FailedIcon sx={{ fontSize: 18, color: "#ef4444", flexShrink: 0 }} />
         )}
         {status === "running" && (
           <CircularProgress size={13} sx={{ color: "#60a5fa", flexShrink: 0 }} />
@@ -837,7 +842,7 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
             >
               <Typography
                 sx={{
-                  fontSize: "0.63rem",
+                  fontSize: "0.72rem",
                   color: "rgba(140,160,200,0.7)",
                   fontFamily: "monospace",
                   flexShrink: 0,
@@ -847,7 +852,7 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
               </Typography>
               <Typography
                 sx={{
-                  fontSize: "0.63rem",
+                  fontSize: "0.72rem",
                   color: "rgba(200,215,240,0.85)",
                   fontFamily: "monospace",
                   maxWidth: 90,
@@ -882,7 +887,7 @@ function WorkflowNodeComponent({ id, data, selected }: NodeProps<WorkflowNode>) 
 // Node Palette Component
 // ---------------------------------------------------------------------------
 
-const PALETTE_WIDTH = 210;
+const PALETTE_WIDTH = 260;
 
 interface NodePaletteProps {
   onDragStart: (event: React.DragEvent, nodeType: WorkflowNodeType) => void;
@@ -895,6 +900,7 @@ function NodePalette({ onDragStart }: NodePaletteProps) {
     "retrieval",
     "tool",
     "condition",
+    "loop",
     "output",
     "transform",
   ];
@@ -917,7 +923,7 @@ function NodePalette({ onDragStart }: NodePaletteProps) {
         <AddNodeIcon sx={{ fontSize: 15, color: "rgba(120,160,220,0.7)" }} />
         <Typography
           sx={{
-            fontSize: "0.7rem",
+            fontSize: "0.78rem",
             fontWeight: 800,
             letterSpacing: "0.1em",
             color: "rgba(120,160,220,0.7)",
@@ -938,11 +944,11 @@ function NodePalette({ onDragStart }: NodePaletteProps) {
             key={nt}
             title={
               <Box sx={{ p: 0.5 }}>
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 700, mb: 0.5, color: "#fff" }}>
+                <Typography sx={{ fontSize: "0.85rem", fontWeight: 700, mb: 0.5, color: "#fff" }}>
                   {meta.label} ({meta.sublabel})
                 </Typography>
                 {meta.description.split("\n").map((line, i) => (
-                  <Typography key={i} sx={{ fontSize: "0.68rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
+                  <Typography key={i} sx={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
                     {line}
                   </Typography>
                 ))}
@@ -996,11 +1002,11 @@ function NodePalette({ onDragStart }: NodePaletteProps) {
                 },
               }}
             >
-              <DragIcon sx={{ fontSize: 13, color: "rgba(120,140,180,0.4)", flexShrink: 0 }} />
+              <DragIcon sx={{ fontSize: 15, color: "rgba(120,140,180,0.4)", flexShrink: 0 }} />
               <Box
                 sx={{
-                  width: 24,
-                  height: 24,
+                  width: 28,
+                  height: 28,
                   borderRadius: "5px",
                   bgcolor: `${colors.border}22`,
                   border: `1px solid ${colors.border}55`,
@@ -1009,18 +1015,18 @@ function NodePalette({ onDragStart }: NodePaletteProps) {
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  "& svg": { fontSize: 14 },
+                  "& svg": { fontSize: 16 },
                 }}
               >
                 {meta.icon}
               </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontSize: "0.75rem", fontWeight: 600, color: "#e0e4f0", lineHeight: 1.2 }}>
+                <Typography sx={{ fontSize: "0.85rem", fontWeight: 600, color: "#e0e4f0", lineHeight: 1.2 }}>
                   {meta.label}
                 </Typography>
                 <Typography
                   sx={{
-                    fontSize: "0.58rem",
+                    fontSize: "0.66rem",
                     fontWeight: 700,
                     letterSpacing: "0.07em",
                     color: colors.text,
@@ -1039,7 +1045,7 @@ function NodePalette({ onDragStart }: NodePaletteProps) {
 
       <Typography
         sx={{
-          fontSize: "0.62rem",
+          fontSize: "0.72rem",
           color: "rgba(100,120,160,0.6)",
           textAlign: "center",
           lineHeight: 1.4,
@@ -1055,7 +1061,7 @@ function NodePalette({ onDragStart }: NodePaletteProps) {
 // Properties Panel Component
 // ---------------------------------------------------------------------------
 
-const PROPERTIES_WIDTH = 290;
+const PROPERTIES_WIDTH = 320;
 
 interface PropertiesPanelProps {
   selectedNode: WorkflowNode | null;
@@ -1323,7 +1329,7 @@ function PropertiesPanel({
       {/* Type-specific config */}
       {(data.nodeType === "llm" || data.nodeType === "retrieval" ||
         data.nodeType === "tool" || data.nodeType === "condition" ||
-        data.nodeType === "transform") && (
+        data.nodeType === "transform" || data.nodeType === "loop") && (
         <>
           <SectionHeader label="노드 설정" />
         </>
@@ -1535,6 +1541,102 @@ function PropertiesPanel({
         </>
       )}
 
+      {data.nodeType === "loop" && (
+            <>
+              <StyledField label="반복 유형">
+                <Select
+                  value={(config.loop_type as string) || "count"}
+                  onChange={(e: SelectChangeEvent) => updateConfig("loop_type", e.target.value)}
+                  size="small"
+                  fullWidth
+                  sx={{
+                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(80,100,140,0.3)" },
+                    "& .MuiSelect-select": { fontSize: "0.88rem", color: "#c8d4e8" },
+                  }}
+                >
+                  <MenuItem value="count" sx={{ fontSize: "0.88rem" }}>횟수 반복 (Count)</MenuItem>
+                  <MenuItem value="foreach" sx={{ fontSize: "0.88rem" }}>리스트 순회 (ForEach)</MenuItem>
+                  <MenuItem value="while" sx={{ fontSize: "0.88rem" }}>조건 반복 (While)</MenuItem>
+                </Select>
+              </StyledField>
+
+              {((config.loop_type as string) || "count") === "count" && (
+                <StyledField label={`반복 횟수: ${(config.count as number) ?? 3}`}>
+                  <Slider
+                    value={(config.count as number) ?? 3}
+                    onChange={(_e, val) => updateConfig("count", val)}
+                    min={1}
+                    max={20}
+                    step={1}
+                    marks={[{ value: 1, label: "1" }, { value: 10, label: "10" }, { value: 20, label: "20" }]}
+                    sx={{ color: "#ec4899" }}
+                  />
+                </StyledField>
+              )}
+
+              {(config.loop_type as string) === "foreach" && (
+                <StyledField label="구분자">
+                  <TextField
+                    value={(config.separator as string) ?? "\\n"}
+                    onChange={(e) => updateConfig("separator", e.target.value)}
+                    size="small"
+                    fullWidth
+                    placeholder="\\n (줄바꿈)"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": { borderColor: "rgba(80,100,140,0.3)" },
+                      },
+                      "& input": { fontSize: "0.88rem", color: "#c8d4e8" },
+                    }}
+                  />
+                </StyledField>
+              )}
+
+              {(config.loop_type as string) === "while" && (
+                <>
+                  <StyledField label="종료 조건">
+                    <Select
+                      value={(config.condition_type as string) || "confidence"}
+                      onChange={(e: SelectChangeEvent) => updateConfig("condition_type", e.target.value)}
+                      size="small"
+                      fullWidth
+                      sx={{
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(80,100,140,0.3)" },
+                        "& .MuiSelect-select": { fontSize: "0.88rem", color: "#c8d4e8" },
+                      }}
+                    >
+                      <MenuItem value="confidence" sx={{ fontSize: "0.88rem" }}>신뢰도 도달</MenuItem>
+                      <MenuItem value="keyword" sx={{ fontSize: "0.88rem" }}>키워드 포함</MenuItem>
+                      <MenuItem value="length" sx={{ fontSize: "0.88rem" }}>길이 도달</MenuItem>
+                    </Select>
+                  </StyledField>
+                  <StyledField label={`임계값: ${((config.threshold as number) ?? 0.8).toFixed(2)}`}>
+                    <Slider
+                      value={(config.threshold as number) ?? 0.8}
+                      onChange={(_e, val) => updateConfig("threshold", val)}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      sx={{ color: "#ec4899" }}
+                    />
+                  </StyledField>
+                </>
+              )}
+
+              <StyledField label={`최대 반복: ${(config.max_iterations as number) ?? 10}`}>
+                <Slider
+                  value={(config.max_iterations as number) ?? 10}
+                  onChange={(_e, val) => updateConfig("max_iterations", val)}
+                  min={1}
+                  max={50}
+                  step={1}
+                  marks={[{ value: 1, label: "1" }, { value: 25, label: "25" }, { value: 50, label: "50" }]}
+                  sx={{ color: "#ec4899" }}
+                />
+              </StyledField>
+            </>
+          )}
+
       {data.nodeType === "transform" && (
         <StyledField label="변환 템플릿">
           <TextField
@@ -1614,9 +1716,9 @@ function EmptyState() {
           animation: "floatIcon 3s ease-in-out infinite",
         }}
       >
-        <WorkflowIcon sx={{ fontSize: 30, color: "rgba(80,120,200,0.5)" }} />
+        <WorkflowIcon sx={{ fontSize: 40, color: "rgba(80,120,200,0.5)" }} />
       </Box>
-      <Typography sx={{ fontSize: "0.9rem", fontWeight: 700, color: "rgba(140,170,220,0.6)" }}>
+      <Typography sx={{ fontSize: "1.05rem", fontWeight: 700, color: "rgba(140,170,220,0.6)" }}>
         캔버스가 비어 있습니다
       </Typography>
       <Stack spacing={0.75} alignItems="center">
@@ -1626,23 +1728,23 @@ function EmptyState() {
             size="small"
             sx={{
               height: 22,
-              fontSize: "0.65rem",
+              fontSize: "0.75rem",
               fontWeight: 700,
               bgcolor: "rgba(30,50,90,0.7)",
               color: "rgba(100,150,240,0.8)",
               border: "1px solid rgba(80,120,200,0.3)",
             }}
           />
-          <Typography sx={{ fontSize: "0.72rem", color: "rgba(100,130,180,0.5)" }}>
+          <Typography sx={{ fontSize: "0.82rem", color: "rgba(100,130,180,0.5)" }}>
             로 시작하거나
           </Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-          <Typography sx={{ fontSize: "0.72rem", color: "rgba(100,130,180,0.5)" }}>
+          <Typography sx={{ fontSize: "0.82rem", color: "rgba(100,130,180,0.5)" }}>
             팔레트에서 노드를
           </Typography>
           <ArrowRightIcon sx={{ fontSize: 14, color: "rgba(100,130,180,0.4)" }} />
-          <Typography sx={{ fontSize: "0.72rem", color: "rgba(100,130,180,0.5)" }}>
+          <Typography sx={{ fontSize: "0.82rem", color: "rgba(100,130,180,0.5)" }}>
             드래그하세요
           </Typography>
         </Box>
@@ -1700,6 +1802,8 @@ function AgentBuilderCanvas() {
   const [runDialogOpen, setRunDialogOpen] = useState(false);
   const [runQuery, setRunQuery] = useState("");
   const [resultDialogOpen, setResultDialogOpen] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingDocx, setExportingDocx] = useState(false);
   const [runResult, setRunResult] = useState<{
     final_output: string;
     status: string;
@@ -1927,12 +2031,22 @@ function AgentBuilderCanvas() {
   // -- Handlers --
   const onConnect = useCallback(
     (connection: Connection) => {
+      // Auto-label edges from LOOP nodes
+      let label = "";
+      if (connection.source) {
+        const sourceNode = nodes.find((n) => n.id === connection.source);
+        if (sourceNode?.data?.nodeType === "loop") {
+          const existingLoopEdges = edges.filter((e) => e.source === connection.source);
+          label = existingLoopEdges.length === 0 ? "body" : "done";
+        }
+      }
       setEdges((eds) =>
         addEdge(
           {
             ...connection,
             animated: true,
             type: "workflow",
+            label,
             markerEnd: {
               type: MarkerType.ArrowClosed,
               color: "rgba(100,140,220,0.6)",
@@ -1944,7 +2058,7 @@ function AgentBuilderCanvas() {
         ),
       );
     },
-    [setEdges],
+    [setEdges, nodes, edges],
   );
 
   const onNodeClick = useCallback(
@@ -2250,7 +2364,7 @@ function AgentBuilderCanvas() {
               "& .MuiOutlinedInput-notchedOutline": { border: "none" },
               "& .MuiSelect-select": {
                 py: 0.5,
-                fontSize: "0.8rem",
+                fontSize: "0.88rem",
                 fontWeight: 600,
                 color: "#c8d4e8",
                 display: "flex",
@@ -2349,7 +2463,7 @@ function AgentBuilderCanvas() {
           sx={{
             py: 0.625,
             px: 1.5,
-            fontSize: "0.78rem",
+            fontSize: "0.85rem",
             fontWeight: 700,
             bgcolor: isRunning ? "rgba(30,80,50,0.8)" : "rgba(20,90,55,0.85)",
             color: isRunning ? "rgba(80,200,130,0.8)" : "#4ade80",
@@ -2414,7 +2528,7 @@ function AgentBuilderCanvas() {
           {currentPreset && nodes.length > 0 && (
             <Typography
               sx={{
-                fontSize: "0.65rem",
+                fontSize: "0.72rem",
                 fontFamily: "monospace",
                 color: "rgba(100,130,180,0.6)",
                 fontWeight: 600,
@@ -2861,7 +2975,7 @@ function AgentBuilderCanvas() {
       <Dialog
         open={resultDialogOpen}
         onClose={() => setResultDialogOpen(false)}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
         PaperProps={{
           sx: {
@@ -2869,13 +2983,13 @@ function AgentBuilderCanvas() {
             border: "1px solid rgba(80,100,140,0.35)",
             borderRadius: "12px",
             backgroundImage: "none",
-            maxHeight: "80vh",
+            maxHeight: "90vh",
           },
         }}
       >
         <DialogTitle
           sx={{
-            fontSize: "0.95rem",
+            fontSize: "1.1rem",
             fontWeight: 700,
             color: "rgba(160,190,240,0.9)",
             borderBottom: "1px solid rgba(80,100,140,0.2)",
@@ -2898,7 +3012,7 @@ function AgentBuilderCanvas() {
               sx={{
                 ml: "auto",
                 height: 20,
-                fontSize: "0.68rem",
+                fontSize: "0.78rem",
                 fontWeight: 700,
                 bgcolor: "rgba(40,70,130,0.6)",
                 color: "rgba(120,170,255,0.85)",
@@ -2927,7 +3041,7 @@ function AgentBuilderCanvas() {
           {/* Node execution timeline */}
           {runResult?.node_results && runResult.node_results.length > 0 && (
             <Box sx={{ mb: 2 }}>
-              <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, color: "rgba(120,150,200,0.7)", mb: 1 }}>
+              <Typography sx={{ fontSize: "0.88rem", fontWeight: 600, color: "rgba(120,150,200,0.7)", mb: 1 }}>
                 노드 실행 타임라인
               </Typography>
               <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap" }}>
@@ -2945,7 +3059,7 @@ function AgentBuilderCanvas() {
                     size="small"
                     sx={{
                       height: 22,
-                      fontSize: "0.68rem",
+                      fontSize: "0.78rem",
                       bgcolor: nr.status === "completed" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
                       color: nr.status === "completed" ? "rgba(120,220,160,0.9)" : "rgba(255,160,160,0.9)",
                       border: `1px solid ${nr.status === "completed" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
@@ -2960,17 +3074,17 @@ function AgentBuilderCanvas() {
           {/* Query display */}
           {runQuery && (
             <Box sx={{ mb: 2, p: 1.5, bgcolor: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: "8px" }}>
-              <Typography sx={{ fontSize: "0.72rem", fontWeight: 600, color: "rgba(34,197,94,0.7)", mb: 0.5 }}>
+              <Typography sx={{ fontSize: "0.88rem", fontWeight: 600, color: "rgba(34,197,94,0.7)", mb: 0.5 }}>
                 입력 질문
               </Typography>
-              <Typography sx={{ fontSize: "0.85rem", color: "#c8d4e8" }}>
+              <Typography sx={{ fontSize: "0.95rem", color: "#c8d4e8" }}>
                 {runQuery}
               </Typography>
             </Box>
           )}
 
           {/* Final output */}
-          <Typography sx={{ fontSize: "0.78rem", fontWeight: 600, color: "rgba(120,150,200,0.7)", mb: 1 }}>
+          <Typography sx={{ fontSize: "0.88rem", fontWeight: 600, color: "rgba(120,150,200,0.7)", mb: 1 }}>
             실행 출력
           </Typography>
           <Box
@@ -2979,10 +3093,10 @@ function AgentBuilderCanvas() {
               border: "1px solid rgba(80,100,140,0.25)",
               borderRadius: "8px",
               p: 2,
-              maxHeight: 400,
+              maxHeight: 600,
               overflow: "auto",
               wordBreak: "break-word",
-              fontSize: "0.85rem",
+              fontSize: "0.95rem",
               lineHeight: 1.8,
               color: "#c8d4e8",
               fontFamily: "'Noto Sans KR', sans-serif",
@@ -2995,24 +3109,134 @@ function AgentBuilderCanvas() {
                 h1: ({ children }) => <Typography variant="h6" sx={{ color: "#93c5fd", mt: 2, mb: 1 }}>{children}</Typography>,
                 h2: ({ children }) => <Typography variant="subtitle1" sx={{ color: "#93c5fd", fontWeight: 700, mt: 2, mb: 1 }}>{children}</Typography>,
                 h3: ({ children }) => <Typography variant="subtitle2" sx={{ color: "#93c5fd", fontWeight: 700, mt: 1.5, mb: 0.5 }}>{children}</Typography>,
-                p: ({ children }) => <Typography variant="body2" sx={{ color: "#c8d4e8", mb: 1, lineHeight: 1.8 }}>{children}</Typography>,
+                p: ({ children }) => <Typography variant="body2" sx={{ color: "#c8d4e8", mb: 1, lineHeight: 1.8, fontSize: "0.95rem" }}>{children}</Typography>,
                 strong: ({ children }) => <strong style={{ color: "#93c5fd" }}>{children}</strong>,
-                ul: ({ children }) => <Box component="ul" sx={{ pl: 2, mb: 1, "& li": { color: "#c8d4e8", mb: 0.3 } }}>{children}</Box>,
-                ol: ({ children }) => <Box component="ol" sx={{ pl: 2, mb: 1, "& li": { color: "#c8d4e8", mb: 0.3 } }}>{children}</Box>,
-                code: ({ children }) => <Box component="code" sx={{ bgcolor: "rgba(50,70,120,0.3)", px: 0.5, borderRadius: 0.5, fontSize: "0.8rem" }}>{children}</Box>,
-                pre: ({ children }) => <Box component="pre" sx={{ bgcolor: "rgba(20,30,50,0.6)", p: 1.5, borderRadius: 1, overflow: "auto", fontSize: "0.8rem", mb: 1 }}>{children}</Box>,
-                table: ({ children }) => <Box sx={{ overflow: "auto", bgcolor: "rgba(20,30,50,0.4)", borderRadius: 1, mb: 1 }}><Box component="table" sx={{ width: "100%", borderCollapse: "collapse", "& th, & td": { p: 1, borderBottom: "1px solid rgba(80,100,140,0.3)", color: "#c8d4e8", fontSize: "0.8rem" }, "& th": { color: "#93c5fd", fontWeight: 700 } }}>{children}</Box></Box>,
+                ul: ({ children }) => <Box component="ul" sx={{ pl: 2, mb: 1, "& li": { color: "#c8d4e8", mb: 0.3, fontSize: "0.95rem" } }}>{children}</Box>,
+                ol: ({ children }) => <Box component="ol" sx={{ pl: 2, mb: 1, "& li": { color: "#c8d4e8", mb: 0.3, fontSize: "0.95rem" } }}>{children}</Box>,
+                code: ({ children }) => <Box component="code" sx={{ bgcolor: "rgba(50,70,120,0.3)", px: 0.5, borderRadius: 0.5, fontSize: "0.88rem" }}>{children}</Box>,
+                pre: ({ children }) => <Box component="pre" sx={{ bgcolor: "rgba(20,30,50,0.6)", p: 1.5, borderRadius: 1, overflow: "auto", fontSize: "0.88rem", mb: 1 }}>{children}</Box>,
+                table: ({ children }) => <Box sx={{ overflow: "auto", bgcolor: "rgba(20,30,50,0.4)", borderRadius: 1, mb: 1 }}><Box component="table" sx={{ width: "100%", borderCollapse: "collapse", "& th, & td": { p: 1, borderBottom: "1px solid rgba(80,100,140,0.3)", color: "#c8d4e8", fontSize: "0.88rem" }, "& th": { color: "#93c5fd", fontWeight: 700 } }}>{children}</Box></Box>,
               }}
             >
-              {typeof runResult?.final_output === "string"
-                ? runResult.final_output
-                : runResult?.final_output
-                  ? JSON.stringify(runResult.final_output, null, 2)
-                  : "출력 없음"}
+              {(() => {
+                const out = runResult?.final_output;
+                if (!out) return "출력 없음";
+                if (typeof out === "string") return out;
+                // Convert dict/object output to readable markdown
+                if (typeof out === "object") {
+                  const parts: string[] = [];
+                  const o = out as Record<string, unknown>;
+                  if (o.content) parts.push(String(o.content));
+                  if (o.confidence !== undefined) parts.push(`\n\n**신뢰도**: ${Number(o.confidence).toFixed(2)}`);
+                  if (Array.isArray(o.sources) && o.sources.length > 0) {
+                    parts.push("\n\n**출처**:");
+                    (o.sources as Array<Record<string, unknown>>).forEach((s, i) => {
+                      const name = s.source_url || s.metadata && (s.metadata as Record<string, unknown>).source || `출처 ${i + 1}`;
+                      parts.push(`\n- ${name}`);
+                    });
+                  }
+                  if (parts.length > 0) return parts.join("");
+                  // Fallback: format as key-value pairs
+                  return Object.entries(o)
+                    .map(([k, v]) => `**${k}**: ${typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}`)
+                    .join("\n\n");
+                }
+                return String(out);
+              })()}
             </ReactMarkdown>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
+            <Button
+              size="small"
+              startIcon={<DownloadIcon sx={{ fontSize: 14 }} />}
+              onClick={() => {
+                const content = typeof runResult?.final_output === "string"
+                  ? runResult.final_output
+                  : JSON.stringify(runResult?.final_output, null, 2) || "";
+                const blob = new Blob([content], { type: "text/markdown" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${workflowName.replace(/\s+/g, "_")}_결과.md`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+              sx={{
+                fontSize: "0.82rem",
+                color: "rgba(120,170,255,0.85)",
+                border: "1px solid rgba(80,130,220,0.3)",
+                "&:hover": { bgcolor: "rgba(50,70,120,0.3)" },
+              }}
+            >
+              MD
+            </Button>
+            <Button
+              size="small"
+              startIcon={exportingPdf ? <CircularProgress size={12} /> : <DownloadIcon sx={{ fontSize: 14 }} />}
+              disabled={exportingPdf}
+              onClick={async () => {
+                setExportingPdf(true);
+                try {
+                  const content = typeof runResult?.final_output === "string"
+                    ? runResult.final_output
+                    : JSON.stringify(runResult?.final_output, null, 2) || "";
+                  const resp = await reportsApi.exportReport({ content, format: "pdf", title: workflowName });
+                  const url = URL.createObjectURL(resp.data);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${workflowName.replace(/\s+/g, "_")}_결과.pdf`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  showSnackbar("PDF 내보내기 실패", "error");
+                } finally {
+                  setExportingPdf(false);
+                }
+              }}
+              sx={{
+                fontSize: "0.82rem",
+                color: "rgba(120,170,255,0.85)",
+                border: "1px solid rgba(80,130,220,0.3)",
+                "&:hover": { bgcolor: "rgba(50,70,120,0.3)" },
+              }}
+            >
+              PDF
+            </Button>
+            <Button
+              size="small"
+              startIcon={exportingDocx ? <CircularProgress size={12} /> : <DownloadIcon sx={{ fontSize: 14 }} />}
+              disabled={exportingDocx}
+              onClick={async () => {
+                setExportingDocx(true);
+                try {
+                  const content = typeof runResult?.final_output === "string"
+                    ? runResult.final_output
+                    : JSON.stringify(runResult?.final_output, null, 2) || "";
+                  const resp = await reportsApi.exportReport({ content, format: "docx", title: workflowName });
+                  const url = URL.createObjectURL(resp.data);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${workflowName.replace(/\s+/g, "_")}_결과.docx`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  showSnackbar("DOCX 내보내기 실패", "error");
+                } finally {
+                  setExportingDocx(false);
+                }
+              }}
+              sx={{
+                fontSize: "0.82rem",
+                color: "rgba(120,170,255,0.85)",
+                border: "1px solid rgba(80,130,220,0.3)",
+                "&:hover": { bgcolor: "rgba(50,70,120,0.3)" },
+              }}
+            >
+              DOCX
+            </Button>
+          </Box>
           <Button
             onClick={() => setResultDialogOpen(false)}
             sx={{ fontSize: "0.8rem", color: "rgba(120,150,200,0.7)" }}

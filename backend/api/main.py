@@ -129,6 +129,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("RAG warm-up failed (will lazy-init on first request): %s", e)
 
+    # 5. Install memory log handler for admin dashboard
+    try:
+        from monitoring.log_handler import install_memory_log_handler
+        install_memory_log_handler()
+        logger.info("Memory log handler installed for admin error dashboard")
+    except Exception as e:
+        logger.warning("Failed to install memory log handler: %s", e)
+
     yield
 
     # Shutdown
@@ -205,7 +213,7 @@ from auth.routes import router as auth_router
 app.include_router(auth_router, prefix="/api", tags=["auth"])
 
 # Register application routes
-from api.routes import admin, agents, bookmarks, chat, content, corrections, documents, feedback, folders, governance, guardrails, logs, mcp, ocr, ocr_training, personal_knowledge, quality, sessions, statistics, sync, workflows
+from api.routes import admin, agents, bookmarks, chat, content, corrections, documents, feedback, folders, governance, guardrails, logs, mcp, ocr, ocr_training, personal_knowledge, quality, report_templates, reports, sessions, statistics, sync, workflows
 
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(documents.router, prefix="/api", tags=["documents"])
@@ -228,6 +236,8 @@ app.include_router(ocr_training.router, prefix="/api", tags=["ocr-training"])
 app.include_router(bookmarks.router, prefix="/api", tags=["bookmarks"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])
 app.include_router(corrections.router, prefix="/api", tags=["corrections"])
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
+app.include_router(report_templates.router, prefix="/api", tags=["report-templates"])
 
 
 @app.get("/health")

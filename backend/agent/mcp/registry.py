@@ -1,6 +1,7 @@
 """Tool registry: manages available tools and their execution."""
 
 from agent.mcp.tools.base import BaseTool, ToolDefinition, ToolResult
+from config.settings import settings
 
 
 class ToolRegistry:
@@ -79,13 +80,17 @@ def create_default_registry() -> ToolRegistry:
     """Create a registry with all built-in tools."""
     from agent.mcp.tools.asset_management_tool import AssetManagementTool
     from agent.mcp.tools.calculator_tool import CalculatorTool
+    from agent.mcp.tools.chart_generator_tool import ChartGeneratorTool
+    from agent.mcp.tools.code_executor_tool import CodeExecutorTool
     from agent.mcp.tools.data_analyzer_tool import DataAnalyzerTool
     from agent.mcp.tools.database_tool import KnowledgeBaseTool
     from agent.mcp.tools.db_query_tool import SystemDbQueryTool
     from agent.mcp.tools.ehsq_tool import EhsqTool
     from agent.mcp.tools.email_composer_tool import EmailComposerTool
     from agent.mcp.tools.erp_lookup_tool import ErpLookupTool
+    from agent.mcp.tools.file_parser_tool import FileParserTool
     from agent.mcp.tools.groupware_tool import GroupwareTool
+    from agent.mcp.tools.http_request_tool import HttpRequestTool
     from agent.mcp.tools.regulation_review_tool import RegulationReviewTool
     from agent.mcp.tools.report_draft_tool import ReportDraftTool
     from agent.mcp.tools.report_generator_tool import ReportGeneratorTool
@@ -116,6 +121,26 @@ def create_default_registry() -> ToolRegistry:
     registry.register(AssetManagementTool())
     # System DB real-time query
     registry.register(SystemDbQueryTool())
+    # Utility & data tools
+    registry.register(HttpRequestTool())
+    registry.register(FileParserTool())
+    registry.register(ChartGeneratorTool())
+    registry.register(CodeExecutorTool())
+    # Batch 2 tools
+    from agent.mcp.tools.calendar_tool import CalendarTool
+    from agent.mcp.tools.law_search_tool import LawSearchTool
+    from agent.mcp.tools.nl_to_sql_tool import NlToSqlTool
+    from agent.mcp.tools.teams_notify_tool import TeamsNotifyTool
+    registry.register(CalendarTool())
+    registry.register(LawSearchTool())
+    registry.register(NlToSqlTool())
+    registry.register(TeamsNotifyTool())
+    # Upstage-dependent tools (only when API key is configured)
+    if settings.upstage_api_key:
+        from agent.mcp.tools.upstage_extract_tool import UpstageExtractTool
+        from agent.mcp.tools.vision_analyzer_tool import VisionAnalyzerTool
+        registry.register(UpstageExtractTool())
+        registry.register(VisionAnalyzerTool())
     return registry
 
 

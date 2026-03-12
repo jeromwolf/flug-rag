@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { sessionsApi, ocrApi, API_BASE, getAuthHeaders } from "../api/client";
+import { sessionsApi, ocrApi, chatApi, API_BASE, getAuthHeaders } from "../api/client";
 import type { Message, Source } from "../types";
 
 interface UseStreamingChatOptions {
@@ -38,6 +38,14 @@ export function useStreamingChat({
   const skipNextReloadRef = useRef(false);
   // OCR 텍스트를 세션 내에서 유지 (후속 질문에서도 사용)
   const ocrContextRef = useRef("");
+  const ocrMaxCharsRef = useRef(30000); // default, updated from server config
+
+  // Fetch OCR config on mount
+  useEffect(() => {
+    chatApi.getConfig().then((res) => {
+      if (res.data?.ocr_max_chars) ocrMaxCharsRef.current = res.data.ocr_max_chars;
+    }).catch(() => { /* fallback to default */ });
+  }, []);
 
   // Load messages when session changes (skip if we just set it from streaming)
   useEffect(() => {
@@ -141,9 +149,8 @@ export function useStreamingChat({
         }
         setIsOcrProcessing(false);
         setToolInProgress(null);
-        // 새 OCR 텍스트를 세션 컨텍스트에 누적 (최대 30,000자 — 초과 시 최신 파일만 유지)
-        const MAX_OCR_CHARS = 30000;
-        if (ocrContextRef.current.length + newOcrContext.length > MAX_OCR_CHARS) {
+        // 새 OCR 텍스트를 세션 컨텍스트에 누적 (설정값 초과 시 최신 파일만 유지)
+        if (ocrContextRef.current.length + newOcrContext.length > ocrMaxCharsRef.current) {
           ocrContextRef.current = newOcrContext;
         } else {
           ocrContextRef.current += newOcrContext;

@@ -146,6 +146,8 @@ export const authApi = {
 
 // === Chat ===
 export const chatApi = {
+  getConfig: () =>
+    api.get<{ ocr_max_chars: number; file_max_size_mb: number }>("/chat/config"),
   send: (data: {
     message: string;
     session_id?: string;
@@ -229,6 +231,27 @@ export const adminApi = {
   // Settings
   setDefaultProvider: (provider: string) =>
     api.put("/admin/settings", { default_provider: provider }),
+  // RAG Settings
+  getRagSettings: () => api.get("/admin/rag-settings"),
+  updateRagSettings: (data: Record<string, unknown>) =>
+    api.put("/admin/rag-settings", data),
+  // Recent Errors
+  getRecentErrors: (limit = 50) =>
+    api.get("/admin/recent-errors", { params: { limit } }),
+  // Prompt Simulator
+  simulatePrompt: (data: {
+    prompt_name?: string;
+    query: string;
+    context_chunks?: Array<{ content: string; metadata?: Record<string, unknown> }>;
+    model_hint?: string;
+  }) => api.post<{
+    system_prompt: string;
+    user_prompt: string;
+    detected_doc_type: string;
+    prompt_length_chars: number;
+    system_prompt_length: number;
+    user_prompt_length: number;
+  }>("/admin/prompts/simulate", data),
   // LLM Playground
   playground: (data: {
     prompt: string;
@@ -237,6 +260,32 @@ export const adminApi = {
     max_tokens?: number;
     system_prompt?: string;
   }) => api.post<{ response: string; latency_ms: number; model_used: string; tokens_used?: number }>("/admin/playground", data),
+};
+
+// === Batch Evaluate (Golden Dataset) ===
+export interface DatasetInfo {
+  name: string;
+  filename: string;
+  question_count: number;
+  categories: string[];
+  description: string;
+}
+
+export interface EvalHistoryEntry {
+  filename: string;
+  dataset: string;
+  total_questions: number;
+  success_rate: number;
+  created_at: string;
+}
+
+export const benchmarkApi = {
+  listDatasets: () =>
+    api.get<{ datasets: DatasetInfo[] }>("/admin/batch-evaluate/datasets"),
+  listHistory: () =>
+    api.get<{ history: EvalHistoryEntry[] }>("/admin/batch-evaluate/history"),
+  getHistoryResult: (filename: string) =>
+    api.get<Record<string, unknown>>(`/admin/batch-evaluate/history/${filename}`),
 };
 
 // === Feedback ===
@@ -257,6 +306,7 @@ export const feedbackApi = {
     description?: string;
   }) => api.post("/feedback/error-report", data),
   list: (limit = 50) => api.get("/feedback", { params: { limit } }),
+  getDetail: (id: string) => api.get(`/feedback/${id}`),
   stats: () => api.get("/feedback/stats"),
   analytics: () => api.get("/feedback/analytics"),
 };
@@ -341,6 +391,27 @@ export interface WorkflowRecord extends WorkflowListItem {
   nodes: unknown[];
   edges: unknown[];
 }
+
+// === Reports (보고서 내보내기) ===
+export const reportsApi = {
+  exportReport: (data: { content: string; format: 'pdf' | 'docx'; title?: string }) =>
+    api.post('/reports/export', data, { responseType: 'blob' }),
+};
+
+// === Report Templates (보고서 템플릿 관리) ===
+export const reportTemplatesApi = {
+  list: () => api.get('/report-templates'),
+  get: (id: string) => api.get(`/report-templates/${id}`),
+  create: (data: { name: string; description?: string; sections?: unknown[]; jinja_template?: string }) =>
+    api.post('/report-templates', data),
+  update: (id: string, data: { name?: string; description?: string; sections?: unknown[]; jinja_template?: string }) =>
+    api.put(`/report-templates/${id}`, data),
+  delete: (id: string) => api.delete(`/report-templates/${id}`),
+  fromImage: (formData: FormData) =>
+    api.post('/report-templates/from-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+};
 
 // === Quality (RAG 파이프라인 품질 관리) ===
 export const qualityApi = {

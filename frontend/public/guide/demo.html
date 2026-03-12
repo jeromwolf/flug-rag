@@ -479,7 +479,7 @@
       <h3 id="workflow">에이전트 빌더 핵심 기능</h3>
 
       <div class="info-box">
-        <strong>평가요소 사전 공개:</strong> <a href="#workflow">멀티에이전트 워크플로우 구성</a>, <a href="#external">외부 데이터 연동</a>, <a href="#rbac">권한 제어</a> 및 <a href="#monitoring">모니터링 기능</a>을 포함합니다.
+        <strong>평가요소 사전 공개:</strong> <a href="#workflow">멀티에이전트 워크플로우 구성</a>, <a href="#external">외부 데이터 연동</a>, <a href="#rbac">권한 제어</a> 및 <a href="#monitoring">모니터링 기능</a>, <a href="#rest-api">REST API</a>를 포함합니다.
       </div>
       <div class="info-box warn">
         <strong>업체자유시연:</strong> <a href="#agent-video">에이전트빌더 만들기 영상</a>, <a href="#knowledge-convert">암묵지의 명시지 전환</a>, <a href="#hitl-feedback">관리자 포털 HITL 피드백</a>
@@ -757,6 +757,92 @@
       <div class="screenshot">
         <img src="images/guardrails.png" alt="가드레일" loading="lazy">
         <div class="caption">가드레일 규칙 관리 — PII 탐지, 키워드 필터, 프롬프트 인젝션 방어 (5개 규칙)</div>
+      </div>
+    </div>
+
+    <div class="card" id="rest-api">
+      <h3>REST API 엔드포인트</h3>
+      <p>플랫폼의 모든 기능은 RESTful API로 제공되며, 외부 시스템에서 프로그래밍 방식으로 연동할 수 있습니다.</p>
+
+      <h4>핵심 API (Core)</h4>
+      <table>
+        <tr><th>메서드</th><th>경로</th><th>설명</th></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/chat</td><td>RAG 질의응답 (SSE 스트리밍)</td></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/chat/stream</td><td>스트리밍 응답</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/sessions</td><td>대화 세션 목록</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/sessions/{id}/messages</td><td>세션 메시지 이력</td></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/documents/upload</td><td>문서 업로드</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/documents</td><td>문서 목록</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/health</td><td>헬스 체크</td></tr>
+      </table>
+
+      <h4>인증 API (Auth)</h4>
+      <table>
+        <tr><th>메서드</th><th>경로</th><th>설명</th></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/auth/login</td><td>JWT 로그인</td></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/auth/refresh</td><td>토큰 갱신</td></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/auth/change-password</td><td>비밀번호 변경</td></tr>
+      </table>
+
+      <h4>관리자 API (Admin)</h4>
+      <table>
+        <tr><th>메서드</th><th>경로</th><th>설명</th></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/admin/system-info</td><td>시스템 정보</td></tr>
+        <tr><td><span class="tag">GET/PUT</span></td><td>/api/admin/rag-settings</td><td>RAG 설정 조회/변경</td></tr>
+        <tr><td><span class="tag">GET/PUT</span></td><td>/api/admin/prompts</td><td>프롬프트 관리</td></tr>
+        <tr><td><span class="tag">GET/POST</span></td><td>/api/admin/models</td><td>모델 레지스트리</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/admin/prompt-versions</td><td>프롬프트 버전 관리</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/admin/batch-evaluate/datasets</td><td>골든 데이터셋 목록</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/admin/batch-evaluate/stream</td><td>배치 평가 실행 (SSE)</td></tr>
+      </table>
+
+      <h4>도구/컨텐츠 API (Tools &amp; Content)</h4>
+      <table>
+        <tr><th>메서드</th><th>경로</th><th>설명</th></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/mcp/tools</td><td>MCP 도구 목록</td></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/mcp/execute</td><td>도구 실행</td></tr>
+        <tr><td><span class="tag">GET/POST</span></td><td>/api/workflows</td><td>워크플로우 관리</td></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/workflows/{id}/run</td><td>워크플로우 실행</td></tr>
+        <tr><td><span class="tag">GET/POST</span></td><td>/api/content/notices</td><td>공지사항</td></tr>
+        <tr><td><span class="tag">GET/POST</span></td><td>/api/content/faq</td><td>FAQ</td></tr>
+      </table>
+
+      <h4>모니터링/품질 API (Monitoring &amp; Quality)</h4>
+      <table>
+        <tr><th>메서드</th><th>경로</th><th>설명</th></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/quality/chunks</td><td>청크 품질 분석</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/quality/embeddings</td><td>임베딩 추적</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/statistics/usage</td><td>사용 통계</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/statistics/export</td><td>Excel 내보내기</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/logs/access</td><td>접근 로그</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/feedback</td><td>피드백 목록</td></tr>
+        <tr><td><span class="tag">GET</span></td><td>/api/feedback/analytics</td><td>피드백 분석</td></tr>
+        <tr><td><span class="tag">GET/POST</span></td><td>/api/guardrails</td><td>가드레일 규칙 관리</td></tr>
+        <tr><td><span class="tag">POST</span></td><td>/api/ocr/process</td><td>OCR 처리</td></tr>
+      </table>
+
+      <div class="feature-grid">
+        <div class="feature-item">
+          <strong>실시간 스트리밍</strong>
+          <span>SSE(Server-Sent Events) 기반 실시간 토큰 출력</span>
+        </div>
+        <div class="feature-item">
+          <strong>JWT 인증</strong>
+          <span>Bearer 토큰 기반 API 인증, 역할별 접근 제어</span>
+        </div>
+        <div class="feature-item">
+          <strong>외부 API 연동</strong>
+          <span>DummyJSON 등 외부 REST API 실시간 호출 지원</span>
+        </div>
+        <div class="feature-item">
+          <strong>OpenAPI 문서</strong>
+          <span>/docs 경로에서 Swagger UI로 API 명세 확인</span>
+        </div>
+      </div>
+
+      <div class="info-box">
+        모든 API는 OpenAPI(Swagger) 표준을 따르며, <strong>/docs</strong> 경로에서 대화형 API 문서를 확인할 수 있습니다.
+        Bearer 토큰 인증이 필요한 엔드포인트는 로그인 후 발급받은 JWT를 <code>Authorization</code> 헤더에 포함해야 합니다.
       </div>
     </div>
 

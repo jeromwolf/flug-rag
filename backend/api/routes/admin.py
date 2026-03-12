@@ -1,9 +1,11 @@
 """Admin endpoints: system info, LLM providers, prompt management."""
 
+import json
 import logging
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from api.schemas import LLMProviderInfo, PromptUpdateRequest, SystemInfoResponse
@@ -180,6 +182,44 @@ async def get_system_metrics(
 
     if gpu_info:
         metrics["gpu"] = gpu_info
+
+    # Average response time from recent assistant messages
+    try:
+        import json as _json
+        import aiosqlite
+        memory_db = settings.data_dir / "memory.db"
+        async with aiosqlite.connect(memory_db) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT metadata FROM messages WHERE role='assistant' AND metadata IS NOT NULL "
+                "ORDER BY created_at DESC LIMIT 100"
+            ) as cur:
+                rows = await cur.fetchall()
+                latencies = []
+                for row in rows:
+                    try:
+                        meta = _json.loads(row["metadata"] or "{}")
+                        if "latency_ms" in meta and meta["latency_ms"]:
+                            latencies.append(float(meta["latency_ms"]))
+                    except (ValueError, TypeError, KeyError):
+                        pass
+                if latencies:
+                    metrics["avg_response_time_ms"] = round(sum(latencies) / len(latencies), 0)
+    except Exception:
+        pass
+
+    # Cache hit rate
+    try:
+        from core.cache import get_cache
+        cache = await get_cache()
+        if hasattr(cache, "stats"):
+            cache_stats = cache.stats
+            metrics["cache_hit_rate"] = cache_stats.get("hit_rate", 0.0)
+            metrics["cache_size"] = cache_stats.get("size", 0)
+            metrics["cache_hits"] = cache_stats.get("hits", 0)
+            metrics["cache_misses"] = cache_stats.get("misses", 0)
+    except Exception:
+        pass
 
     return {"metrics": metrics}
 
@@ -840,6 +880,134 @@ class PlaygroundResponse(BaseModel):
     tokens_used: int | None = None
 
 
+# ==================== Prompt Simulator Endpoint ====================
+
+
+class PromptSimulateRequest(BaseModel):
+    prompt_name: str = Field(
+        "rag_system",
+        description="프롬프트 이름 (rag_system, rag_legal_system, direct_system 등)",
+    )
+    query: str = Field(..., min_length=1, description="테스트 질문")
+    context_chunks: list[dict] = Field(
+        default_factory=list,
+        description="컨텍스트 청크 [{content, metadata}]",
+    )
+    model_hint: str | None = Field(None, description="모델 힌트 (간결성 접미사)")
+
+
+@router.post("/admin/prompts/simulate")
+async def simulate_prompt(
+    request: PromptSimulateRequest,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """프롬프트 시뮬레이션 — LLM 호출 없이 최종 프롬프트를 조립하여 반환."""
+    pm = PromptManager()
+
+    if request.context_chunks:
+        system_prompt, user_prompt = pm.build_rag_prompt(
+            query=request.query,
+            context_chunks=request.context_chunks,
+            model_hint=request.model_hint,
+        )
+        doc_type = pm.detect_document_type(request.context_chunks)
+    else:
+        system_prompt, user_prompt = pm.build_direct_prompt(request.query)
+        doc_type = "direct"
+
+    return {
+        "system_prompt": system_prompt,
+        "user_prompt": user_prompt,
+        "detected_doc_type": doc_type,
+        "prompt_length_chars": len(system_prompt) + len(user_prompt),
+        "system_prompt_length": len(system_prompt),
+        "user_prompt_length": len(user_prompt),
+    }
+
+
+# ==================== RAG Settings Endpoint ====================
+
+
+@router.get("/admin/rag-settings")
+async def get_rag_settings(
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """현재 RAG 런타임 설정값 조회."""
+    return {
+        "context_max_chunks": settings.context_max_chunks,
+        "llm_max_tokens": settings.llm_max_tokens,
+        "llm_temperature": settings.llm_temperature,
+        "use_rerank": settings.use_rerank,
+        "retrieval_top_k": settings.retrieval_top_k,
+        "rerank_top_n": settings.rerank_top_n,
+        "multi_query_enabled": settings.multi_query_enabled,
+        "self_rag_enabled": settings.self_rag_enabled,
+        "agentic_rag_enabled": settings.agentic_rag_enabled,
+        "bm25_weight": settings.bm25_weight,
+        "vector_weight": settings.vector_weight,
+        "few_shot_max_examples": settings.few_shot_max_examples,
+        "confidence_low": settings.confidence_low,
+        "confidence_high": settings.confidence_high,
+        "ocr_max_chars": settings.ocr_max_chars,
+    }
+
+
+class RagSettingsUpdateRequest(BaseModel):
+    context_max_chunks: int | None = Field(None, ge=1, le=30)
+    llm_max_tokens: int | None = Field(None, ge=64, le=8192)
+    llm_temperature: float | None = Field(None, ge=0.0, le=1.0)
+    use_rerank: bool | None = None
+    retrieval_top_k: int | None = Field(None, ge=1, le=100)
+    rerank_top_n: int | None = Field(None, ge=1, le=30)
+    multi_query_enabled: bool | None = None
+    self_rag_enabled: bool | None = None
+    agentic_rag_enabled: bool | None = None
+    bm25_weight: float | None = Field(None, ge=0.0, le=1.0)
+    vector_weight: float | None = Field(None, ge=0.0, le=1.0)
+    few_shot_max_examples: int | None = Field(None, ge=0, le=10)
+    confidence_low: float | None = Field(None, ge=0.0, le=1.0)
+    confidence_high: float | None = Field(None, ge=0.0, le=1.0)
+    ocr_max_chars: int | None = Field(None, ge=5000, le=200000)
+
+
+@router.put("/admin/rag-settings")
+async def update_rag_settings(
+    request: RagSettingsUpdateRequest,
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+):
+    """RAG 런타임 설정 변경. 서버 재시작 시 .env 기본값으로 복원."""
+    updates = request.model_dump(exclude_none=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="변경할 설정을 하나 이상 지정해야 합니다.")
+
+    for key, value in updates.items():
+        if hasattr(settings, key):
+            setattr(settings, key, value)
+
+    logger.info(f"RAG settings updated by {current_user.username}: {updates}")
+    return {
+        "status": "updated",
+        "changes": updates,
+        "note": "런타임 변경만 적용됩니다. 서버 재시작 시 .env 기본값으로 초기화됩니다.",
+    }
+
+
+# ==================== Recent Errors Endpoint ====================
+
+
+@router.get("/admin/recent-errors")
+async def get_recent_errors(
+    current_user: Annotated[User, Depends(require_role([Role.ADMIN]))],
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+):
+    """최근 WARNING/ERROR 로그 조회 (인메모리 링버퍼)."""
+    from monitoring.log_handler import get_memory_log_handler
+
+    handler = get_memory_log_handler()
+    entries = handler.get_recent(limit=limit)
+    return {"errors": entries, "total": len(entries)}
+
+
 @router.post("/admin/playground", response_model=PlaygroundResponse)
 async def llm_playground(
     request: PlaygroundRequest,
@@ -886,4 +1054,74 @@ async def llm_playground(
         latency_ms=latency_ms,
         model_used=result.model,
         tokens_used=tokens_used,
+    )
+
+
+# ==================== Batch Evaluate (Golden Dataset) ====================
+
+
+@router.get("/batch-evaluate/datasets")
+async def list_eval_datasets(
+    current_user: Annotated[User, Depends(require_role(Role.ADMIN))],
+):
+    """List available golden dataset files."""
+    from rag.batch_evaluator import BatchEvaluator
+    return {"datasets": BatchEvaluator.list_datasets()}
+
+
+@router.get("/batch-evaluate/history")
+async def list_eval_history(
+    current_user: Annotated[User, Depends(require_role(Role.ADMIN))],
+):
+    """List previous batch evaluation results."""
+    from rag.batch_evaluator import BatchEvaluator
+    return {"history": BatchEvaluator.list_history()}
+
+
+@router.get("/batch-evaluate/history/{filename}")
+async def get_eval_history_result(
+    filename: str,
+    current_user: Annotated[User, Depends(require_role(Role.ADMIN))],
+):
+    """Get a specific historical evaluation result."""
+    from rag.batch_evaluator import BatchEvaluator
+    result = BatchEvaluator.get_history_result(filename)
+    if result is None:
+        raise HTTPException(404, "결과 파일을 찾을 수 없습니다.")
+    return result
+
+
+@router.get("/batch-evaluate/stream")
+async def stream_batch_evaluate(
+    dataset: str = Query(..., description="Dataset name (stem of JSON file)"),
+    limit: int | None = Query(None, ge=1, le=500, description="Max questions to evaluate"),
+    current_user: User = Depends(require_role(Role.ADMIN)),
+):
+    """Run batch evaluation via SSE stream.
+
+    Streams events: init, progress (per question), complete, error.
+    """
+    from rag.batch_evaluator import BatchEvaluator
+
+    evaluator = BatchEvaluator()
+
+    async def event_generator():
+        try:
+            async for event in evaluator.run_stream(dataset, limit):
+                event_type = event.get("event", "message")
+                data = json.dumps(event.get("data", {}), ensure_ascii=False)
+                yield f"event: {event_type}\ndata: {data}\n\n"
+        except Exception as e:
+            logger.error("Batch evaluate stream error: %s", e)
+            error_data = json.dumps({"message": str(e)}, ensure_ascii=False)
+            yield f"event: error\ndata: {error_data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

@@ -50,50 +50,14 @@ export default function PrivateRoute({
     return <Navigate to="/login" replace />;
   }
 
-  // Role check
+  // Role check — redirect to chat if unauthorized
   if (requiredRoles && !hasRole(requiredRoles)) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          gap: 2,
-        }}
-      >
-        <Typography variant="h5" color="error">
-          접근 권한이 없습니다
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          이 페이지에 접근하려면 적절한 권한이 필요합니다.
-        </Typography>
-      </Box>
-    );
+    return <Navigate to="/chat" replace />;
   }
 
-  // Permission check
+  // Permission check — redirect to chat if unauthorized
   if (requiredPermission && !hasPermission(requiredPermission)) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          gap: 2,
-        }}
-      >
-        <Typography variant="h5" color="error">
-          접근 권한이 없습니다
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          이 페이지에 접근할 수 있는 권한이 부족합니다.
-        </Typography>
-      </Box>
-    );
+    return <Navigate to="/chat" replace />;
   }
 
   return <>{children}</>;

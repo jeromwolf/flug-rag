@@ -16,6 +16,7 @@ class NodeType(str, Enum):
     CONDITION = "condition"   # Branching logic
     OUTPUT = "output"         # Final output
     TRANSFORM = "transform"   # Data transformation
+    LOOP = "loop"             # Iteration (count / foreach / while)
 
 
 class WorkflowStatus(str, Enum):

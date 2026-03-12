@@ -144,6 +144,8 @@ class Settings(BaseSettings):
     ocr_provider: str = "cloud"  # "cloud" or "onprem"
     ocr_onprem_url: str = "http://localhost:8501"
 
+    ocr_max_chars: int = 30000  # OCR 텍스트 누적 최대 문자수
+
     # OCR Training Data Collection
     ocr_training_enabled: bool = False
     ocr_training_dir: str = "./data/ocr_training"

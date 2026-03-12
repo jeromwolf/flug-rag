@@ -126,7 +126,8 @@ flux-rag/
 │   └── src/
 │       ├── pages/        # Chat, Admin, Documents, Monitor, QualityDashboard, AgentBuilder
 │       ├── components/
-│       │   └── chat/     # ChatSidebar, ChatTopBar, MessageBubble, SourcesPanel 등 8개 (ChatGPT 스타일)
+│       │   ├── chat/     # ChatSidebar, ChatTopBar, MessageBubble, SourcesPanel 등 8개 (ChatGPT 스타일)
+│       │   └── admin/    # 10개 관리자 탭 (SystemSettings, BatchEvaluator, AuditLog 등)
 │       ├── hooks/        # useStreamingChat, useSessions, useFeedback 등 5개
 │       └── stores/       # Zustand 상태 관리 (appStore — session, model, temperature, darkMode)
 ├── k8s/                  # Kubernetes 배포
@@ -250,6 +251,9 @@ flux-rag/
 - `GET/PUT /api/admin/prompts` - 프롬프트 관리
 - `GET/POST /api/admin/models` - 모델 레지스트리
 - `GET /api/admin/prompt-versions` - 프롬프트 버전 관리
+- `GET /api/admin/batch-evaluate/datasets` - 골든 데이터셋 목록
+- `GET /api/admin/batch-evaluate/stream` - 배치 평가 실행 (SSE)
+- `GET /api/admin/batch-evaluate/history` - 이전 평가 결과
 
 ### Quality & Monitoring
 - `GET /api/quality/*` - 품질 대시보드 (청크, 임베딩, 벡터 분포)
@@ -384,18 +388,30 @@ asyncio.run(check())
 - **에이전트 빌더**: 출력 포맷 `dangerouslySetInnerHTML` → `ReactMarkdown` + GFM
 - **QA 점검**: sync.py await 버그, admin timeout, quality timeout, AdminPage 매핑 수정
 
+### Phase 9: 관리자 포털 고도화 + 배치 평가기 (2026-03-12)
+- **배치 평가기**: 골든 데이터셋 일괄 평가 UI (`BatchEvaluatorTab.tsx` + `rag/batch_evaluator.py`)
+  - SSE 스트리밍으로 실시간 진행 표시, 카테고리별 성공률, 등급 분포, CSV 내보내기
+  - 이전 평가 이력 로드, 중단 기능
+- **OCR 설정 분리**: `ocr_max_chars` 하드코딩 → `settings.py` + 관리자 UI 런타임 변경
+  - `/chat/config` 엔드포인트로 프론트엔드 동적 로드
+- **에이전트 빌더 포맷팅**: raw JSON → 마크다운 변환 (content/confidence/sources 추출)
+- **감사 로그 실 API**: Mock 30건 삭제 → `logsApi.searchAccess()` 실시간 데이터
+- **알림벨 실 데이터**: Mock 10건 삭제 → 감사 로그 API 기반 동적 알림
+- **데이터 내보내기 실 API**: Mock CSV/JSON → `feedbackApi`, `authApi`, `logsApi` 연결
+- **URL 탭 퍼시스트**: `useSearchParams`로 관리자 탭 새로고침 유지 (`?tab=audit-log`)
+- **대시보드 메트릭**: 평균 응답시간(messages 메타데이터), 캐시 히트율(InMemoryCache stats)
+- **탭 컴포넌트 분리**: AdminPage.tsx 5782줄 → 3680줄 (5개 탭 개별 파일로 추출, -36%)
+  - `CacheManagementTab`, `LLMPlaygroundTab`, `OcrTestTab`, `AuditLogTab`, `ExportCenterTab`
+- **demo.html REST API**: 25개 엔드포인트 5개 카테고리 문서 + OpenAPI 안내
+- **PrivateRoute 개선**: 권한 없는 페이지 접근 시 에러 → `/chat` 리다이렉트
+
 ### 현재 상태
 - **시연 완료**: RunPod A40+A100 환경 시연 종료
-- **시연 이후 개선**: Phase 8 작업 완료, 배포 대기
+- **Phase 8-9 완료**: 관리자 포털 고도화, Mock 데이터 전면 실 API 교체, 코드 분리
 
 ### 남은 작업
-- 프롬프트 시뮬레이터 구현
-- 피드백 드릴다운 (부정 피드백 클릭 → 쿼리/응답 상세)
-- 관리자 UI에서 CONTEXT_MAX_CHUNKS, LLM_MAX_TOKENS 변경 기능
-- 채팅 파일첨부 시 파일 크기 사전 체크
-- OCR 30,000자 제한을 설정으로 분리
-- 관리자 페이지 전반 개선
 - 운영 배포 준비 (vLLM, K8s, Redis)
+- AdminPage 나머지 11개 인라인 탭 컴포넌트 파일 분리 (코드 품질)
 
 ### 중장기 확장 방향
 - MCP/에이전트 전문화 (실API 연동, 도구 마켓플레이스)

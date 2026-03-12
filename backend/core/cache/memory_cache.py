@@ -20,20 +20,25 @@ class InMemoryCache(BaseCache):
         self._max_size = max_size
         self._store: OrderedDict[str, tuple[Any, float]] = OrderedDict()
         self._lock = asyncio.Lock()
+        self._hits = 0
+        self._misses = 0
 
     async def get(self, key: str) -> Optional[Any]:
         """Retrieve a value, returning None if expired or missing."""
         async with self._lock:
             if key not in self._store:
+                self._misses += 1
                 return None
 
             value, expires_at = self._store[key]
             if expires_at > 0 and time.time() > expires_at:
                 del self._store[key]
+                self._misses += 1
                 return None
 
             # Move to end (most recently used)
             self._store.move_to_end(key)
+            self._hits += 1
             return value
 
     async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
@@ -96,3 +101,15 @@ class InMemoryCache(BaseCache):
     def size(self) -> int:
         """Current number of entries (including potentially expired)."""
         return len(self._store)
+
+    @property
+    def stats(self) -> dict:
+        """Cache hit/miss statistics."""
+        total = self._hits + self._misses
+        return {
+            "hits": self._hits,
+            "misses": self._misses,
+            "total": total,
+            "hit_rate": self._hits / total if total > 0 else 0.0,
+            "size": len(self._store),
+        }

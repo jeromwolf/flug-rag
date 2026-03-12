@@ -430,6 +430,77 @@ def create_iso_compliance_workflow() -> Workflow:
 
 
 # ---------------------------------------------------------------------------
+# 7. 보고서 자동 생성
+# ---------------------------------------------------------------------------
+
+def create_report_generation_workflow() -> Workflow:
+    """보고서 자동 생성: 주제 입력 → RAG 검색 → 보고서 초안 → 출력."""
+    return Workflow(
+        name="보고서 자동 생성",
+        description="주제를 입력하면 관련 문서를 검색하고, 전문적인 보고서 초안을 자동 생성합니다. PDF/DOCX로 내보내기 가능합니다.",
+        nodes=[
+            WorkflowNode(id="start", config=NodeConfig(
+                node_type=NodeType.START, label="보고서 주제 입력",
+                config={"description": "작성할 보고서 주제를 입력하세요 (예: 2026년 1분기 안전점검 결과 보고서)"},
+                position={"x": 40, "y": 220},
+            )),
+            WorkflowNode(id="retrieve", config=NodeConfig(
+                node_type=NodeType.RETRIEVAL, label="관련 문서 검색",
+                config={"top_k": 7},
+                position={"x": 260, "y": 220},
+            )),
+            WorkflowNode(id="confidence_check", config=NodeConfig(
+                node_type=NodeType.CONDITION, label="검색 품질 확인",
+                config={"condition_type": "confidence", "threshold": 0.3},
+                position={"x": 480, "y": 220},
+            )),
+            WorkflowNode(id="draft_llm", config=NodeConfig(
+                node_type=NodeType.LLM, label="보고서 초안 작성",
+                config={
+                    "system_prompt": (
+                        f"당신은 {settings.platform_name}의 전문 보고서 작성 어시스턴트입니다.\n"
+                        "검색된 문서를 바탕으로 한국 공공기관 형식의 보고서 초안을 작성하세요.\n\n"
+                        "보고서 구조:\n"
+                        "## 1. 개요\n- 보고서 목적 및 배경\n\n"
+                        "## 2. 주요 내용\n- 핵심 사항을 번호 매겨 정리\n\n"
+                        "## 3. 세부 분석\n- 관련 규정 근거와 함께 상세 분석\n\n"
+                        "## 4. 결론 및 제언\n- 요약 및 향후 조치사항\n\n"
+                        "## 5. 참고 자료\n- 인용 문서 목록\n\n"
+                        "사실에 기반하여 작성하고 불확실한 내용은 '[확인 필요]'로 표시하세요."
+                    ),
+                    "temperature": 0.2,
+                },
+                position={"x": 700, "y": 120},
+            )),
+            WorkflowNode(id="fallback", config=NodeConfig(
+                node_type=NodeType.TRANSFORM, label="검색 결과 부족 안내",
+                config={"template": "관련 문서의 검색 결과가 부족합니다.\n\n{input}\n\n더 구체적인 주제로 다시 시도하거나, 관련 문서가 등록되어 있는지 확인해 주세요."},
+                position={"x": 700, "y": 340},
+            )),
+            WorkflowNode(id="output", config=NodeConfig(
+                node_type=NodeType.OUTPUT, label="보고서 출력",
+                config={"format": "markdown"},
+                position={"x": 940, "y": 120},
+            )),
+            WorkflowNode(id="output_low", config=NodeConfig(
+                node_type=NodeType.OUTPUT, label="안내 출력",
+                config={"format": "markdown"},
+                position={"x": 940, "y": 340},
+            )),
+        ],
+        edges=[
+            Edge(source="start", target="retrieve"),
+            Edge(source="retrieve", target="confidence_check"),
+            Edge(source="confidence_check", target="draft_llm", condition="true", label="신뢰도 충분"),
+            Edge(source="confidence_check", target="fallback", condition="false", label="신뢰도 부족"),
+            Edge(source="draft_llm", target="output"),
+            Edge(source="fallback", target="output_low"),
+        ],
+        status=WorkflowStatus.ACTIVE,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -440,6 +511,7 @@ PRESET_WORKFLOWS = {
     "management_evaluation": create_management_evaluation_workflow,
     "onboarding_guide": create_onboarding_guide_workflow,
     "iso_compliance": create_iso_compliance_workflow,
+    "report_generation": create_report_generation_workflow,
 }
 
 

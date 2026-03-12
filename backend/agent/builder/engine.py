@@ -1,7 +1,10 @@
 """Workflow execution engine: runs DAG-based agent workflows."""
 
+import logging
 import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from agent.builder.models import (
     Edge, ExecutionStatus, NodeConfig, NodeExecutionResult, NodeType,
@@ -81,13 +84,21 @@ class WorkflowEngine:
         )
 
         try:
-            output = await self._run_node(node.config, context)
-            node_result.output = output
-            node_result.status = ExecutionStatus.COMPLETED
-            context["results"][node.id] = output
-            # Condition nodes should NOT overwrite last_output (keep retrieval data for LLM)
-            if node.config.node_type != NodeType.CONDITION:
+            # LOOP nodes manage their own edge traversal
+            if node.config.node_type == NodeType.LOOP:
+                output = await self._run_loop_node(node, workflow, context, result)
+                node_result.output = f"[Loop completed: {len(context.get('loop_results', []))} iterations]"
+                node_result.status = ExecutionStatus.COMPLETED
+                context["results"][node.id] = output
                 context["last_output"] = output
+            else:
+                output = await self._run_node(node.config, context)
+                node_result.output = output
+                node_result.status = ExecutionStatus.COMPLETED
+                context["results"][node.id] = output
+                # Condition nodes should NOT overwrite last_output (keep retrieval data for LLM)
+                if node.config.node_type != NodeType.CONDITION:
+                    context["last_output"] = output
         except Exception as e:
             node_result.status = ExecutionStatus.FAILED
             node_result.error = str(e)
@@ -95,6 +106,10 @@ class WorkflowEngine:
         finally:
             node_result.duration_ms = int((time.time() - start_time) * 1000)
             result.node_results.append(node_result)
+
+        # LOOP nodes handle their own edge traversal — skip standard traversal
+        if node.config.node_type == NodeType.LOOP:
+            return
 
         # Traverse outgoing edges
         edges = workflow.get_outgoing_edges(node.id)
@@ -264,3 +279,119 @@ class WorkflowEngine:
             if isinstance(last_output, dict):
                 return last_output.get("confidence", 0) < 0.5
         return True
+
+    # ------------------------------------------------------------------
+    # LOOP node execution
+    # ------------------------------------------------------------------
+
+    async def _run_loop_node(
+        self,
+        node: WorkflowNode,
+        workflow: Workflow,
+        context: dict,
+        result: WorkflowExecutionResult,
+    ) -> str:
+        """Execute a LOOP node: run body sub-graph N times, then follow done edges."""
+        cfg = node.config.config
+        loop_type = cfg.get("loop_type", "count")
+        max_iter = min(int(cfg.get("max_iterations", 10)), 50)  # hard limit 50
+
+        # Classify outgoing edges into body vs done
+        edges = workflow.get_outgoing_edges(node.id)
+        body_edges: list[Edge] = []
+        done_edges: list[Edge] = []
+
+        for edge in edges:
+            label = (edge.label or "").lower().strip()
+            if any(k in label for k in ["body", "loop", "반복"]):
+                body_edges.append(edge)
+            elif any(k in label for k in ["done", "complete", "완료"]):
+                done_edges.append(edge)
+            else:
+                # First unlabeled edge → body, subsequent → done
+                if not body_edges:
+                    body_edges.append(edge)
+                else:
+                    done_edges.append(edge)
+
+        iterations_output: list[str] = []
+
+        if loop_type == "count":
+            count = min(int(cfg.get("count", 3)), max_iter)
+            for i in range(count):
+                context["loop_iteration"] = i
+                context["loop_total"] = count
+                logger.info("Loop [count] iteration %d/%d", i + 1, count)
+                await self._execute_body(body_edges, workflow, context, result)
+                iterations_output.append(str(context.get("last_output", "")))
+
+        elif loop_type == "foreach":
+            separator = cfg.get("separator", "\n")
+            raw = str(context.get("last_output", ""))
+            items = [x.strip() for x in raw.split(separator) if x.strip()]
+            items = items[:max_iter]
+            for i, item in enumerate(items):
+                context["loop_iteration"] = i
+                context["loop_item"] = item
+                context["loop_total"] = len(items)
+                context["last_output"] = item  # each item as input
+                logger.info("Loop [foreach] item %d/%d: %s", i + 1, len(items), item[:50])
+                await self._execute_body(body_edges, workflow, context, result)
+                iterations_output.append(str(context.get("last_output", "")))
+
+        elif loop_type == "while":
+            for i in range(max_iter):
+                context["loop_iteration"] = i
+                context["loop_total"] = max_iter
+                logger.info("Loop [while] iteration %d/%d", i + 1, max_iter)
+                await self._execute_body(body_edges, workflow, context, result)
+                iterations_output.append(str(context.get("last_output", "")))
+                if self._evaluate_loop_condition(cfg, context):
+                    logger.info("Loop [while] condition met at iteration %d", i + 1)
+                    break
+
+        # Store results
+        context["loop_results"] = iterations_output
+        combined = "\n\n".join(iterations_output)
+        context["last_output"] = combined
+
+        # Follow done edges
+        for edge in done_edges:
+            next_node = workflow.get_node(edge.target)
+            if next_node:
+                await self._execute_node(workflow, next_node, context, result)
+
+        return combined
+
+    async def _execute_body(
+        self,
+        body_edges: list[Edge],
+        workflow: Workflow,
+        context: dict,
+        result: WorkflowExecutionResult,
+    ) -> None:
+        """Execute the body sub-graph of a loop once."""
+        for edge in body_edges:
+            next_node = workflow.get_node(edge.target)
+            if next_node:
+                await self._execute_node(workflow, next_node, context, result)
+
+    def _evaluate_loop_condition(self, cfg: dict, context: dict) -> bool:
+        """Evaluate whether a while-loop should stop (returns True to stop)."""
+        condition_type = cfg.get("condition_type", "confidence")
+        threshold = float(cfg.get("threshold", 0.8))
+        last_output = context.get("last_output", "")
+
+        if condition_type == "confidence":
+            if isinstance(last_output, dict):
+                return last_output.get("confidence", 0) >= threshold
+            return False  # no confidence data → keep looping
+
+        elif condition_type == "keyword":
+            keyword = cfg.get("keyword", "")
+            return keyword.lower() in str(last_output).lower() if keyword else True
+
+        elif condition_type == "length":
+            return len(str(last_output)) >= int(threshold * 1000)
+
+        return True  # unknown type → stop

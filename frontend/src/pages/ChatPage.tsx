@@ -80,6 +80,17 @@ export default function ChatPage() {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
 
   const handleFilesAttached = (files: File[]) => {
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    const oversized = files.filter((f) => f.size > MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      alert(
+        `파일 크기 초과 (50MB 제한):\n${oversized.map((f) => `${f.name} (${(f.size / 1024 / 1024).toFixed(1)}MB)`).join("\n")}`,
+      );
+      const valid = files.filter((f) => f.size <= MAX_FILE_SIZE);
+      if (valid.length === 0) return;
+      setAttachedFiles((prev) => [...prev, ...valid]);
+      return;
+    }
     setAttachedFiles((prev) => [...prev, ...files]);
   };
 

@@ -22,7 +22,7 @@ TONE_PROMPTS = {
     ),
 }
 
-EMAIL_SYSTEM = f"""당신은 {settings.platform_name}의 이메일 작성 전문가입니다.
+EMAIL_SYSTEM_TEMPLATE = """당신은 {platform_name}의 이메일 작성 전문가입니다.
 비즈니스 이메일을 전문적으로 작성합니다.
 
 이메일 구조:
@@ -146,7 +146,10 @@ class EmailComposerTool(BaseTool):
         cc_list = cc_list or []
         tone_instruction = TONE_PROMPTS.get(tone, TONE_PROMPTS["formal"])
 
-        system = EMAIL_SYSTEM.format(tone_instruction=tone_instruction)
+        system = EMAIL_SYSTEM_TEMPLATE.format(
+            platform_name=settings.platform_name,
+            tone_instruction=tone_instruction,
+        )
 
         parts = [f"제목: {subject_hint}"]
         if recipients:
