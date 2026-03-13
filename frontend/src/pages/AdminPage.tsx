@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -35,7 +35,6 @@ import {
   FormControl,
   InputLabel,
   Tooltip,
-  Slider,
   Divider,
   LinearProgress,
   Stack,
@@ -74,7 +73,6 @@ import SecurityIcon from "@mui/icons-material/Security";
 import MemoryIcon from "@mui/icons-material/Memory";
 import PersonIcon from "@mui/icons-material/Person";
 import CachedIcon from "@mui/icons-material/Cached";
-import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 import ScienceIcon from "@mui/icons-material/Science";
 import SpeedIcon from "@mui/icons-material/Speed";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -103,12 +101,10 @@ import DownloadIcon from "@mui/icons-material/Download";
 import HistoryIcon from "@mui/icons-material/History";
 import ComputerIcon from "@mui/icons-material/Computer";
 import ShieldIcon from "@mui/icons-material/Shield";
-import LoginIcon from "@mui/icons-material/Login";
-import LogoutIcon from "@mui/icons-material/Logout";
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner";
 import TuneIcon from "@mui/icons-material/Tune";
 import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
-import { adminApi, mcpApi, workflowsApi, guardrailsApi, authApi, governanceApi, feedbackApi, statsApi, ocrApi, logsApi } from "../api/client";
+import { adminApi, mcpApi, workflowsApi, guardrailsApi, authApi, governanceApi, feedbackApi, statsApi, logsApi } from "../api/client";
 import Layout from "../components/Layout";
 import CustomToolBuilder from "../components/CustomToolBuilder";
 import ContentManager from "../components/ContentManager";

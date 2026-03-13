@@ -34,8 +34,13 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   useTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
 } from "@mui/material";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
+import CloseIcon from "@mui/icons-material/Close";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
 import RemoveIcon from "@mui/icons-material/Remove";
 import FeedbackIcon from "@mui/icons-material/Feedback";
@@ -731,6 +736,7 @@ interface QueryLogEntry {
   query_class?: string;
   response_mode?: string;
   model_used?: string;
+  sources?: { filename: string; score?: number; source_url?: string }[];
 }
 interface OperationLogEntry {
   timestamp: string;
@@ -768,6 +774,9 @@ function LogManagementSection() {
   const [opActionFilter, setOpActionFilter] = useState("all");
   const [opPage, setOpPage] = useState(0);
 
+  // Query detail popup state
+  const [queryDetail, setQueryDetail] = useState<QueryLogEntry | null>(null);
+
   const PAGE_SIZE = 15;
 
   // ── Data fetching ──
@@ -783,7 +792,7 @@ function LogManagementSection() {
         page: accessPage + 1,
         page_size: PAGE_SIZE,
       }),
-    enabled: logTab === 0,
+    enabled: logTab === 1,
   });
 
   const { data: queryData, isLoading: queryLoading } = useQuery({
@@ -797,7 +806,7 @@ function LogManagementSection() {
         page: queryPage + 1,
         page_size: PAGE_SIZE,
       }),
-    enabled: logTab === 1,
+    enabled: logTab === 0,
   });
 
   const { data: opData, isLoading: opLoading } = useQuery({
@@ -891,14 +900,14 @@ function LogManagementSection() {
       {/* Sub-tabs */}
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
         <Tabs value={logTab} onChange={(_, v) => setLogTab(v)} variant="fullWidth">
-          <Tab label="접속 로그" />
           <Tab label="질의 이력" />
+          <Tab label="접속 로그" />
           <Tab label="작업 로그" />
         </Tabs>
       </Box>
 
       {/* ── Access Logs Tab ── */}
-      {logTab === 0 && (
+      {logTab === 1 && (
         <Card variant="outlined">
           <CardContent>
             <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
@@ -985,7 +994,7 @@ function LogManagementSection() {
       )}
 
       {/* ── Query Logs Tab ── */}
-      {logTab === 1 && (
+      {logTab === 0 && (
         <Card variant="outlined">
           <CardContent>
             <Box sx={{ display: "flex", gap: 1, mb: 2, flexWrap: "wrap" }}>
@@ -1016,9 +1025,7 @@ function LogManagementSection() {
                     <TableHead>
                       <TableRow>
                         <TableCell>시각</TableCell>
-                        <TableCell>세션</TableCell>
                         <TableCell>질의 내용</TableCell>
-                        <TableCell>답변</TableCell>
                         <TableCell>분류</TableCell>
                         <TableCell>신뢰도</TableCell>
                         <TableCell>응답시간</TableCell>
@@ -1026,25 +1033,17 @@ function LogManagementSection() {
                     </TableHead>
                     <TableBody>
                       {(queryLogs?.queries ?? []).map((q: QueryLogEntry, i: number) => (
-                        <TableRow key={i} hover>
+                        <TableRow key={i} hover onClick={() => setQueryDetail(q)} sx={{ cursor: "pointer" }}>
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
                             <Typography variant="caption">{new Date(q.timestamp).toLocaleString("ko-KR")}</Typography>
                           </TableCell>
-                          <TableCell>
-                            <Typography variant="caption" sx={{ fontFamily: "monospace" }}>{q.session_id?.slice(0, 8)}</Typography>
-                          </TableCell>
-                          <TableCell sx={{ maxWidth: 280 }}>
+                          <TableCell sx={{ maxWidth: 320 }}>
                             <Typography variant="body2" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                               {q.content}
                             </Typography>
                           </TableCell>
-                          <TableCell sx={{ maxWidth: 280 }}>
-                            <Typography variant="body2" noWrap sx={{ overflow: "hidden", textOverflow: "ellipsis", color: q.answer ? "text.primary" : "text.disabled" }}>
-                              {q.answer || "-"}
-                            </Typography>
-                          </TableCell>
                           <TableCell>
-                            {q.query_class && (
+                            {q.query_class ? (
                               <Chip
                                 label={q.query_class}
                                 size="small"
@@ -1052,27 +1051,33 @@ function LogManagementSection() {
                                 variant="outlined"
                                 sx={{ fontSize: "0.7rem" }}
                               />
+                            ) : (
+                              <Typography variant="caption" color="text.disabled">-</Typography>
                             )}
                           </TableCell>
                           <TableCell>
-                            {q.confidence != null && (
+                            {q.confidence != null ? (
                               <Typography variant="caption" color={q.confidence >= 0.7 ? "success.main" : q.confidence >= 0.4 ? "warning.main" : "error.main"}>
                                 {(q.confidence * 100).toFixed(0)}%
                               </Typography>
+                            ) : (
+                              <Typography variant="caption" color="text.disabled">-</Typography>
                             )}
                           </TableCell>
                           <TableCell>
-                            {q.latency_ms != null && (
+                            {q.latency_ms != null ? (
                               <Typography variant="caption">
                                 {q.latency_ms >= 1000 ? `${(q.latency_ms / 1000).toFixed(1)}s` : `${q.latency_ms}ms`}
                               </Typography>
+                            ) : (
+                              <Typography variant="caption" color="text.disabled">-</Typography>
                             )}
                           </TableCell>
                         </TableRow>
                       ))}
                       {(queryLogs?.queries ?? []).length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7}>
+                          <TableCell colSpan={5}>
                             <Typography color="text.secondary" variant="body2" align="center">결과 없음</Typography>
                           </TableCell>
                         </TableRow>
@@ -1094,6 +1099,94 @@ function LogManagementSection() {
               </>
             )}
           </CardContent>
+
+          {/* 질의 상세 팝업 */}
+          <Dialog open={!!queryDetail} onClose={() => setQueryDetail(null)} maxWidth="lg" fullWidth PaperProps={{ sx: { minHeight: "60vh" } }}>
+            <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", pb: 1 }}>
+              질의 상세
+              <IconButton onClick={() => setQueryDetail(null)} size="small"><CloseIcon /></IconButton>
+            </DialogTitle>
+            <DialogContent dividers>
+              {queryDetail && (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+                  {/* 메타 정보 */}
+                  <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap", bgcolor: "action.hover", p: 1.5, borderRadius: 1 }}>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">시각</Typography>
+                      <Typography variant="body2">{new Date(queryDetail.timestamp).toLocaleString("ko-KR")}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">세션</Typography>
+                      <Typography variant="body2" sx={{ fontFamily: "monospace" }}>{queryDetail.session_id?.slice(0, 8)}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">분류</Typography>
+                      <Typography variant="body2">{queryDetail.query_class || "-"}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">신뢰도</Typography>
+                      <Typography variant="body2" fontWeight="bold" color={
+                        (queryDetail.confidence ?? 0) >= 0.7 ? "success.main" : (queryDetail.confidence ?? 0) >= 0.4 ? "warning.main" : "error.main"
+                      }>
+                        {queryDetail.confidence != null ? `${(queryDetail.confidence * 100).toFixed(0)}%` : "-"}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">응답시간</Typography>
+                      <Typography variant="body2">
+                        {queryDetail.latency_ms != null ? (queryDetail.latency_ms >= 1000 ? `${(queryDetail.latency_ms / 1000).toFixed(1)}초` : `${queryDetail.latency_ms}ms`) : "-"}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* 질의 */}
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>질의 내용</Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>{queryDetail.content}</Typography>
+                  </Box>
+
+                  {/* 답변 */}
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>답변</Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", bgcolor: "action.hover", p: 2, borderRadius: 1, maxHeight: 300, overflow: "auto" }}>
+                      {queryDetail.answer || "(답변 없음)"}
+                    </Typography>
+                  </Box>
+
+                  {/* 참고 문서 */}
+                  {queryDetail.sources && queryDetail.sources.length > 0 && (
+                    <Box>
+                      <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                        참고 문서 ({queryDetail.sources.length}건)
+                      </Typography>
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+                        {queryDetail.sources.map((s, idx) => (
+                          <Box key={idx} sx={{ display: "flex", alignItems: "center", gap: 1, p: 0.75, borderRadius: 0.5, "&:hover": { bgcolor: "action.hover" } }}>
+                            <Typography variant="body2" sx={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {idx + 1}. {s.filename}
+                            </Typography>
+                            {s.score != null && (
+                              <Chip label={`${(s.score * 100).toFixed(0)}%`} size="small" variant="outlined"
+                                color={s.score >= 0.8 ? "success" : s.score >= 0.6 ? "warning" : "default"}
+                                sx={{ fontSize: "0.7rem", minWidth: 45 }}
+                              />
+                            )}
+                            {s.source_url && (
+                              <Chip label="원본" size="small" component="a"
+                                href={`https://7rzubyo9fsfmco-3000.proxy.runpod.net${s.source_url}`}
+                                target="_blank" rel="noopener noreferrer" clickable
+                                color="primary" variant="outlined" sx={{ fontSize: "0.7rem" }}
+                              />
+                            )}
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              )}
+            </DialogContent>
+          </Dialog>
         </Card>
       )}
 

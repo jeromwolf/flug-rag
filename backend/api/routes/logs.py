@@ -47,6 +47,7 @@ class QueryLogEntry(BaseModel):
     query_class: str = ""
     response_mode: str = ""
     model_used: str = ""
+    sources: list[dict] = []
 
 
 class QueryLogResponse(BaseModel):
@@ -229,6 +230,17 @@ async def search_query_logs(
                             entry.query_class = meta.get("query_class", "")
                             entry.response_mode = meta.get("response_mode", "")
                             entry.model_used = meta.get("model_used", "")
+                            # Extract sources (filename + score + source_url)
+                            raw_sources = meta.get("sources", [])
+                            entry.sources = [
+                                {
+                                    "filename": s.get("filename", ""),
+                                    "score": s.get("score"),
+                                    "source_url": s.get("source_url", ""),
+                                }
+                                for s in raw_sources
+                                if isinstance(s, dict)
+                            ]
                         except (ValueError, TypeError):
                             pass
 

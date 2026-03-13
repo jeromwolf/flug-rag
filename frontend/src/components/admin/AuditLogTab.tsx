@@ -135,7 +135,7 @@ function mapActionToSeverity(action: string): AuditSeverity {
 function AuditLogTab() {
   const PAGE_SIZE = 10;
   const [entries, setEntries] = useState<AuditEntry[]>([]);
-  const [total, setTotal] = useState(0);
+
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [userFilter, setUserFilter] = useState("");
@@ -172,11 +172,9 @@ function AuditLogTab() {
         resource: log.resource || "",
       }));
       setEntries(mapped);
-      setTotal(data.total || mapped.length);
     } catch (err) {
       console.error("Failed to fetch audit logs:", err);
       setEntries([]);
-      setTotal(0);
     } finally {
       setLoading(false);
     }
