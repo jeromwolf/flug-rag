@@ -582,6 +582,728 @@ const PRESETS: PresetDef[] = [
       { id: "e6", source: "report_tool", target: "output", animated: true, type: "workflow" },
     ],
   },
+  // 7. 보고서 자동 생성
+  {
+    id: "report_generation",
+    name: "보고서 자동 생성",
+    description: "주제를 입력하면 관련 문서를 검색하고, 전문적인 보고서 초안을 자동 생성. PDF/DOCX 내보내기 가능",
+    badge: "REPORT",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "보고서 주제 입력", config: { description: "보고서 주제를 입력하세요 (예: 2026년 상반기 안전점검 현황)" } },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 260, y: 220 },
+        data: { nodeType: "retrieval", label: "관련 문서 검색", config: { top_k: 7, description: "보고서 관련 문서 검색 (top_k=7)" } },
+      },
+      {
+        id: "confidence_check",
+        type: "workflow",
+        position: { x: 480, y: 220 },
+        data: {
+          nodeType: "condition",
+          label: "검색 품질 확인",
+          config: { condition_type: "confidence", threshold: 0.3 },
+        },
+      },
+      {
+        id: "draft_llm",
+        type: "workflow",
+        position: { x: 700, y: 120 },
+        data: {
+          nodeType: "llm",
+          label: "보고서 초안 생성",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 보고서 작성 전문가입니다.\n공공기관 형식에 맞춰 다음 구조로 보고서 초안을 작성하세요:\n\n## 1. 개요\n- 보고서 목적 및 배경\n\n## 2. 현황 분석\n- 검색된 자료 기반 현황 정리\n\n## 3. 주요 내용\n- 핵심 사항을 번호 매겨 상세 기술\n\n## 4. 결론 및 건의사항\n- 종합 의견 및 향후 조치 필요 사항\n\n## 5. 첨부\n- 참고 문서 및 근거 자료 목록",
+            temperature: 0.1,
+          },
+        },
+      },
+      {
+        id: "fallback",
+        type: "workflow",
+        position: { x: 700, y: 340 },
+        data: {
+          nodeType: "transform",
+          label: "검색 결과 부족 안내",
+          config: { template: "관련 문서의 검색 신뢰도가 낮습니다.\n\n검색 결과:\n{input}\n\n보다 구체적인 주제로 다시 시도하거나, 관련 문서가 등록되어 있는지 확인해 주세요." },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 940, y: 120 },
+        data: { nodeType: "output", label: "보고서 출력", config: { format: "markdown" } },
+      },
+      {
+        id: "output_low",
+        type: "workflow",
+        position: { x: 940, y: 340 },
+        data: { nodeType: "output", label: "안내 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "retrieve", animated: true, type: "workflow" },
+      { id: "e2", source: "retrieve", target: "confidence_check", animated: true, type: "workflow" },
+      { id: "e3", source: "confidence_check", target: "draft_llm", animated: true, label: "신뢰도 충분", type: "workflow" },
+      { id: "e4", source: "confidence_check", target: "fallback", animated: true, label: "신뢰도 부족", type: "workflow" },
+      { id: "e5", source: "draft_llm", target: "output", animated: true, type: "workflow" },
+      { id: "e6", source: "fallback", target: "output_low", animated: true, type: "workflow" },
+    ],
+  },
+  // 8. 안전교육 퀴즈 생성
+  {
+    id: "safety_quiz_generator",
+    name: "안전교육 퀴즈 생성",
+    description: "설비 유형별 안전 체크리스트를 기반으로 4지선다 퀴즈를 자동 생성",
+    badge: "QUIZ",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "설비 유형 입력", config: { description: "퀴즈를 생성할 설비 유형을 입력하세요 (예: LNG 저장탱크)" } },
+      },
+      {
+        id: "checklist_tool",
+        type: "workflow",
+        position: { x: 260, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "안전 체크리스트 조회",
+          config: {
+            tool_name: "safety_checklist",
+            arguments_template: { equipment_type: "{input}" },
+          },
+        },
+      },
+      {
+        id: "loop",
+        type: "workflow",
+        position: { x: 480, y: 220 },
+        data: { nodeType: "loop", label: "퀴즈 5문항 반복", config: { loop_type: "count", count: 5 } },
+      },
+      {
+        id: "quiz_llm",
+        type: "workflow",
+        position: { x: 700, y: 120 },
+        data: {
+          nodeType: "llm",
+          label: "퀴즈 문항 생성",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 안전교육 전문가입니다.\n안전 체크리스트 항목을 기반으로 4지선다 퀴즈를 생성하세요:\n\n**문제 N.**\n[질문 내용]\n\n① 보기 1\n② 보기 2\n③ 보기 3\n④ 보기 4\n\n**정답:** ②\n**해설:** [정답 근거 및 관련 규정 설명]",
+            temperature: 0.5,
+          },
+        },
+      },
+      {
+        id: "format_transform",
+        type: "workflow",
+        position: { x: 700, y: 340 },
+        data: {
+          nodeType: "transform",
+          label: "퀴즈 포맷 정리",
+          config: { transform_type: "merge", template: "# 안전교육 퀴즈\n\n설비 유형: {input}\n생성일: 오늘\n\n---\n\n{content}" },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 940, y: 220 },
+        data: { nodeType: "output", label: "퀴즈 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "checklist_tool", animated: true, type: "workflow" },
+      { id: "e2", source: "checklist_tool", target: "loop", animated: true, type: "workflow" },
+      { id: "e3", source: "loop", target: "quiz_llm", animated: true, label: "body", type: "workflow" },
+      { id: "e4", source: "loop", target: "format_transform", animated: true, label: "done", type: "workflow" },
+      { id: "e5", source: "quiz_llm", target: "loop", animated: true, type: "workflow" },
+      { id: "e6", source: "format_transform", target: "output", animated: true, type: "workflow" },
+    ],
+  },
+  // 9. 사고 대응 매뉴얼
+  {
+    id: "incident_response",
+    name: "사고 대응 매뉴얼",
+    description: "EHSQ 사고 이력을 조회하고 대응 매뉴얼을 작성한 뒤 이메일 보고서를 자동 생성",
+    badge: "EMERGENCY",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "사고 유형 입력", config: { description: "대응 매뉴얼을 작성할 사고 유형을 입력하세요 (예: 가스 누출 사고)" } },
+      },
+      {
+        id: "ehsq_tool",
+        type: "workflow",
+        position: { x: 280, y: 100 },
+        data: {
+          nodeType: "tool",
+          label: "EHSQ 사고 이력 조회",
+          config: {
+            tool_name: "ehsq_lookup",
+            arguments_template: { action: "incident_report", facility: "{input}" },
+          },
+        },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 280, y: 340 },
+        data: {
+          nodeType: "retrieval",
+          label: "사고대응규정 검색",
+          config: { top_k: 7, description: "사고대응 관련 내부규정 검색" },
+        },
+      },
+      {
+        id: "analyze_llm",
+        type: "workflow",
+        position: { x: 520, y: 220 },
+        data: {
+          nodeType: "llm",
+          label: "대응 매뉴얼 작성",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 사고 대응 전문가입니다.\nEHSQ 사고 이력과 내부규정을 종합하여 대응 매뉴얼을 작성하세요:\n\n## 1. 사고 유형 분류\n- 사고 유형 및 위험 등급\n\n## 2. 즉시 대응 절차\n- 단계별 초기 대응 체크리스트\n\n## 3. 보고 체계\n- 보고 대상 및 보고 시한\n\n## 4. 복구 절차\n- 피해 최소화 및 복구 단계\n\n## 5. 재발 방지 대책\n- 근본 원인 분석 및 예방 조치\n\n## 6. 관련 규정\n- 적용 규정 및 조항 명시",
+            temperature: 0.1,
+          },
+        },
+      },
+      {
+        id: "checklist_tool",
+        type: "workflow",
+        position: { x: 760, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "안전 체크리스트 생성",
+          config: {
+            tool_name: "safety_checklist",
+            arguments_template: { equipment_type: "{input}" },
+          },
+        },
+      },
+      {
+        id: "email_tool",
+        type: "workflow",
+        position: { x: 1000, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "이메일 보고서 생성",
+          config: {
+            tool_name: "email_composer",
+            arguments_template: { subject: "사고 대응 매뉴얼 - {input}", body: "{content}" },
+          },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 1240, y: 220 },
+        data: { nodeType: "output", label: "대응 매뉴얼 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "ehsq_tool", animated: true, label: "EHSQ", type: "workflow" },
+      { id: "e2", source: "start", target: "retrieve", animated: true, label: "규정", type: "workflow" },
+      { id: "e3", source: "ehsq_tool", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e4", source: "retrieve", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e5", source: "analyze_llm", target: "checklist_tool", animated: true, type: "workflow" },
+      { id: "e6", source: "checklist_tool", target: "email_tool", animated: true, type: "workflow" },
+      { id: "e7", source: "email_tool", target: "output", animated: true, type: "workflow" },
+    ],
+  },
+  // 10. 규정 Q&A
+  {
+    id: "regulation_qa",
+    name: "규정 Q&A",
+    description: "내부규정에 대한 질문에 조항 번호를 포함하여 정확하게 답변",
+    badge: "Q&A",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "규정 질문 입력", config: { description: "내부규정에 대한 질문을 입력하세요 (예: 연차휴가 부여 기준은?)" } },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 260, y: 220 },
+        data: { nodeType: "retrieval", label: "내부규정 검색", config: { top_k: 7, description: "질문 관련 내부규정 검색 (top_k=7)" } },
+      },
+      {
+        id: "condition",
+        type: "workflow",
+        position: { x: 480, y: 220 },
+        data: {
+          nodeType: "condition",
+          label: "신뢰도 확인",
+          config: { condition_type: "confidence", threshold: 0.3 },
+        },
+      },
+      {
+        id: "answer_llm",
+        type: "workflow",
+        position: { x: 700, y: 120 },
+        data: {
+          nodeType: "llm",
+          label: "규정 답변 생성",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 내부규정 전문가입니다.\n질문에 대해 다음 형식으로 정확하게 답변하세요:\n\n## 답변\n- 질문에 대한 명확한 답변\n\n## 관련 규정\n- 규정명 제N조 (조항 제목)\n- 해당 조문 원문 인용\n\n## 보충 설명\n- 실무 적용 시 참고 사항\n\n반드시 조항 번호를 포함하여 근거를 명시하세요.",
+            temperature: 0.1,
+          },
+        },
+      },
+      {
+        id: "fallback",
+        type: "workflow",
+        position: { x: 700, y: 340 },
+        data: {
+          nodeType: "transform",
+          label: "검색 결과 부족 안내",
+          config: { template: "해당 질문에 대한 관련 규정을 찾지 못했습니다.\n\n검색 결과:\n{input}\n\n질문을 더 구체적으로 입력하거나, 다른 키워드로 시도해 주세요." },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 940, y: 120 },
+        data: { nodeType: "output", label: "답변 출력", config: { format: "markdown" } },
+      },
+      {
+        id: "output_low",
+        type: "workflow",
+        position: { x: 940, y: 340 },
+        data: { nodeType: "output", label: "안내 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "retrieve", animated: true, type: "workflow" },
+      { id: "e2", source: "retrieve", target: "condition", animated: true, type: "workflow" },
+      { id: "e3", source: "condition", target: "answer_llm", animated: true, label: "신뢰도 충분", type: "workflow" },
+      { id: "e4", source: "condition", target: "fallback", animated: true, label: "신뢰도 부족", type: "workflow" },
+      { id: "e5", source: "answer_llm", target: "output", animated: true, type: "workflow" },
+      { id: "e6", source: "fallback", target: "output_low", animated: true, type: "workflow" },
+    ],
+  },
+  // 11. 다국어 문서 번역
+  {
+    id: "multilingual_doc",
+    name: "다국어 문서 번역",
+    description: "내부 문서를 검색·요약한 후 영문으로 번역",
+    badge: "TRANSLATE",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "문서 주제 입력", config: { description: "번역할 문서 주제를 입력하세요 (예: 안전관리규정 요약)" } },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 260, y: 220 },
+        data: { nodeType: "retrieval", label: "내부 문서 검색", config: { top_k: 5, description: "번역 대상 내부 문서 검색 (top_k=5)" } },
+      },
+      {
+        id: "summarize_llm",
+        type: "workflow",
+        position: { x: 480, y: 220 },
+        data: {
+          nodeType: "llm",
+          label: "문서 요약",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 문서 분석 전문가입니다.\n검색된 문서를 간결하게 요약하세요:\n\n## 문서 요약\n- 핵심 내용을 구조화하여 정리\n\n## 주요 사항\n- 중요 항목을 번호로 나열\n\n## 관련 규정\n- 참조된 규정 및 조항 명시\n\n번역에 적합하도록 명확하고 간결한 문장으로 작성하세요.",
+            temperature: 0.1,
+          },
+        },
+      },
+      {
+        id: "translate_tool",
+        type: "workflow",
+        position: { x: 700, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "영문 번역",
+          config: {
+            tool_name: "translator",
+            arguments_template: { target_language: "en", text: "{content}" },
+          },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 920, y: 220 },
+        data: { nodeType: "output", label: "번역 결과 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "retrieve", animated: true, type: "workflow" },
+      { id: "e2", source: "retrieve", target: "summarize_llm", animated: true, type: "workflow" },
+      { id: "e3", source: "summarize_llm", target: "translate_tool", animated: true, type: "workflow" },
+      { id: "e4", source: "translate_tool", target: "output", animated: true, type: "workflow" },
+    ],
+  },
+  // 12. 데이터 분석 보고서
+  {
+    id: "data_analysis_report",
+    name: "데이터 분석 보고서",
+    description: "데이터를 통계 분석하고 차트 시각화를 포함한 분석 보고서를 생성",
+    badge: "ANALYTICS",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "분석 주제 입력", config: { description: "분석할 데이터 주제를 입력하세요 (예: 2026년 설비 점검 현황 분석)" } },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 260, y: 220 },
+        data: { nodeType: "retrieval", label: "관련 데이터 검색", config: { top_k: 5, description: "분석 대상 데이터 및 관련 문서 검색 (top_k=5)" } },
+      },
+      {
+        id: "data_tool",
+        type: "workflow",
+        position: { x: 500, y: 100 },
+        data: {
+          nodeType: "tool",
+          label: "통계 분석",
+          config: {
+            tool_name: "data_analyzer",
+            arguments_template: { query: "{input}" },
+          },
+        },
+      },
+      {
+        id: "chart_tool",
+        type: "workflow",
+        position: { x: 500, y: 340 },
+        data: {
+          nodeType: "tool",
+          label: "차트 생성",
+          config: {
+            tool_name: "chart_generator",
+            arguments_template: { query: "{input}" },
+          },
+        },
+      },
+      {
+        id: "analyze_llm",
+        type: "workflow",
+        position: { x: 740, y: 220 },
+        data: {
+          nodeType: "llm",
+          label: "분석 보고서 작성",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 데이터 분석 전문가입니다.\n통계 분석 결과와 차트를 종합하여 분석 보고서를 작성하세요:\n\n## 1. 분석 개요\n- 분석 목적 및 데이터 범위\n\n## 2. 주요 통계\n- 핵심 지표 및 통계 수치 (표 형식)\n\n## 3. 추세 분석\n- 시계열 변화 추이 및 패턴\n\n## 4. 시사점\n- 데이터에서 도출된 인사이트\n\n## 5. 권고사항\n- 데이터 기반 개선 방안",
+            temperature: 0.1,
+          },
+        },
+      },
+      {
+        id: "report_tool",
+        type: "workflow",
+        position: { x: 980, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "분석보고서 생성",
+          config: {
+            tool_name: "report_draft",
+            arguments_template: { topic: "{input}", report_type: "분석보고서" },
+          },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 1220, y: 220 },
+        data: { nodeType: "output", label: "분석 보고서 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "retrieve", animated: true, type: "workflow" },
+      { id: "e2", source: "retrieve", target: "data_tool", animated: true, label: "통계", type: "workflow" },
+      { id: "e3", source: "retrieve", target: "chart_tool", animated: true, label: "시각화", type: "workflow" },
+      { id: "e4", source: "data_tool", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e5", source: "chart_tool", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e6", source: "analyze_llm", target: "report_tool", animated: true, type: "workflow" },
+      { id: "e7", source: "report_tool", target: "output", animated: true, type: "workflow" },
+    ],
+  },
+  // 13. 일일 안전 브리핑
+  {
+    id: "daily_safety_briefing",
+    name: "일일 안전 브리핑",
+    description: "EHSQ 안전 현황, 금일 일정, 핵심 규정을 종합한 일일 브리핑을 작성하여 이메일로 발송",
+    badge: "BRIEFING",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "브리핑 요청", config: { description: "브리핑 대상 부서 또는 시설을 입력하세요 (예: 인천기지 시설안전부)" } },
+      },
+      {
+        id: "ehsq_tool",
+        type: "workflow",
+        position: { x: 280, y: 80 },
+        data: {
+          nodeType: "tool",
+          label: "안전 현황 조회",
+          config: {
+            tool_name: "ehsq_lookup",
+            arguments_template: { action: "safety_status", facility: "{input}" },
+          },
+        },
+      },
+      {
+        id: "groupware_tool",
+        type: "workflow",
+        position: { x: 280, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "금일 일정 조회",
+          config: {
+            tool_name: "groupware",
+            arguments_template: { action: "schedule", keyword: "{input}" },
+          },
+        },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 280, y: 360 },
+        data: {
+          nodeType: "retrieval",
+          label: "안전규정 검색",
+          config: { top_k: 3, description: "일일 안전 브리핑 관련 핵심 규정 검색" },
+        },
+      },
+      {
+        id: "briefing_llm",
+        type: "workflow",
+        position: { x: 540, y: 220 },
+        data: {
+          nodeType: "llm",
+          label: "브리핑 작성",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 안전관리 담당자입니다.\nEHSQ 안전 현황, 금일 일정, 핵심 규정을 종합하여 일일 안전 브리핑을 작성하세요:\n\n## 일일 안전 브리핑\n**작성일:** 오늘\n\n### 1. 안전 현황\n- EHSQ 시스템 기반 현재 안전 상태\n\n### 2. 금일 주요 일정\n- 점검, 회의, 교육 등 안전 관련 일정\n\n### 3. 핵심 안전 규정 리마인더\n- 금일 활동에 적용되는 핵심 규정\n\n### 4. 주의사항\n- 특별 주의가 필요한 사항",
+            temperature: 0.2,
+          },
+        },
+      },
+      {
+        id: "email_tool",
+        type: "workflow",
+        position: { x: 780, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "이메일 발송",
+          config: {
+            tool_name: "email_composer",
+            arguments_template: { subject: "일일 안전 브리핑 - {input}", body: "{content}" },
+          },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 1020, y: 220 },
+        data: { nodeType: "output", label: "브리핑 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "ehsq_tool", animated: true, label: "EHSQ", type: "workflow" },
+      { id: "e2", source: "start", target: "groupware_tool", animated: true, label: "일정", type: "workflow" },
+      { id: "e3", source: "start", target: "retrieve", animated: true, label: "규정", type: "workflow" },
+      { id: "e4", source: "ehsq_tool", target: "briefing_llm", animated: true, type: "workflow" },
+      { id: "e5", source: "groupware_tool", target: "briefing_llm", animated: true, type: "workflow" },
+      { id: "e6", source: "retrieve", target: "briefing_llm", animated: true, type: "workflow" },
+      { id: "e7", source: "briefing_llm", target: "email_tool", animated: true, type: "workflow" },
+      { id: "e8", source: "email_tool", target: "output", animated: true, type: "workflow" },
+    ],
+  },
+  // 14. 법령 vs 내부규정 검토
+  {
+    id: "law_regulation_review",
+    name: "법령 vs 내부규정 검토",
+    description: "국가 법령을 검색하고 내부규정과 대조하여 준수 여부를 분석",
+    badge: "LAW",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "법령 주제 입력", config: { description: "검토할 법령 또는 규정 주제를 입력하세요 (예: 고압가스 안전관리법 시설 기준)" } },
+      },
+      {
+        id: "law_tool",
+        type: "workflow",
+        position: { x: 280, y: 100 },
+        data: {
+          nodeType: "tool",
+          label: "국가 법령 검색",
+          config: {
+            tool_name: "law_search",
+            arguments_template: { query: "{input}" },
+          },
+        },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 280, y: 340 },
+        data: {
+          nodeType: "retrieval",
+          label: "내부규정 검색",
+          config: { top_k: 7, description: "법령 대조용 내부규정 검색 (top_k=7)" },
+        },
+      },
+      {
+        id: "compare_llm",
+        type: "workflow",
+        position: { x: 540, y: 220 },
+        data: {
+          nodeType: "llm",
+          label: "법령·규정 대조 분석",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 법률·규정 검토 전문가입니다.\n국가 법령과 내부규정을 대조하여 준수 여부를 분석하세요:\n\n## 1. 법령 요약\n- 관련 법령의 핵심 조항 정리\n\n## 2. 내부규정 현황\n- 해당 법령에 대응하는 내부규정 조항\n\n## 3. 준수 여부 분석\n| 법령 조항 | 내부규정 | 준수 여부 | 비고 |\n\n## 4. 미준수 항목\n- 법령 대비 부족한 내부규정 사항\n\n## 5. 개선 권고\n- 내부규정 개정 또는 신설 필요 사항",
+            temperature: 0.1,
+          },
+        },
+      },
+      {
+        id: "review_tool",
+        type: "workflow",
+        position: { x: 780, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "검토 보고서 생성",
+          config: {
+            tool_name: "regulation_review",
+            arguments_template: { query: "{input}" },
+          },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 1020, y: 220 },
+        data: { nodeType: "output", label: "검토 결과 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "law_tool", animated: true, label: "법령", type: "workflow" },
+      { id: "e2", source: "start", target: "retrieve", animated: true, label: "내부규정", type: "workflow" },
+      { id: "e3", source: "law_tool", target: "compare_llm", animated: true, type: "workflow" },
+      { id: "e4", source: "retrieve", target: "compare_llm", animated: true, type: "workflow" },
+      { id: "e5", source: "compare_llm", target: "review_tool", animated: true, type: "workflow" },
+      { id: "e6", source: "review_tool", target: "output", animated: true, type: "workflow" },
+    ],
+  },
+  // 15. 프로젝트 현황 보고
+  {
+    id: "project_status_report",
+    name: "프로젝트 현황 보고",
+    description: "ERP 프로젝트 데이터와 그룹웨어 결재 현황을 종합한 프로젝트 현황 보고서를 생성",
+    badge: "PROJECT",
+    nodes: [
+      {
+        id: "start",
+        type: "workflow",
+        position: { x: 40, y: 220 },
+        data: { nodeType: "start", label: "프로젝트 정보 입력", config: { description: "현황을 조회할 프로젝트명을 입력하세요 (예: 인천기지 배관 교체 프로젝트)" } },
+      },
+      {
+        id: "erp_tool",
+        type: "workflow",
+        position: { x: 280, y: 80 },
+        data: {
+          nodeType: "tool",
+          label: "ERP 프로젝트 조회",
+          config: {
+            tool_name: "erp_lookup",
+            arguments_template: { query_type: "project", keyword: "{input}" },
+          },
+        },
+      },
+      {
+        id: "groupware_tool",
+        type: "workflow",
+        position: { x: 280, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "결재 현황 조회",
+          config: {
+            tool_name: "groupware",
+            arguments_template: { action: "approval", keyword: "{input}" },
+          },
+        },
+      },
+      {
+        id: "retrieve",
+        type: "workflow",
+        position: { x: 280, y: 360 },
+        data: {
+          nodeType: "retrieval",
+          label: "관련 규정 검색",
+          config: { top_k: 3, description: "프로젝트 관련 내부규정 검색" },
+        },
+      },
+      {
+        id: "analyze_llm",
+        type: "workflow",
+        position: { x: 540, y: 220 },
+        data: {
+          nodeType: "llm",
+          label: "현황 분석",
+          config: {
+            system_prompt: "당신은 한국가스기술공사의 프로젝트 관리 전문가입니다.\nERP 데이터, 결재 현황, 관련 규정을 종합하여 프로젝트 현황 보고서를 작성하세요:\n\n## 1. 프로젝트 개요\n- 프로젝트명, 기간, 예산, 담당부서\n\n## 2. 진행 현황\n| 항목 | 계획 | 실적 | 진행률 |\n\n## 3. 결재 현황\n- 주요 결재 건 및 처리 상태\n\n## 4. 예산 집행 현황\n- 예산 대비 집행액 및 잔액\n\n## 5. 리스크 및 이슈\n- 식별된 위험 요소 및 대응 방안\n\n## 6. 향후 계획\n- 다음 단계 주요 일정",
+            temperature: 0.1,
+          },
+        },
+      },
+      {
+        id: "report_tool",
+        type: "workflow",
+        position: { x: 780, y: 220 },
+        data: {
+          nodeType: "tool",
+          label: "현황보고서 생성",
+          config: {
+            tool_name: "report_draft",
+            arguments_template: { topic: "{input}", report_type: "현황보고서" },
+          },
+        },
+      },
+      {
+        id: "output",
+        type: "workflow",
+        position: { x: 1020, y: 220 },
+        data: { nodeType: "output", label: "현황 보고서 출력", config: { format: "markdown" } },
+      },
+    ],
+    edges: [
+      { id: "e1", source: "start", target: "erp_tool", animated: true, label: "ERP", type: "workflow" },
+      { id: "e2", source: "start", target: "groupware_tool", animated: true, label: "결재", type: "workflow" },
+      { id: "e3", source: "start", target: "retrieve", animated: true, label: "규정", type: "workflow" },
+      { id: "e4", source: "erp_tool", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e5", source: "groupware_tool", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e6", source: "retrieve", target: "analyze_llm", animated: true, type: "workflow" },
+      { id: "e7", source: "analyze_llm", target: "report_tool", animated: true, type: "workflow" },
+      { id: "e8", source: "report_tool", target: "output", animated: true, type: "workflow" },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
