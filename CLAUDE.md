@@ -93,8 +93,9 @@ flux-rag/
 │   ├── api/              # FastAPI 라우트 (19개 모듈)
 │   │   └── routes/       # chat, documents, sessions, admin, feedback, mcp,
 │   │                     # workflows, quality, sync, folders, personal_knowledge,
-│   │                     # ocr, ocr_training, statistics, logs, guardrails, content
-│   ├── agent/            # Agent, MCP (10개 도구), Router, Builder
+│   │                     # ocr, ocr_training, statistics, logs, guardrails, content,
+│   │                     # reports, report_templates
+│   ├── agent/            # Agent, MCP (27개 도구), Builder (15 프리셋), Router
 │   ├── auth/             # JWT, RBAC, LDAP, 윤리서약, 접근요청
 │   ├── config/           # Pydantic 설정
 │   ├── core/
@@ -276,7 +277,7 @@ flux-rag/
 - `GET /api/mcp/tools` - MCP 도구 목록 (10개 내장 + 커스텀 도구 빌더)
 - `POST /api/mcp/execute` - 도구 실행
 - `GET/POST /api/content/*` - 공지사항, FAQ, 설문
-- `GET /api/workflows/*` - 워크플로 프리셋
+- `GET /api/workflows/*` - 워크플로 프리셋 (15개)
 
 ## 개발 가이드
 
@@ -405,9 +406,19 @@ asyncio.run(check())
 - **demo.html REST API**: 25개 엔드포인트 5개 카테고리 문서 + OpenAPI 안내
 - **PrivateRoute 개선**: 권한 없는 페이지 접근 시 에러 → `/chat` 리다이렉트
 
+### Phase 10: 에이전트 빌더 확장 + 리포트 품질 개선 (2026-03-14)
+- **에이전트 프리셋 15개**: 기존 7개 → 15개 (`agent/builder/presets.py`)
+  - 신규 8개: 안전교육 퀴즈(LOOP), 사고 대응(3-tool 체이닝), 규정 Q&A, 다국어 번역, 데이터 분석, 일일 안전 브리핑(3-way 병렬), 법령 검토, 프로젝트 현황
+  - 미사용 도구 8개 활용: safety_checklist, email_composer, translator, data_analyzer, chart_generator, law_search, regulation_review, groupware_lookup
+  - 프론트엔드 동기화 15개 (`AgentBuilderPage.tsx`)
+- **DOCX 내보내기 고품질화**: `DocxHtmlParser(HTMLParser)` 클래스 (`api/routes/reports.py`)
+  - Markdown → HTML → python-docx 파이프라인
+  - 테이블(navy 헤더, 줄무늬), **볼드**/이탤릭/코드, 코드블록(Courier New), 인용문, 수평선 지원
+- **Vite 프록시 설정**: 로컬 개발환경 `/api` → `http://localhost:8000` 프록시 (`vite.config.ts`)
+
 ### 현재 상태
 - **시연 완료**: RunPod A40+A100 환경 시연 종료
-- **Phase 8-9 완료**: 관리자 포털 고도화, Mock 데이터 전면 실 API 교체, 코드 분리
+- **Phase 8-10 완료**: 관리자 포털 고도화, Mock→실 API, 에이전트 빌더 15개, DOCX 고품질화
 
 ### 남은 작업
 - 운영 배포 준비 (vLLM, K8s, Redis)
